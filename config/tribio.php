@@ -1,0 +1,124 @@
+<?php
+
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | Plantillas disponibles para las tiendas
+    |--------------------------------------------------------------------------
+    */
+    'templates' => [
+        'elegant-dark' => [
+            'name'        => 'Elegant Dark',
+            'description' => 'Diseño oscuro premium con glassmorphism. Ideal para tecnología, moda y productos de lujo.',
+            'preview'     => 'images/templates/elegant-dark-preview.jpg',
+            'hero_styles' => ['full', 'split', 'minimal'],
+            'supports_carousel' => true,
+            'default_accent'    => '#8B5CF6',
+            'default_secondary' => '#EC4899',
+            'default_bg'        => '#0F0F1A',
+            'tags'              => ['premium', 'oscuro', 'moderno'],
+        ],
+        'minimal-light' => [
+            'name'        => 'Minimal Light',
+            'description' => 'Estética limpia y minimalista con fondo blanco. Perfecta para joyería, boutiques y productos artesanales.',
+            'preview'     => 'images/templates/minimal-light-preview.jpg',
+            'hero_styles' => ['split', 'minimal'],
+            'supports_carousel' => false,
+            'default_accent'    => '#1F2937',
+            'default_secondary' => '#D97706',
+            'default_bg'        => '#FFFFFF',
+            'tags'              => ['minimalista', 'claro', 'elegante'],
+        ],
+        'vibrant-fresh' => [
+            'name'        => 'Vibrant Fresh',
+            'description' => 'Colores alegres y bordes redondeados. Ideal para alimentos, repostería, juguetes y artesanías.',
+            'preview'     => 'images/templates/vibrant-fresh-preview.jpg',
+            'hero_styles' => ['full', 'split'],
+            'supports_carousel' => true,
+            'default_accent'    => '#EC4899',
+            'default_secondary' => '#F59E0B',
+            'default_bg'        => '#FFF7F0',
+            'tags'              => ['colorido', 'alegre', 'juvenil'],
+        ],
+        'industrial-light' => [
+            'name'        => 'Industrial Light',
+            'description' => 'Diseño industrial premium con fondo claro y detalles en rojo y verde. Ideal para repuestos, maquinaria, herramientas y talleres.',
+            'preview'     => 'images/templates/industrial-light-preview.jpg',
+            'hero_styles' => ['full', 'split'],
+            'supports_carousel' => true,
+            'default_accent'    => '#DC2626',
+            'default_secondary' => '#16A34A',
+            'default_bg'        => '#FFFFFF',
+            'tags'              => ['industrial', 'claro', 'repuestos'],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Categorías de negocios disponibles al registrarse
+    |--------------------------------------------------------------------------
+    */
+    'business_categories' => [
+        'moda'        => ['label' => 'Moda y Ropa',         'icon' => '👗'],
+        'calzado'     => ['label' => 'Calzado',              'icon' => '👟'],
+        'tecnologia'  => ['label' => 'Tecnología',           'icon' => '💻'],
+        'alimentos'   => ['label' => 'Alimentos y Bebidas',  'icon' => '🍕'],
+        'joyeria'     => ['label' => 'Joyería y Accesorios', 'icon' => '💍'],
+        'hogar'       => ['label' => 'Hogar y Decoración',   'icon' => '🏡'],
+        'deporte'     => ['label' => 'Deporte y Fitness',    'icon' => '⚽'],
+        'salud'       => ['label' => 'Salud y Belleza',      'icon' => '💄'],
+        'servicios'   => ['label' => 'Servicios',            'icon' => '🔧'],
+        'otros'       => ['label' => 'Otros',                'icon' => '🛍️'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Planes de suscripción
+    |--------------------------------------------------------------------------
+    */
+    'plans' => [
+        'basic' => [
+            'label'        => 'Básico',
+            'price'        => 29.90,
+            'max_products' => 20,
+            'max_gallery'  => 10,
+            'features'     => [
+                'Hasta 20 productos',
+                'Galería de 10 fotos',
+                'Pedidos por WhatsApp',
+                'Subdirectorio Tribio',
+            ],
+            'highlight' => false,
+        ],
+        'professional' => [
+            'label'        => 'Profesional',
+            'price'        => 59.90,
+            'max_products' => 100,
+            'max_gallery'  => 50,
+            'features'     => [
+                'Hasta 100 productos',
+                'Galería de 50 fotos',
+                'Módulo de inventario',
+                'Analytics básico',
+                'Categorías ilimitadas',
+                'Pedidos por WhatsApp',
+            ],
+            'highlight' => true,
+        ],
+        'enterprise' => [
+            'label'        => 'Empresarial',
+            'price'        => 99.90,
+            'max_products' => 9999,
+            'max_gallery'  => 999,
+            'features'     => [
+                'Productos ilimitados',
+                'Galería ilimitada',
+                'Dominio personalizado',
+                'Analytics avanzado',
+                'Exportación de inventario',
+                'Soporte prioritario',
+            ],
+            'highlight' => false,
+        ],
+    ],
+];
