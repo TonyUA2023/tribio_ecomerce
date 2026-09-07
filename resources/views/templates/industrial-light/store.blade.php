@@ -6,10 +6,10 @@
     <title>{{ $store->name }} — Everything That Makes a Tractor Move</title>
     <meta name="description" content="{{ $store->description }}">
 
-    <!-- Google Fonts: Outfit -->
+    <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <!-- AlpineJS v3 (CDN) -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -25,7 +25,7 @@
             --bg: #FFFFFF;
         }
         body {
-            font-family: 'Outfit', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: var(--bg);
             color: #1F2937;
         }
@@ -98,346 +98,498 @@
 </head>
 <body x-data="cartApp()" x-init="initCart()" class="antialiased scroll-smooth bg-white">
 
-    <!-- Top Red Banner -->
-    <div class="bg-[#E50914] text-white text-center py-2 px-4 font-black uppercase italic tracking-[0.15em] text-xs sm:text-sm border-b border-red-700">
-        “Todo lo que hace que un tractor se mueva”
-    </div>
+    <!-- Dynamic Header will be rendered in the section loop -->
 
-    <!-- Header / Navbar (Unified) -->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-20 gap-4">
-                <!-- Logo -->
-                <a href="{{ route('store.show', $store->slug) }}" class="shrink-0">
-                    @if($store->logo_path)
-                        <img src="{{ $store->logo_url }}" alt="{{ $store->name }}" class="h-14 w-auto object-contain">
-                    @else
-                        <span class="text-2xl font-black tracking-tight text-gray-900">TFL <span class="text-[#E50914]">PARTS</span></span>
-                    @endif
-                </a>
-
-                <!-- Centered Navigation Links -->
-                <nav class="hidden lg:flex items-center gap-7 text-xs font-black uppercase tracking-wider text-gray-700">
-                    <a href="{{ route('store.show', $store->slug) }}" class="hover:text-[#E50914] pb-1 border-b-2 border-transparent hover:border-[#E50914] transition-all">INICIO</a>
-                    <a href="{{ route('store.catalog', $store->slug) }}" class="hover:text-[#E50914] pb-1 border-b-2 border-transparent hover:border-[#E50914] transition-all">CATÁLOGO</a>
-                    <a href="#contacto" class="hover:text-[#E50914] pb-1 border-b-2 border-transparent hover:border-[#E50914] transition-all">CONTACTO</a>
-                </nav>
-
-                <!-- Search and Cart Group -->
-                <div class="flex items-center gap-4 flex-1 max-w-sm justify-end">
-                    <!-- Search Input -->
-                    <form method="GET" action="{{ route('store.catalog', $store->slug) }}" class="hidden sm:flex border border-gray-300 rounded overflow-hidden h-10 w-full max-w-[240px]">
-                        <input type="text" 
-                               name="q" 
-                               placeholder="Buscar repuesto..." 
-                               class="w-full px-3 text-xs text-gray-700 focus:outline-none">
-                        <button type="submit" class="bg-[#E50914] hover:bg-red-700 text-white px-3 flex items-center justify-center">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
-                        </button>
-                    </form>
-
-                    <!-- Cart Indicator Button & Dropdown -->
-                    <div class="relative">
-                        <button @click="openCartDropdown = !openCartDropdown" class="relative p-2.5 rounded-full bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors shrink-0">
-                            <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                            </svg>
-                            <span x-show="cartCount > 0" x-text="cartCount" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center bg-[#E50914] shadow-md animate-pulse"></span>
-                        </button>
-
-                        <!-- Mini Dropdown Cart Container -->
-                        <div x-show="openCartDropdown"
-                             @click.outside="openCartDropdown = false"
-                             x-transition:enter="transition ease-out duration-200"
-                             x-transition:enter-start="opacity-0 translate-y-1"
-                             x-transition:enter-end="opacity-100 translate-y-0"
-                             x-transition:leave="transition ease-in duration-150"
-                             x-transition:leave-start="opacity-100 translate-y-0"
-                             x-transition:leave-end="opacity-0 translate-y-1"
-                             style="display: none;"
-                             class="absolute right-0 mt-3 w-80 sm:w-96 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 p-4 space-y-4 text-left">
-                            
-                            <!-- Step 1: Resumen de Compra -->
-                            <div x-show="checkoutStep === 1" class="space-y-4">
-                                <div class="flex items-center justify-between pb-2 border-b border-gray-100">
-                                    <h3 class="text-xs font-black uppercase tracking-wider text-gray-900">
-                                        Mi carrito (<span x-text="cartCount"></span>)
-                                    </h3>
-                                    <button @click="openCartDropdown = false" class="text-gray-400 hover:text-gray-500 text-xs">✕</button>
-                                </div>
-
-                                <!-- Items List -->
-                                <div class="max-h-60 overflow-y-auto divide-y divide-gray-100 pr-1">
-                                    <template x-if="items.length === 0">
-                                        <div class="text-center py-8 space-y-2">
-                                            <svg class="w-8 h-8 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                                            </svg>
-                                            <p class="text-gray-500 font-bold text-[10px]">Tu carrito está vacío.</p>
-                                        </div>
-                                    </template>
-
-                                    <template x-if="items.length > 0">
-                                        <template x-for="item in items" :key="item.id">
-                                            <div class="flex py-3 gap-3">
-                                                <div class="w-12 h-12 bg-gray-50 rounded border border-gray-100 shrink-0 flex items-center justify-center overflow-hidden">
-                                                    <template x-if="item.image">
-                                                        <img :src="item.image" class="w-full h-full object-contain">
-                                                    </template>
-                                                    <template x-if="!item.image">
-                                                        <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                                                        </svg>
-                                                    </template>
-                                                </div>
-                                                <div class="flex-1 flex flex-col justify-between min-w-0">
-                                                    <div>
-                                                        <h4 class="text-[10px] font-black text-gray-900 leading-tight truncate uppercase" x-text="item.name"></h4>
-                                                        <span class="text-[10px] text-green-600 font-bold" x-text="'S/. ' + item.price.toFixed(2)"></span>
-                                                    </div>
-                                                    <div class="flex items-center justify-between mt-1">
-                                                        <!-- Quantity Buttons -->
-                                                        <div class="flex items-center border border-gray-200 rounded overflow-hidden bg-gray-50">
-                                                            <button @click="updateQty(item.id, item.quantity - 1)" class="px-1.5 py-0.5 text-gray-500 hover:bg-gray-200 text-[10px]">-</button>
-                                                            <span class="px-2 text-[10px] font-bold text-gray-700" x-text="item.quantity"></span>
-                                                            <button @click="updateQty(item.id, item.quantity + 1)" class="px-1.5 py-0.5 text-gray-500 hover:bg-gray-200 text-[10px]">+</button>
-                                                        </div>
-                                                        <!-- Delete -->
-                                                        <button @click="removeItem(item.id)" class="text-[10px] text-red-500 font-semibold hover:underline">Eliminar</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </template>
-                                    </template>
-                                </div>
-
-                                <!-- Subtotal & Continue Button -->
-                                <template x-if="items.length > 0">
-                                    <div class="pt-3 border-t border-gray-100 space-y-3">
-                                        <div class="flex justify-between items-center text-xs">
-                                            <span class="font-bold text-gray-600">Total Estimado:</span>
-                                            <span class="font-black text-gray-900 text-sm" x-text="'S/. ' + totalSum().toFixed(2)"></span>
-                                        </div>
-                                        <div class="flex gap-2">
-                                            <button @click="checkoutStep = 2" class="flex-1 py-2 px-3 font-bold bg-[#E50914] hover:bg-red-700 text-white text-[10px] uppercase tracking-wider text-center rounded">
-                                                Continuar pedido
-                                            </button>
-                                            <button @click="openCartDropdown = false" class="py-2 px-3 font-bold bg-gray-100 hover:bg-gray-200 text-gray-800 text-[10px] uppercase tracking-wider text-center rounded">
-                                                Cerrar
-                                            </button>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-
-                            <!-- Step 2: Formulario de Cotización -->
-                            <div x-show="checkoutStep === 2" class="space-y-4">
-                                <div class="flex items-center justify-between pb-2 border-b border-gray-100">
-                                    <h3 class="text-xs font-black uppercase tracking-wider text-gray-900">
-                                        Detalles de Cotización
-                                    </h3>
-                                    <button @click="checkoutStep = 1" class="text-[#E50914] hover:underline text-[10px] font-bold">Volver</button>
-                                </div>
-
-                                <!-- Form Fields -->
-                                <div class="space-y-2">
-                                    <div>
-                                        <label class="block text-[9px] font-bold text-gray-600 mb-0.5">Nombre Comercial / Razón Social *</label>
-                                        <input type="text" x-model="checkoutForm.customer_name" class="w-full px-2 py-1.5 rounded border border-gray-200 focus:outline-none focus:border-[#E50914] text-[10px]" placeholder="Ej. Corporación Agrícola S.A.">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[9px] font-bold text-gray-600 mb-0.5">Celular / WhatsApp *</label>
-                                        <input type="text" x-model="checkoutForm.customer_phone" class="w-full px-2 py-1.5 rounded border border-gray-200 focus:outline-none focus:border-[#E50914] text-[10px]" placeholder="Ej. 987654321">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[9px] font-bold text-gray-600 mb-0.5">Dirección de Despacho *</label>
-                                        <input type="text" x-model="checkoutForm.customer_address" class="w-full px-2 py-1.5 rounded border border-gray-200 focus:outline-none focus:border-[#E50914] text-[10px]" placeholder="Ej. Chiclayo o Provincia de destino">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[9px] font-bold text-gray-600 mb-0.5">Notas (Detalles de Tractor o Motor)</label>
-                                        <textarea x-model="checkoutForm.customer_notes" rows="2" class="w-full px-2 py-1.5 rounded border border-gray-200 focus:outline-none focus:border-[#E50914] text-[10px]" placeholder="Ej. Filtro para MF 290 del año 2012"></textarea>
-                                    </div>
-                                </div>
-
-                                <!-- Action Buttons -->
-                                <div class="pt-2 border-t border-gray-100 space-y-2">
-                                    <div class="flex justify-between items-center text-xs mb-1">
-                                        <span class="font-bold text-gray-600">Total Estimado:</span>
-                                        <span class="font-black text-gray-900 text-sm" x-text="'S/. ' + totalSum().toFixed(2)"></span>
-                                    </div>
-                                    <button @click="submitOrder()"
-                                            :disabled="submitting"
-                                            class="w-full py-2.5 px-3 font-bold bg-[#16A34A] hover:bg-green-700 text-white text-[10px] uppercase tracking-wider text-center flex items-center justify-center gap-2 rounded">
-                                        <template x-if="submitting">
-                                            <span>Procesando...</span>
-                                        </template>
-                                        <template x-if="!submitting">
-                                            <span>Confirmar Pedido por WhatsApp</span>
-                                        </template>
-                                    </button>
-                                    <button @click="checkoutStep = 1" class="w-full py-2 px-3 font-bold bg-gray-100 hover:bg-gray-200 text-gray-800 text-[10px] uppercase tracking-wider text-center rounded">
-                                        Volver al resumen
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+    @if(isset($sections) && $sections->isNotEmpty())
+        @foreach($sections as $section)
+            @if(View::exists("components.store-sections.{$section->type}"))
+                <div class="tribio-section-wrapper relative group" data-section-id="{{ $section->id }}" id="section-{{ $section->id }}">
+                    <div class="tribio-section-content">
+                        @include("components.store-sections.{$section->type}", ['data' => $section->data])
                     </div>
                 </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Slider / Hero Banner Section with Hex Sidebars -->
+            @endif
+        @endforeach
+        
+        @if(request()->query('editor'))
+            @include('components.store-sections.editor-scripts')
+        @endif
+    @else
+    <!-- Slider / Hero Banner Section (Style DercoMaq) -->
     <section class="relative bg-black border-b border-gray-900 overflow-hidden select-none">
-        <div class="grid grid-cols-12 w-full h-[320px] sm:h-[420px] lg:h-[500px]">
-            <!-- Left Honeycomb Sidebar -->
-            <div class="hidden md:block col-span-2 hex-bg border-r border-gray-900 relative">
-                <button class="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
-                    </svg>
-                </button>
+        <div class="relative w-full h-[540px] sm:h-[600px] lg:h-[680px] bg-black overflow-hidden group">
+            <!-- Background Image -->
+            <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+                 style="background-image: linear-gradient(rgba(0,0,0,0.25), rgba(0,0,0,0.55)), url('{{ asset('storage/images/tfl_parts_hero.png') }}');">
             </div>
 
-            <!-- Central Sunset Banner Slider -->
-            <div class="col-span-12 md:col-span-8 relative bg-cover bg-center flex items-center justify-center p-6 text-center"
-                 style="background-image: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.4)), url('{{ asset('storage/images/tfl_parts_hero.png') }}');">
-                <div class="space-y-4 max-w-2xl text-white">
-                    <h2 class="text-2xl sm:text-4xl lg:text-5xl font-black uppercase italic tracking-wider drop-shadow-md text-white">
-                        “Todo lo que hace <br class="hidden sm:block">
-                        que un tractor se mueva”
+            <!-- Content Overlay -->
+            <div class="absolute inset-0 flex flex-col justify-between p-8 sm:p-16 lg:p-24 text-left z-10">
+                <div>
+                    <span class="inline-block px-3 py-1 bg-[#E50914] text-white text-[10px] font-black uppercase tracking-widest italic rounded shadow-md">
+                        NUEVA LÍNEA B2B
+                    </span>
+                </div>
+
+                <!-- Title -->
+                <div class="space-y-6 sm:space-y-8 max-w-3xl">
+                    <h2 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold uppercase tracking-wider text-white leading-[1.15] drop-shadow-md">
+                        NUEVA LÍNEA DE <br class="hidden sm:block">
+                        REPUESTOS AGRÍCOLAS
                     </h2>
-                    <p class="text-xs sm:text-sm font-medium tracking-widest uppercase text-gray-200 drop-shadow">
+                    <p class="text-xs sm:text-sm font-bold uppercase tracking-widest text-gray-200 drop-shadow max-w-xl">
                         {{ $store->tagline }}
                     </p>
-                    <div class="pt-4">
-                        <a href="{{ route('store.catalog', $store->slug) }}" class="inline-block px-6 py-3 font-bold text-xs uppercase tracking-widest bg-[#E50914] hover:bg-red-700 text-white rounded transition-all">
-                            Explorar Repuestos
+                </div>
+
+                <!-- Bottom Action Button & Controls -->
+                <div class="flex items-end justify-between w-full">
+                    <div>
+                        <a href="{{ route('store.catalog', $store->slug) }}"
+                           class="inline-block px-8 py-3 bg-white hover:bg-gray-100 text-[#E50914] font-black text-xs uppercase tracking-widest transition-all rounded shadow-lg transform hover:-translate-y-0.5">
+                            VER PRODUCTOS
                         </a>
                     </div>
-                </div>
-            </div>
 
-            <!-- Right Honeycomb Sidebar -->
-            <div class="hidden md:block col-span-2 hex-bg border-l border-gray-900 relative">
-                <button class="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
-                    </svg>
-                </button>
+                    <!-- Slider Controls -->
+                    <div class="flex gap-2">
+                        <button class="w-10 h-10 border border-white/20 hover:border-white/50 text-white flex items-center justify-center rounded-full bg-black/20 hover:bg-black/40 transition-all">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
+                            </svg>
+                        </button>
+                        <button class="w-10 h-10 border border-white/20 hover:border-white/50 text-white flex items-center justify-center rounded-full bg-black/20 hover:bg-black/40 transition-all">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
     <!-- Core Features Section -->
-    <section class="py-16 bg-white border-b border-gray-100">
+    <section class="py-12 bg-white border-b border-gray-100">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-10 animate-fade-in-up">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Expedited Shipping -->
-                <div class="flex items-start gap-5">
-                    <div class="p-3 border border-red-500 rounded-xl text-red-600 shrink-0">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="flex items-center gap-5 p-6 rounded-xl border border-gray-100 hover:border-red-500/20 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group bg-gray-50/50">
+                    <div class="p-3 bg-red-50 border border-red-200 rounded-xl text-[#E50914] shrink-0 group-hover:bg-[#E50914] group-hover:text-white group-hover:scale-110 transition-all duration-300">
+                        <svg class="w-6 h-6 transform group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 011 1v2.5a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5V16m5 0h2a1 1 0 001-1v-4a1 1 0 00-.293-.707l-2-2A1 1 0 0016.5 8H14M14 16a2 2 0 11-4 0M6 16a2 2 0 11-4 0"/>
                         </svg>
                     </div>
-                    <div class="space-y-2">
-                        <h4 class="text-sm font-black uppercase tracking-wider text-gray-900">ENVÍO RÁPIDO</h4>
-                        <p class="text-xs text-gray-500 leading-relaxed font-semibold">
-                            Preparamos minuciosamente tus pedidos y los despachamos de inmediato con nuestros transportistas de confianza, garantizando una entrega rápida y segura. Tu satisfacción es nuestra prioridad.
-                        </p>
+                    <div>
+                        <h4 class="text-xs sm:text-sm font-black uppercase tracking-widest text-gray-900 group-hover:text-[#E50914] transition-colors duration-300">
+                            ENVÍO RÁPIDO Y GARANTIZADO
+                        </h4>
                     </div>
                 </div>
 
                 <!-- Professional Support -->
-                <div class="flex items-start gap-5">
-                    <div class="p-3 border border-red-500 rounded-xl text-red-600 shrink-0">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="flex items-center gap-5 p-6 rounded-xl border border-gray-100 hover:border-red-500/20 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group bg-gray-50/50">
+                    <div class="p-3 bg-red-50 border border-red-200 rounded-xl text-[#E50914] shrink-0 group-hover:bg-[#E50914] group-hover:text-white group-hover:scale-110 transition-all duration-300">
+                        <svg class="w-6 h-6 transform group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/>
                         </svg>
                     </div>
-                    <div class="space-y-2">
-                        <h4 class="text-sm font-black uppercase tracking-wider text-gray-900">SOPORTE PROFESIONAL</h4>
-                        <p class="text-xs text-gray-500 leading-relaxed font-semibold">
-                            Nuestro equipo de soporte dedicado está a tu servicio los 7 días de la semana, asegurando una asistencia rápida y personalizada siempre que lo necesites.
-                        </p>
+                    <div>
+                        <h4 class="text-xs sm:text-sm font-black uppercase tracking-widest text-gray-900 group-hover:text-[#E50914] transition-colors duration-300">
+                            SOPORTE PROFESIONAL B2B
+                        </h4>
                     </div>
                 </div>
 
                 <!-- Convenient Payment Solutions -->
-                <div class="flex items-start gap-5">
-                    <div class="p-3 border border-red-500 rounded-xl text-red-600 shrink-0">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="flex items-center gap-5 p-6 rounded-xl border border-gray-100 hover:border-red-500/20 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group bg-gray-50/50">
+                    <div class="p-3 bg-red-50 border border-red-200 rounded-xl text-[#E50914] shrink-0 group-hover:bg-[#E50914] group-hover:text-white group-hover:scale-110 transition-all duration-300">
+                        <svg class="w-6 h-6 transform group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
                         </svg>
                     </div>
-                    <div class="space-y-2">
-                        <h4 class="text-sm font-black uppercase tracking-wider text-gray-900">MÉTODOS DE PAGO SEGUROS</h4>
-                        <p class="text-xs text-gray-500 leading-relaxed font-semibold">
-                            Ofrecemos una variedad de opciones de pago seguras y flexibles, adaptándonos a transferencias, depósitos y tarjetas bancarias para garantizar un proceso de cotización sencillo.
-                        </p>
+                    <div>
+                        <h4 class="text-xs sm:text-sm font-black uppercase tracking-widest text-gray-900 group-hover:text-[#E50914] transition-colors duration-300">
+                            MÉTODOS DE PAGO SEGUROS
+                        </h4>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Banner "TODO LO QUE NECESITAS ESTÁ A UN SOLO CLIC" -->
-    <section class="py-10 bg-gray-50 border-b border-gray-100">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-            <h3 class="text-xl sm:text-2xl lg:text-3xl font-black uppercase tracking-wider text-gray-900">
-                TODO LO QUE NECESITAS ESTÁ <span class="text-[#E50914]">A UN SOLO CLIC</span>
-            </h3>
-            <p class="text-xs text-gray-500 max-w-xl mx-auto leading-relaxed">
-                Accede a nuestro catálogo de distribución B2B y cotiza en línea directo a nuestro WhatsApp de atención rápida.
-            </p>
+    <!-- Brands Carousel Section -->
+    <section class="py-10 bg-white border-b border-gray-100 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-5 text-center">
+            <span class="text-[9px] font-black uppercase tracking-widest text-[#E50914] block">MARCAS QUE DISTRIBUIMOS</span>
+            <h4 class="text-xs sm:text-sm font-black uppercase tracking-widest text-gray-900 mt-1">
+                Compatibilidad total con las principales maquinarias del mercado
+            </h4>
+        </div>
+        
+        <!-- Infinite Scrolling Logo Bar -->
+        <div class="relative w-full flex overflow-x-hidden group bg-gray-50/30 py-6 border-y border-gray-100">
+            <style>
+                @keyframes marquee {
+                    0% { transform: translateX(0%); }
+                    100% { transform: translateX(-50%); }
+                }
+                .animate-marquee {
+                    display: flex;
+                    width: max-content;
+                    animation: marquee 25s linear infinite;
+                }
+                .animate-marquee:hover {
+                    animation-play-state: paused;
+                }
+            </style>
+            <!-- Double the list for seamless looping -->
+            <div class="animate-marquee gap-16 items-center flex select-none">
+                <!-- Brand items -->
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic font-serif">JOHN DEERE</span>
+                </div>
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic font-mono">PERKINS</span>
+                </div>
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic">MASSEY FERGUSON</span>
+                </div>
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic font-sans font-black">CUMMINS</span>
+                </div>
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic font-semibold">DONALDSON</span>
+                </div>
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic font-mono font-bold">EATON</span>
+                </div>
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic font-serif">NEW HOLLAND</span>
+                </div>
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic font-black">CASE IH</span>
+                </div>
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic font-semibold">CATERPILLAR</span>
+                </div>
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic font-serif font-black">VALTRA</span>
+                </div>
+                
+                <!-- Repeated list for loop -->
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic font-serif">JOHN DEERE</span>
+                </div>
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic font-mono">PERKINS</span>
+                </div>
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic">MASSEY FERGUSON</span>
+                </div>
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic font-sans font-black">CUMMINS</span>
+                </div>
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic font-semibold">DONALDSON</span>
+                </div>
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic font-mono font-bold">EATON</span>
+                </div>
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic font-serif">NEW HOLLAND</span>
+                </div>
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic font-black">CASE IH</span>
+                </div>
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic font-semibold">CATERPILLAR</span>
+                </div>
+                <div class="flex flex-col items-center justify-center min-w-[140px] text-gray-400 hover:text-[#E50914] transition-colors duration-300">
+                    <span class="text-sm sm:text-base font-extrabold tracking-widest uppercase italic font-serif font-black">VALTRA</span>
+                </div>
+            </div>
         </div>
     </section>
 
-    <!-- Categories / Sections -->
-    <section class="py-12 bg-white">
+    <!-- Categories / Sections (Style DercoMaq) -->
+    <section class="py-16 bg-white border-b border-gray-100">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="border-b border-gray-200 pb-4 mb-8">
-                <h2 class="text-xl font-black uppercase tracking-widest text-gray-900">Categorías de Repuestos</h2>
+            <!-- Section Header with red vertical line -->
+            <div class="border-l-4 border-[#E50914] pl-4 mb-10 text-left">
+                <span class="text-[10px] font-black uppercase tracking-widest text-[#E50914] block mb-1">CATEGORÍAS DE REPUESTOS</span>
+                <h2 class="text-xl sm:text-2xl font-black uppercase tracking-tight text-gray-900">
+                    Explora Nuestras Líneas Especializadas
+                </h2>
+                <p class="text-xs text-gray-500 font-semibold mt-1">
+                    Componentes garantizados y soporte técnico al alcance de todos.
+                </p>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in-up">
+
+            <!-- 5-Column Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 animate-fade-in-up">
+                @php
+                    $categoryBackgrounds = [
+                        'repuestos-de-tractores' => 'https://images.unsplash.com/photo-1594913785162-e6785b4938a2?auto=format&fit=crop&q=80&w=600',
+                        'motores-y-partes'       => 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&q=80&w=600',
+                        'retenes-y-sellos'       => 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&q=80&w=600',
+                        'sistemas-hidraulicos'   => 'https://images.unsplash.com/photo-1616401784845-180882ba9ba8?auto=format&fit=crop&q=80&w=600',
+                    ];
+
+                    $categoryDescriptions = [
+                        'repuestos-de-tractores' => 'Componentes premium de motor, embrague y transmisión.',
+                        'motores-y-partes'       => 'Pistones, camisas y empaquetaduras de alta durabilidad.',
+                        'retenes-y-sellos'       => 'O-rings y sellos hidráulicos de vitón y nitrilo.',
+                        'sistemas-hidraulicos'   => 'Bombas hidráulicas y mangueras R2 de alta presión.',
+                    ];
+                @endphp
+
                 @foreach($categories as $cat)
-                    <a href="{{ route('store.catalog', [$store->slug, 'category' => $cat->slug]) }}" class="p-6 rounded-lg border border-gray-200 hover:border-[#E50914] bg-white transition-all flex flex-col justify-between group shadow-sm">
-                        <div>
-                            @if($cat->slug === 'repuestos-de-tractores')
-                                <svg class="w-7 h-7 text-gray-400 group-hover:text-[#E50914] transition-colors mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 17a3 3 0 1 0 6 0a3 3 0 1 0 -6 0 M13 17a5 5 0 1 0 10 0a5 5 0 1 0 -10 0 M9 14h6 M18 12V8h-5v4 M9 14V10h4"/>
-                                </svg>
-                            @elseif($cat->slug === 'motores-y-partes')
-                                <svg class="w-7 h-7 text-gray-400 group-hover:text-[#E50914] transition-colors mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                                </svg>
-                            @elseif($cat->slug === 'retenes-y-sellos')
-                                <svg class="w-7 h-7 text-gray-400 group-hover:text-[#E50914] transition-colors mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.5"/>
-                                    <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="1.5"/>
-                                </svg>
-                            @elseif($cat->slug === 'sistemas-hidraulicos')
-                                <svg class="w-7 h-7 text-gray-400 group-hover:text-[#E50914] transition-colors mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8M12 4v16M4 20h16"/>
-                                </svg>
-                            @else
-                                <svg class="w-7 h-7 text-gray-400 group-hover:text-[#E50914] transition-colors mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                                </svg>
-                            @endif
-                            <h3 class="text-xs font-black uppercase tracking-wider text-gray-900 group-hover:text-[#E50914] transition-colors">{{ $cat->name }}</h3>
+                    @php
+                        $bgImg = $categoryBackgrounds[$cat->slug] ?? 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&q=80&w=600';
+                        $desc = $categoryDescriptions[$cat->slug] ?? 'Repuestos premium de alta calidad garantizada.';
+                    @endphp
+                    <a href="{{ route('store.catalog', [$store->slug, 'category' => $cat->slug]) }}" 
+                       class="relative overflow-hidden group rounded-xl h-[340px] flex flex-col justify-between p-6 shadow-md hover:shadow-xl transition-all duration-300">
+                        
+                        <!-- Background Image -->
+                        <div class="absolute inset-0 w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+                             style="background-image: url('{{ $bgImg }}');">
                         </div>
-                        <div class="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
-                            <span class="text-[9px] text-gray-400 font-extrabold uppercase tracking-widest group-hover:text-[#E50914] transition-colors">VER REPUESTOS</span>
-                            <svg class="w-3.5 h-3.5 text-gray-400 group-hover:text-[#E50914] group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
-                            </svg>
+
+                        <!-- Dark Overlay -->
+                        <div class="absolute inset-0 bg-black/60 group-hover:bg-black/75 transition-colors duration-300 z-0"></div>
+
+                        <!-- Central Icon & Title (Normal State) -->
+                        <div class="relative z-10 flex flex-col items-center justify-center text-center my-auto space-y-4">
+                            <!-- Thin white line-art SVG Icon -->
+                            <div class="w-16 h-16 rounded-full border border-white/20 flex items-center justify-center bg-white/5 group-hover:bg-white/10 transition-colors">
+                                @if($cat->slug === 'repuestos-de-tractores')
+                                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 17a3 3 0 1 0 6 0a3 3 0 1 0 -6 0 M13 17a5 5 0 1 0 10 0a5 5 0 1 0 -10 0 M9 14h6 M18 12V8h-5v4 M9 14V10h4"/>
+                                    </svg>
+                                @elseif($cat->slug === 'motores-y-partes')
+                                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                    </svg>
+                                @elseif($cat->slug === 'retenes-y-sellos')
+                                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.5"/>
+                                        <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="1.5"/>
+                                    </svg>
+                                @elseif($cat->slug === 'sistemas-hidraulicos')
+                                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8M12 4v16M4 20h16"/>
+                                    </svg>
+                                @else
+                                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                    </svg>
+                                @endif
+                            </div>
+                            
+                            <h3 class="text-xs font-black uppercase tracking-wider text-white px-2">
+                                {{ $cat->name }}
+                            </h3>
+                        </div>
+
+                        <!-- Hover Details & Button -->
+                        <div class="relative z-10 w-full flex flex-col items-center space-y-4 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-300 pb-2">
+                            <p class="text-[10px] text-gray-300 font-bold text-center px-4 leading-normal">
+                                {{ $desc }}
+                            </p>
+                            <span class="px-4 py-2 bg-[#E50914] text-white text-[9px] font-black uppercase tracking-widest rounded hover:bg-red-700 transition-colors shadow-lg">
+                                VER PRODUCTOS
+                            </span>
                         </div>
                     </a>
                 @endforeach
+
+                <!-- 5th Column Card: Servicio y Soporte Técnico B2B (Static) -->
+                @if($store->whatsapp_phone)
+                    <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $store->whatsapp_phone) }}?text={{ urlencode('Hola, me gustaría solicitar servicio técnico o asesoría sobre repuestos.') }}"
+                       target="_blank"
+                       class="relative overflow-hidden group rounded-xl h-[340px] flex flex-col justify-between p-6 shadow-md hover:shadow-xl transition-all duration-300">
+                        
+                        <!-- Background Image -->
+                        <div class="absolute inset-0 w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+                             style="background-image: url('https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=600');">
+                        </div>
+
+                        <!-- Dark Overlay -->
+                        <div class="absolute inset-0 bg-black/60 group-hover:bg-black/75 transition-colors duration-300 z-0"></div>
+
+                        <!-- Central Icon & Title (Normal State) -->
+                        <div class="relative z-10 flex flex-col items-center justify-center text-center my-auto space-y-4">
+                            <!-- Thin white line-art SVG Icon for Wrench/Tools -->
+                            <div class="w-16 h-16 rounded-full border border-white/20 flex items-center justify-center bg-white/5 group-hover:bg-white/10 transition-colors">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.42 15.17L17.25 21A1.5 1.5 0 0020 18.75l-5.83-5.83M11.42 15.17a3 3 0 11-4.24-4.24M11.42 15.17L18.4 8.2a1.5 1.5 0 012.12 0l1.28 1.28a1.5 1.5 0 010 2.12l-7.4 7.4M7.18 10.93L1.5 16.6a1.5 1.5 0 002.68 2.68l5.7-5.7M7.18 10.93a3 3 0 11-4.24-4.24"/>
+                                </svg>
+                            </div>
+                            
+                            <h3 class="text-xs font-black uppercase tracking-wider text-white px-2">
+                                Soporte & Asesoría B2B
+                            </h3>
+                        </div>
+
+                        <!-- Hover Details & Button -->
+                        <div class="relative z-10 w-full flex flex-col items-center space-y-4 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-300 pb-2">
+                            <p class="text-[10px] text-gray-300 font-bold text-center px-4 leading-normal">
+                                Asesoría técnica inmediata en campo y cotizaciones especiales.
+                            </p>
+                            <span class="px-4 py-2 bg-[#16A34A] text-white text-[9px] font-black uppercase tracking-widest rounded hover:bg-green-700 transition-colors shadow-lg">
+                                CONSULTAR WHATSAPP
+                            </span>
+                        </div>
+                    </a>
+                @endif
             </div>
+        </div>
+    </section>
+
+    <!-- Featured Products Section -->
+    <section class="py-16 bg-gray-50 border-b border-gray-100 overflow-hidden" 
+             x-data="{
+                 scrollNext() {
+                     const container = this.$refs.carousel;
+                     if (!container) return;
+                     const cardWidth = container.firstElementChild.getBoundingClientRect().width;
+                     container.scrollBy({ left: cardWidth + 24, behavior: 'smooth' });
+                 },
+                 scrollPrev() {
+                     const container = this.$refs.carousel;
+                     if (!container) return;
+                     const cardWidth = container.firstElementChild.getBoundingClientRect().width;
+                     container.scrollBy({ left: -(cardWidth + 24), behavior: 'smooth' });
+                 }
+             }">
+        <style>
+            .no-scrollbar::-webkit-scrollbar {
+                display: none;
+            }
+            .no-scrollbar {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+        </style>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Section Header with red vertical line and carousel controls -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-l-4 border-[#E50914] pl-4 mb-10 text-left">
+                <div>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-[#E50914] block mb-1">LO MÁS SOLICITADO</span>
+                    <h2 class="text-xl sm:text-2xl font-black uppercase tracking-tight text-gray-900">
+                        Productos Destacados & Repuestos Premium
+                    </h2>
+                    <p class="text-xs text-gray-500 font-semibold mt-1">
+                        Componentes de alta durabilidad garantizada para tu maquinaria.
+                    </p>
+                </div>
+                <div class="flex items-center gap-4 mt-4 sm:mt-0 self-start sm:self-auto">
+                    <a href="{{ route('store.catalog', $store->slug) }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-black hover:bg-gray-800 text-white font-black text-[10px] uppercase tracking-wider rounded transition-colors shadow-sm shrink-0">
+                        Ver Catálogo
+                    </a>
+                    <!-- Carousel Navigation Controls -->
+                    <div class="flex gap-2">
+                        <button @click="scrollPrev()" class="w-10 h-10 border border-gray-200 hover:border-gray-400 text-gray-700 flex items-center justify-center rounded-full bg-white hover:bg-gray-50 transition-all shadow-sm shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
+                            </svg>
+                        </button>
+                        <button @click="scrollNext()" class="w-10 h-10 border border-gray-200 hover:border-gray-400 text-gray-700 flex items-center justify-center rounded-full bg-white hover:bg-gray-50 transition-all shadow-sm shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Carousel -->
+            @if($featuredProducts->isEmpty())
+                <div class="text-center py-12 bg-white rounded-xl border border-gray-200 shadow-sm">
+                    <svg class="w-12 h-12 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    </svg>
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-widest block">No hay productos destacados por el momento</span>
+                </div>
+            @else
+                <div x-ref="carousel" class="flex gap-6 overflow-x-auto scroll-smooth snap-x snap-mandatory no-scrollbar pb-6 select-none">
+                    @foreach($featuredProducts as $product)
+                        @php
+                            $detectedBrand = 'EATON';
+                            if (str_contains(strtoupper($product->name), 'JOHN DEERE')) {
+                                $detectedBrand = 'JOHN DEERE';
+                            } elseif (str_contains(strtoupper($product->name), 'PERKINS')) {
+                                $detectedBrand = 'PERKINS';
+                            } elseif (str_contains(strtoupper($product->name), 'CUMMINS')) {
+                                $detectedBrand = 'CUMMINS';
+                            } elseif (str_contains(strtoupper($product->name), 'MASSEY FERGUSON')) {
+                                $detectedBrand = 'MASSEY FERGUSON';
+                            } elseif (str_contains(strtoupper($product->name), 'DONALDSON')) {
+                                $detectedBrand = 'DONALDSON';
+                            }
+                        @endphp
+                        <div class="snap-start shrink-0 w-full sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between group relative">
+                            
+                            <!-- Sale Discount Badge -->
+                            @if($product->compare_price && $product->compare_price > $product->price)
+                                @php
+                                    $discount = round((($product->compare_price - $product->price) / $product->compare_price) * 100);
+                                @endphp
+                                <span class="absolute top-3 left-3 px-2 py-1 text-[10px] font-black text-white bg-[#E50914] rounded z-10 shadow-sm">
+                                    - {{ $discount }}%
+                                </span>
+                            @endif
+
+                            <div>
+                                <!-- Image Box -->
+                                <div class="aspect-square w-full bg-gray-50 flex items-center justify-center p-6 border-b border-gray-100 relative overflow-hidden">
+                                    @if($product->image_path)
+                                        <img src="{{ $product->image_url }}" alt="{{ $product->name }}" class="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300">
+                                    @else
+                                        <div class="text-center text-gray-300">
+                                            <svg class="w-12 h-12 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                            </svg>
+                                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Imagen no disponible</span>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <!-- Content Info -->
+                                <div class="p-5 space-y-2">
+                                    <a href="{{ route('store.product', [$store->slug, $product->slug]) }}" class="block font-black text-gray-800 hover:text-[#E50914] text-xs uppercase tracking-wide leading-snug line-clamp-2 transition-colors">
+                                        {{ $product->name }}
+                                    </a>
+                                    <div class="text-[11px] text-gray-600 font-bold uppercase space-y-0.5">
+                                        <p>SKU: <span class="text-gray-900 font-medium">{{ $product->sku ?? 'N/D' }}</span></p>
+                                        <p>MARCA: <span class="text-gray-900 font-medium">{{ $detectedBrand }}</span></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Price and Add Button -->
+                            <div class="p-5 pt-0">
+                                <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+                                    <div>
+                                        @if($product->compare_price && $product->compare_price > $product->price)
+                                            <span class="block text-sm font-black text-[#E50914]">S/. {{ number_format($product->price, 2) }}</span>
+                                            <span class="text-[10px] text-gray-400 line-through">S/. {{ number_format($product->compare_price, 2) }}</span>
+                                        @else
+                                            <span class="block text-sm font-black text-gray-800">S/. {{ number_format($product->price, 2) }}</span>
+                                        @endif
+                                    </div>
+                                    <button @click="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->price }}, '{{ $product->image_path ? $product->image_url : '' }}')"
+                                            class="px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-wider bg-[#E50914] hover:bg-red-700 text-white shadow-sm transition-colors">
+                                        + AÑADIR
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
         </div>
     </section>
 
@@ -515,8 +667,15 @@
     <!-- Photo Gallery / Showroom Section -->
     <section id="galeria" class="py-16 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="border-b border-gray-200 pb-4 mb-12">
-                <h2 class="text-sm font-black uppercase tracking-widest text-gray-900">GALERÍA / PORTAFOLIO</h2>
+            <!-- Section Header with red vertical line -->
+            <div class="border-l-4 border-[#E50914] pl-4 mb-10 text-left">
+                <span class="text-[10px] font-black uppercase tracking-widest text-[#E50914] block mb-1">STOCK FOTOGRÁFICO DE REPUESTOS</span>
+                <h2 class="text-xl sm:text-2xl font-black uppercase tracking-tight text-gray-900">
+                    Repuestos para Todo Tipo de Tractores & Maquinaria
+                </h2>
+                <p class="text-xs text-gray-500 font-semibold mt-1">
+                    Visualiza nuestro stock físico en almacén: lotes de repuestos agrícolas y componentes clasificados por marca.
+                </p>
             </div>
 
             @if($galleryItems->isEmpty())
@@ -579,74 +738,10 @@
             </div>
         </div>
     </section>
+    @endif
 
     <!-- Footer / Contact -->
-    <footer id="contacto" class="bg-gray-900 text-white pt-16 pb-8 scroll-mt-20">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 pb-12 border-b border-gray-800">
-                <!-- Brand Info -->
-                <div class="space-y-4">
-                    <a href="#" class="flex items-center">
-                        @if($store->logo_path)
-                            <img src="{{ $store->logo_url }}" alt="{{ $store->name }}" class="h-10 w-auto bg-white p-1 rounded">
-                        @else
-                            <span class="text-xl font-black text-white">TFL <span class="text-[#E50914]">PARTS</span></span>
-                        @endif
-                    </a>
-                    <p class="text-[11px] text-gray-400 leading-relaxed font-semibold">
-                        Importadores y distribuidores premium de repuestos para maquinaria agrícola. Garantizamos durabilidad y un despacho inmediato.
-                    </p>
-                </div>
-
-                <!-- Fast Links -->
-                <div class="space-y-4">
-                    <h4 class="text-xs font-black uppercase tracking-widest text-[#E50914]">CORPORATIVO</h4>
-                    <ul class="space-y-2 text-[11px] text-gray-400 uppercase tracking-wider font-bold">
-                        <li><a href="#" class="hover:text-white transition-colors">HOME</a></li>
-                        <li><a href="#nosotros" class="hover:text-white transition-colors">CORPORATE</a></li>
-                        <li><a href="{{ route('store.catalog', $store->slug) }}" class="hover:text-white transition-colors">SHOWROOM</a></li>
-                        <li><a href="#galeria" class="hover:text-white transition-colors">GALERÍA</a></li>
-                    </ul>
-                </div>
-
-                <!-- Contact Detail -->
-                <div class="space-y-4">
-                    <h4 class="text-xs font-black uppercase tracking-widest text-[#E50914]">CONTACTO</h4>
-                    <ul class="space-y-2 text-[11px] text-gray-400 font-semibold uppercase tracking-wider">
-                        @if($store->phone)
-                            <li>VENTAS: {{ $store->phone }}</li>
-                        @endif
-                        @if($store->whatsapp_phone)
-                            <li>WHATSAPP: +{{ $store->whatsapp_phone }}</li>
-                        @endif
-                        @if($store->email)
-                            <li>CORREO: {{ $store->email }}</li>
-                        @endif
-                        <li>DIRECCIÓN: {{ $store->address ?? 'Chiclayo, Lambayeque' }}</li>
-                    </ul>
-                </div>
-
-                <!-- Socials -->
-                <div class="space-y-4">
-                    <h4 class="text-xs font-black uppercase tracking-widest text-[#E50914]">REDES SOCIALES</h4>
-                    <div class="flex gap-3 text-[11px] text-gray-400 font-bold uppercase tracking-wider">
-                        @if($store->facebook_url)
-                            <a href="{{ $store->facebook_url }}" target="_blank" class="hover:text-white">Facebook</a>
-                        @endif
-                        @if($store->instagram_url)
-                            <a href="{{ $store->instagram_url }}" target="_blank" class="hover:text-white">Instagram</a>
-                        @endif
-                    </div>
-                </div>
-            </div>
-
-            <!-- Bottom footer -->
-            <div class="flex flex-col sm:flex-row justify-between items-center pt-8 gap-4 text-xs text-gray-500">
-                <p>© {{ date('Y') }} {{ $store->name }} — Chiclayo. Todos los derechos reservados.</p>
-                <p>Desarrollado en la plataforma multi-tienda <a href="{{ route('home') }}" class="text-gray-400 hover:text-white underline">Tribio</a></p>
-            </div>
-        </div>
-    </footer>
+    <!-- Dynamic Footer will be rendered in the section loop -->
 
     <!-- Floating Toast Notification -->
     <div x-show="showToast"

@@ -8,6 +8,7 @@ use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\StoreSettingsController;
 use App\Http\Controllers\Dashboard\ProductController;
 use App\Http\Controllers\Dashboard\CategoryController;
+use App\Http\Controllers\Dashboard\BrandController;
 use App\Http\Controllers\Dashboard\GalleryController;
 use App\Http\Controllers\Dashboard\OrderController as DashboardOrderController;
 use App\Http\Controllers\Dashboard\InventoryController;
@@ -15,6 +16,8 @@ use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AdminStoreController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\StoreController;
+use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\Dashboard\StoreBuilderController;
 
 // ═══════════════════════════════════════════════════════════════
 //  PORTAL PÚBLICO TRIBIO
@@ -22,6 +25,9 @@ use App\Http\Controllers\StoreController;
 Route::get('/', [PublicController::class, 'home'])->name('home');
 Route::get('/buscar', [PublicController::class, 'search'])->name('search');
 Route::get('/negocios', [PublicController::class, 'directory'])->name('directory');
+Route::post('/plan/checkout', [SubscriptionController::class, 'checkout'])->name('plan.checkout');
+Route::get('/plan/callback', [SubscriptionController::class, 'callback'])->name('plan.callback');
+Route::post('/plan/webhook', [SubscriptionController::class, 'webhook'])->name('plan.webhook');
 
 // ═══════════════════════════════════════════════════════════════
 //  AUTENTICACIÓN
@@ -49,7 +55,19 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     Route::post('/tienda', [StoreSettingsController::class, 'update'])->name('store.update');
     Route::post('/tienda/logo', [StoreSettingsController::class, 'uploadLogo'])->name('store.logo');
     Route::post('/tienda/portada', [StoreSettingsController::class, 'uploadCover'])->name('store.cover');
+    Route::get('/tienda/plantillas', [StoreSettingsController::class, 'templates'])->name('store.templates');
     Route::post('/tienda/plantilla', [StoreSettingsController::class, 'updateTemplate'])->name('store.template');
+
+    // Constructor visual
+    Route::get('/tienda/constructor', [StoreBuilderController::class, 'index'])->name('store.builder');
+    Route::post('/tienda/constructor/secciones', [StoreBuilderController::class, 'store'])->name('store.builder.store');
+    Route::put('/tienda/constructor/secciones/{id}', [StoreBuilderController::class, 'update'])->name('store.builder.update');
+    Route::delete('/tienda/constructor/secciones/{id}', [StoreBuilderController::class, 'destroy'])->name('store.builder.destroy');
+    Route::post('/tienda/constructor/publicar', [StoreBuilderController::class, 'publish'])->name('store.builder.publish');
+    Route::post('/tienda/constructor/reordenar', [StoreBuilderController::class, 'reorder'])->name('store.builder.reorder');
+    Route::post('/tienda/constructor/cargar-plantilla', [StoreBuilderController::class, 'loadFromTemplate'])->name('store.builder.load_template');
+    Route::post('/tienda/constructor/render-preview', [StoreBuilderController::class, 'renderPreview'])->name('store.builder.render_preview');
+    Route::post('/tienda/constructor/upload-image', [StoreBuilderController::class, 'uploadImage'])->name('store.builder.upload_image');
 
     // Productos CRUD
     Route::resource('productos', ProductController::class)->parameters(['productos' => 'product']);
@@ -57,6 +75,9 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     // Categorías
     Route::resource('categorias', CategoryController::class)->parameters(['categorias' => 'category']);
     Route::post('/categorias/reordenar', [CategoryController::class, 'reorder'])->name('categorias.reorder');
+
+    // Marcas
+    Route::resource('marcas', BrandController::class)->parameters(['marcas' => 'brand']);
 
     // Galería
     Route::get('/galeria', [GalleryController::class, 'index'])->name('galeria.index');
@@ -101,7 +122,30 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('admin')->name('admin.')
 });
 
 // ═══════════════════════════════════════════════════════════════
-//  TIENDAS PÚBLICAS
+//  TIENDAS PÚBLICAS EN DOMINIOS PROPIOS
+// ═══════════════════════════════════════════════════════════════
+$mainDomain = parse_url(config('app.url'), PHP_URL_HOST) ?? 'localhost';
+$excludedDomains = ['localhost', '127.0.0.1', '::1'];
+if (!in_array($mainDomain, $excludedDomains)) {
+    $excludedDomains[] = $mainDomain;
+}
+$excludedPattern = '^(?!(' . implode('|', array_map(function($d) {
+    return preg_quote($d, '#') . '|.*?\.' . preg_quote($d, '#');
+}, $excludedDomains)) . ')$).*';
+
+Route::domain('{custom_domain}')
+    ->where(['custom_domain' => $excludedPattern])
+    ->group(function () {
+        Route::get('/', [StoreController::class, 'show']);
+        Route::get('/catalogo', [StoreController::class, 'catalog']);
+        Route::get('/producto/{product:slug}', [StoreController::class, 'product']);
+        Route::get('/galeria', [StoreController::class, 'gallery']);
+        Route::post('/checkout', [StoreController::class, 'checkout']);
+        Route::get('/pedido/{order}/confirmacion', [StoreController::class, 'orderConfirmation']);
+    });
+
+// ═══════════════════════════════════════════════════════════════
+//  TIENDAS PÚBLICAS ESTÁNDAR (CON PREFIJO /tienda/{slug})
 // ═══════════════════════════════════════════════════════════════
 Route::prefix('tienda')->name('store.')->group(function () {
     Route::get('/{slug}', [StoreController::class, 'show'])->name('show');

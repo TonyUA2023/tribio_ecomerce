@@ -1,0 +1,553 @@
+/* 
+   Template: Elegant Refurbished (iStack Custom)
+   Design: Apple-Style, Minimalist, Premium, Glassmorphism 
+   Colors: Midnight Dark & Neon Cyan
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+    /* Base Colors - Light Theme */
+    --er-bg-light: #F5F5F7; /* Apple style light gray/white */
+    --er-bg-secondary-light: #FFFFFF;
+    --er-text-main-light: #1D1D1F;
+    --er-text-muted-light: #86868B;
+    --er-border-light: rgba(0, 0, 0, 0.1);
+
+    /* Accent Colors - Apple Blue */
+    --er-accent: #0066CC;
+    --er-accent-hover: #0077ED;
+    --er-accent-glow: rgba(0, 102, 204, 0.3);
+    --er-success: #34C759;
+    
+    /* Variables mapped to theme */
+    --bg-primary: var(--er-bg-light);
+    --bg-secondary: var(--er-bg-secondary-light);
+    --text-main: var(--er-text-main-light);
+    --text-muted: var(--er-text-muted-light);
+    --border-color: var(--er-border-light);
+
+    /* Typography */
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    
+    /* Spacing */
+    --space-xs: 0.5rem;
+    --space-sm: 1rem;
+    --space-md: 2rem;
+    --space-lg: 4rem;
+    --space-xl: 8rem;
+
+    /* Border Radius */
+    --radius-sm: 12px;
+    --radius-md: 20px;
+    --radius-lg: 32px;
+    
+    /* Transitions */
+    --transition-fast: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    --transition-slow: 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Base Styles */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--bg-primary);
+    color: var(--text-main);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+}
+
+a {
+    color: var(--er-accent);
+    text-decoration: none;
+    transition: color var(--transition-fast), text-shadow var(--transition-fast);
+}
+
+a:hover {
+    color: var(--er-accent-hover);
+    text-shadow: 0 0 8px var(--er-accent-glow);
+}
+
+/* Typography Utilities */
+.er-title-xl {
+    font-size: clamp(3rem, 8vw, 6rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    background: linear-gradient(135deg, #1D1D1F 0%, #434345 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: var(--space-sm);
+}
+
+.er-title-lg {
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+.er-title-md {
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.er-subtitle {
+    font-size: clamp(1.1rem, 2vw, 1.5rem);
+    color: var(--text-muted);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+}
+
+/* Layout Utilities */
+.er-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-md);
+}
+
+.er-section {
+    padding: var(--space-lg) 0;
+    position: relative;
+    z-index: 1;
+}
+
+.er-grid {
+    display: grid;
+    gap: var(--space-md);
+}
+
+.er-grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.er-grid-3 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+
+/* Buttons */
+.er-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.8rem 2rem;
+    border-radius: 980px; /* Apple pill shape */
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: none;
+    text-decoration: none;
+}
+
+.er-btn-primary {
+    background-color: var(--er-accent);
+    color: #fff;
+    box-shadow: 0 4px 15px var(--er-accent-glow);
+}
+
+.er-btn-primary:hover {
+    background-color: var(--er-accent-hover);
+    color: #fff;
+    box-shadow: 0 0 25px var(--er-accent-glow);
+    transform: scale(1.05);
+}
+
+.er-btn-secondary {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--text-main);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+}
+
+.er-btn-secondary:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    transform: scale(1.05);
+}
+
+/* Glassmorphism Product Card */
+.er-product-card {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    text-align: center;
+    transition: all var(--transition-fast);
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.er-product-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 100%;
+    background: linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0) 100%);
+    pointer-events: none;
+}
+
+.er-product-card:hover {
+    transform: translateY(-10px);
+    border-color: rgba(0, 102, 204, 0.3);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.08), 0 0 20px rgba(0, 102, 204, 0.05);
+}
+
+.er-product-img {
+    width: 100%;
+    max-width: 220px;
+    height: 250px;
+    object-fit: contain;
+    margin-bottom: var(--space-sm);
+    transition: transform var(--transition-fast);
+}
+
+.er-product-card:hover .er-product-img {
+    transform: scale(1.05);
+}
+
+.er-product-badge {
+    background-color: rgba(0, 102, 204, 0.1);
+    color: var(--er-accent);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.4rem 0.8rem;
+    border-radius: 980px;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: 1px solid rgba(0, 102, 204, 0.2);
+}
+
+/* Hero Section */
+.er-hero {
+    min-height: 90vh;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Dynamic glow effect in background */
+.er-hero::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60vw;
+    height: 60vw;
+    background: radial-gradient(circle, rgba(0, 102, 204, 0.05) 0%, rgba(255,255,255,0) 70%);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.er-hero-content {
+    position: relative;
+    z-index: 2;
+    animation: fadeUp var(--transition-slow);
+}
+
+/* Animations */
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-on-scroll {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.animate-on-scroll.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Form inputs */
+.er-input {
+    width: 100%;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background-color: rgba(255,255,255,0.05);
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 1rem;
+    transition: all var(--transition-fast);
+}
+
+.er-input:focus {
+    outline: none;
+    border-color: var(--er-accent);
+    box-shadow: 0 0 10px rgba(0,240,255,0.2);
+    background-color: rgba(255,255,255,0.1);
+}
+
+/* Header & Navigation */
+.er-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    transition: all var(--transition-fast);
+}
+
+.er-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 70px;
+}
+
+.er-logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+    letter-spacing: -0.02em;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+}
+
+.er-logo span {
+    color: var(--er-accent);
+}
+
+.er-nav-links {
+    display: flex;
+    list-style: none;
+    gap: 2rem;
+    margin: 0;
+    padding: 0;
+}
+
+.er-nav-links a {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+.er-nav-links a:hover {
+    color: var(--text-main);
+    text-shadow: none;
+}
+
+/* Footer */
+.er-footer {
+    background: #FFFFFF;
+    border-top: 1px solid rgba(0,0,0,0.05);
+    padding: var(--space-lg) 0 var(--space-md);
+    margin-top: auto;
+}
+
+.er-footer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.er-footer h4 {
+    color: var(--text-main);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+}
+
+.er-footer ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.er-footer ul li {
+    margin-bottom: 0.8rem;
+}
+
+.er-footer ul a {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+.er-footer ul a:hover {
+    color: var(--er-accent);
+}
+
+.er-footer-bottom {
+    text-align: center;
+    padding-top: var(--space-md);
+    border-top: 1px solid rgba(0,0,0,0.05);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+/* Swiper Slider Overrides */
+.swiper {
+    width: 100%;
+    height: 100%;
+}
+.swiper-slide {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+.swiper-pagination-bullet {
+    background: rgba(0,0,0,0.2);
+    opacity: 1;
+}
+.swiper-pagination-bullet-active {
+    background: var(--er-accent);
+    box-shadow: 0 0 10px var(--er-accent-glow);
+}
+.swiper-button-next, .swiper-button-prev {
+    color: var(--er-accent);
+}
+
+main {
+    padding-top: 70px;
+    min-height: calc(100vh - 70px);
+}
+
+/* Info Bar */
+.er-info-bar {
+    background-color: var(--er-accent);
+    color: #fff;
+    padding: var(--space-sm) 0;
+    margin-bottom: var(--space-md);
+    border-radius: var(--radius-sm);
+}
+
+.er-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-sm);
+    text-align: center;
+    align-items: center;
+}
+
+.er-info-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.er-info-item svg {
+    width: 2rem;
+    height: 2rem;
+    stroke-width: 1.5;
+}
+
+/* Promo Banner */
+.er-promo-banner {
+    background-color: #05050A; /* Dark background to stand out */
+    color: #fff;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    display: flex;
+    align-items: stretch;
+    margin: var(--space-lg) auto;
+    max-width: 1200px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+}
+
+.er-promo-content {
+    flex: 1;
+    padding: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+}
+
+.er-promo-image {
+    flex: 1;
+    background-image: url('https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-15-pro-model-unselect-gallery-2-202309?wid=5120&hei=2880&fmt=p-jpg&qlt=80&.v=1693010532212');
+    background-size: cover;
+    background-position: center;
+    min-height: 400px;
+}
+
+/* Testimonials */
+.er-testimonial-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+}
+
+.er-testimonial-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    margin-bottom: 1rem;
+    background-color: var(--er-accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 auto 1rem;
+    position: relative;
+}
+
+.er-testimonial-google {
+    position: absolute;
+    bottom: 0;
+    right: -5px;
+    background: #fff;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.er-stars {
+    color: #FFB800;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.er-testimonial-text {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Product Pricing */
+.er-price-old {
+    text-decoration: line-through;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-top: 0.2rem;
+}
+.er-price-new {
+    color: var(--er-accent);
+    font-weight: 700;
+    font-size: 1.2rem;
+}

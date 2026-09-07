@@ -21,15 +21,33 @@ class StoreSettingsController extends Controller
         return view('dashboard.store.edit', compact('store', 'templates'));
     }
 
+    public function templates()
+    {
+        $store = $this->getStore();
+        $templates = config('tribio.templates');
+        return view('dashboard.store.templates', compact('store', 'templates'));
+    }
+
     public function update(Request $request)
     {
         $store = $this->getStore();
 
+        // Sanitizar el dominio antes de la validación
+        if ($request->filled('custom_domain')) {
+            $domain = $request->input('custom_domain');
+            $domain = preg_replace('#^https?://#i', '', $domain);
+            $domain = explode('/', $domain)[0];
+            $domain = strtolower(trim($domain));
+            $request->merge(['custom_domain' => $domain]);
+        }
+
         $request->validate([
             'name'           => 'required|string|max:255',
+            'slug'           => 'nullable|string|max:150|alpha_dash|unique:stores,slug,' . $store->id,
             'tagline'        => 'nullable|string|max:150',
             'description'    => 'nullable|string|max:1000',
-            'category'       => 'required|string',
+            'category'       => 'required|string|in:moda,calzado,tecnologia,alimentos,joyeria,hogar,deporte,salud,servicios,otros',
+            'build_mode'     => 'required|string|in:builder,custom_code',
             'whatsapp_phone' => 'nullable|string|max:20',
             'phone'          => 'nullable|string|max:20',
             'email'          => 'nullable|email',
@@ -41,14 +59,46 @@ class StoreSettingsController extends Controller
             'meta_title'     => 'nullable|string|max:70',
             'meta_description'=> 'nullable|string|max:160',
             'distributors'   => 'nullable|array',
+            'checkout_mode'  => 'required|string|in:whatsapp,card',
+            'payment_gateway'=> 'nullable|string|in:culqi,mercado_pago',
+            'gateway_public_key' => 'nullable|string|max:255',
+            'gateway_private_key'=> 'nullable|string|max:255',
+            'gateway_access_token'=> 'nullable|string',
+            'custom_domain'  => [
+                'nullable',
+                'string',
+                'max:255',
+                'unique:stores,custom_domain,' . $store->id,
+                'regex:/^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(:[0-9]{1,5})?$/'
+            ]
+        ], [
+            'custom_domain.regex' => 'El formato del dominio no es válido. Debe ser similar a "mitienda.com" (sin http:// ni / al final).',
+            'custom_domain.unique' => 'Este dominio ya está configurado en otra tienda.',
         ]);
 
-        $store->update($request->only([
-            'name', 'tagline', 'description', 'category',
+        $data = $request->only([
+            'name', 'tagline', 'description', 'category', 'build_mode',
             'whatsapp_phone', 'phone', 'email', 'address', 'city',
             'facebook_url', 'instagram_url', 'tiktok_url',
             'meta_title', 'meta_description', 'distributors',
-        ]));
+            'custom_domain',
+            'checkout_mode', 'payment_gateway', 'gateway_public_key', 'gateway_private_key', 'gateway_access_token',
+        ]);
+
+        if ($request->filled('slug')) {
+            $data['slug'] = \Illuminate\Support\Str::slug($request->slug);
+        } elseif ($request->name !== $store->name) {
+            $slug = \Illuminate\Support\Str::slug($request->name);
+            $originalSlug = $slug;
+            $counter = 1;
+            while (\App\Models\Store::where('slug', $slug)->where('id', '!=', $store->id)->exists()) {
+                $slug = $originalSlug . '-' . $counter;
+                $counter++;
+            }
+            $data['slug'] = $slug;
+        }
+
+        $store->update($data);
 
         return back()->with('success', 'Información de la tienda actualizada correctamente.');
     }
@@ -92,7 +142,7 @@ class StoreSettingsController extends Controller
     public function updateTemplate(Request $request)
     {
         $request->validate([
-            'template_name'    => 'required|string|in:elegant-dark,minimal-light,vibrant-fresh,industrial-light',
+            'template_name'    => 'required|string|in:elegant-dark,minimal-light,vibrant-fresh,industrial-light,elegant-refurbished',
             'accent_color'     => 'nullable|string|max:7',
             'secondary_color'  => 'nullable|string|max:7',
             'hero_carousel'    => 'nullable|boolean',

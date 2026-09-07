@@ -11,11 +11,12 @@ class Product extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'store_id', 'category_id', 'name', 'slug', 'description', 'short_description', 'sku',
+        'store_id', 'category_id', 'brand_id', 'parent_id', 'name', 'slug', 'description', 'short_description', 'sku', 'origin_code',
         'price', 'compare_price', 'cost_price',
         'stock', 'track_stock', 'allow_backorder', 'low_stock_alert', 'unit',
         'image_path', 'gallery_images',
         'is_active', 'is_featured', 'is_new', 'is_digital',
+        'is_composite', 'composite_type', 'is_sold', 'sold_at',
         'weight', 'dimensions', 'tags', 'meta_title', 'meta_description',
         'views', 'sold_count', 'sort_order',
     ];
@@ -32,6 +33,9 @@ class Product extends Model
         'is_digital'      => 'boolean',
         'track_stock'     => 'boolean',
         'allow_backorder' => 'boolean',
+        'is_composite'    => 'boolean',
+        'is_sold'         => 'boolean',
+        'sold_at'         => 'datetime',
     ];
 
     // ─── Scopes ──────────────────────────────────────────────────
@@ -81,7 +85,77 @@ class Product extends Model
         return $this->track_stock && $this->stock > 0 && $this->stock <= $this->low_stock_alert;
     }
 
+    // ─── Lógica Financiera e Inventario Jerárquico ───────────────
+    public function getRootProduct(): Product
+    {
+        $current = $this;
+        while ($current->parent_id) {
+            $parent = Product::find($current->parent_id);
+            if (!$parent) break;
+            $current = $parent;
+        }
+        return $current;
+    }
+
+    public function getTotalCostAttribute(): float
+    {
+        // El costo solo se asume del producto raíz
+        return (float) ($this->cost_price ?? 0);
+    }
+
+    public function getRevenueGeneratedAttribute(): float
+    {
+        return $this->calculateRevenue();
+    }
+
+    protected function calculateRevenue(): float
+    {
+        $revenue = 0.0;
+        
+        // Si este producto individual está vendido, sumar su precio
+        if ($this->is_sold) {
+            $revenue += (float) $this->price;
+        }
+        
+        // Sumar recursivamente los ingresos de sus hijos
+        foreach ($this->children as $child) {
+            $revenue += $child->calculateRevenue();
+        }
+        
+        return $revenue;
+    }
+
+    public function getNetProfitAttribute(): float
+    {
+        if ($this->parent_id === null) {
+            // Producto raíz: Ganancia = Ingresos Acumulados - Costo Total de Compra
+            return $this->revenue_generated - $this->total_cost;
+        }
+        // Sub-ensamblaje: Ingresos acumulados de sus partes
+        return $this->revenue_generated;
+    }
+
     // ─── Relationships ───────────────────────────────────────────
+    public function parent()
+    {
+        return $this->belongsTo(Product::class, 'parent_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(Product::class, 'parent_id');
+    }
+
+    public function allChildren()
+    {
+        return $this->hasMany(Product::class, 'parent_id')->with('allChildren');
+    }
+
+    public function stateHistories()
+    {
+        return $this->hasMany(ProductStateHistory::class)->orderBy('created_at', 'desc');
+    }
+
     public function store()
     {
         return $this->belongsTo(Store::class);
@@ -90,6 +164,11 @@ class Product extends Model
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function brand()
+    {
+        return $this->belongsTo(Brand::class);
     }
 
     public function orderItems()

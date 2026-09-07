@@ -41,7 +41,8 @@ class ProductController extends Controller
     {
         $store      = $this->getStore();
         $categories = $store->categories;
-        return view('dashboard.products.create', compact('store', 'categories'));
+        $brands     = $store->brands;
+        return view('dashboard.products.create', compact('store', 'categories', 'brands'));
     }
 
     public function store(Request $request)
@@ -53,7 +54,9 @@ class ProductController extends Controller
             'description'       => 'nullable|string',
             'short_description' => 'nullable|string|max:200',
             'sku'               => 'nullable|string|max:50',
+            'origin_code'       => 'nullable|string|max:100',
             'category_id'       => 'nullable|integer|exists:categories,id',
+            'brand_id'          => 'nullable|integer|exists:brands,id',
             'price'             => 'required|numeric|min:0',
             'compare_price'     => 'nullable|numeric|min:0',
             'cost_price'        => 'nullable|numeric|min:0',
@@ -72,6 +75,22 @@ class ProductController extends Controller
 
         $data['store_id'] = $store->id;
         $data['slug']     = Str::slug($data['name']) . '-' . Str::random(4);
+
+        // Generar SKU único si no se ingresa
+        if (empty($data['sku'])) {
+            $prefix = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $store->slug), 0, 3));
+            if (empty($prefix)) {
+                $prefix = 'PROD';
+            }
+            $num = $store->products()->count() + 1;
+            do {
+                $sku = $prefix . '-' . str_pad($num, 4, '0', STR_PAD_LEFT);
+                $exists = Product::where('store_id', $store->id)->where('sku', $sku)->exists();
+                $num++;
+            } while ($exists);
+            $data['sku'] = $sku;
+        }
+
         $data['track_stock']   = $request->boolean('track_stock');
         $data['allow_backorder']= $request->boolean('allow_backorder');
         $data['is_active']     = $request->boolean('is_active', true);
@@ -116,8 +135,9 @@ class ProductController extends Controller
         $store = $this->getStore();
         abort_if($product->store_id !== $store->id, 403);
         $categories = $store->categories;
+        $brands     = $store->brands;
 
-        return view('dashboard.products.edit', compact('store', 'product', 'categories'));
+        return view('dashboard.products.edit', compact('store', 'product', 'categories', 'brands'));
     }
 
     public function update(Request $request, Product $product)
@@ -130,7 +150,9 @@ class ProductController extends Controller
             'description'       => 'nullable|string',
             'short_description' => 'nullable|string|max:200',
             'sku'               => 'nullable|string|max:50',
+            'origin_code'       => 'nullable|string|max:100',
             'category_id'       => 'nullable|integer|exists:categories,id',
+            'brand_id'          => 'nullable|integer|exists:brands,id',
             'price'             => 'required|numeric|min:0',
             'compare_price'     => 'nullable|numeric|min:0',
             'cost_price'        => 'nullable|numeric|min:0',

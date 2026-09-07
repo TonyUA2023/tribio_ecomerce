@@ -1,114 +1,264 @@
 @extends('layouts.dashboard')
 @section('title','Mi Tienda') @section('page_title','⚙️ Configurar Mi Tienda')
 @section('content')
-<div class="glass-card p-8 max-w-2xl">
-    <form method="POST" action="{{ route('dashboard.store.update') }}" class="space-y-5">@csrf
-        <div><label class="input-label">Nombre del negocio *</label><input type="text" name="name" class="input-field" value="{{ old('name', $store?->name) }}" required></div>
-        <div><label class="input-label">Eslogan / Tagline</label><input type="text" name="tagline" class="input-field" value="{{ old('tagline', $store?->tagline) }}" placeholder="Ej: El sabor que te enamora"></div>
-        <div><label class="input-label">Descripción</label><textarea name="description" class="input-field" rows="3" placeholder="Breve descripción de tu negocio...">{{ old('description', $store?->description) }}</textarea></div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div><label class="input-label">WhatsApp (con código país)</label><input type="tel" name="whatsapp_phone" class="input-field" value="{{ old('whatsapp_phone', $store?->whatsapp_phone) }}" placeholder="51900000000"></div>
-            <div><label class="input-label">Ciudad</label><input type="text" name="city" class="input-field" value="{{ old('city', $store?->city) }}" placeholder="Lima"></div>
-            <div><label class="input-label">Facebook</label><input type="url" name="facebook_url" class="input-field" value="{{ old('facebook_url', $store?->facebook_url) }}" placeholder="https://facebook.com/..."></div>
-            <div><label class="input-label">Instagram</label><input type="url" name="instagram_url" class="input-field" value="{{ old('instagram_url', $store?->instagram_url) }}" placeholder="https://instagram.com/..."></div>
-        </div>
-        <!-- Distributors (Distribuidores) Section -->
-        <div class="border-t border-white/10 pt-6" x-data="{
-            regions: {{ json_encode(old('distributors', $store->distributors ?? [])) }} || [],
-            addRegion() {
-                this.regions.push({ region: '', locations: [''] });
-            },
-            removeRegion(index) {
-                this.regions.splice(index, 1);
-            },
-            addLocation(regionIndex) {
-                this.regions[regionIndex].locations.push('');
-            },
-            removeLocation(regionIndex, locIndex) {
-                this.regions[regionIndex].locations.splice(locIndex, 1);
-                if (this.regions[regionIndex].locations.length === 0) {
-                    this.regions[regionIndex].locations.push('');
-                }
-            }
-        }">
-            <h3 class="text-white font-bold text-sm mb-4">🌍 Red de Distribuidores Globales</h3>
-            <p class="text-xs text-white/50 mb-4">Agrega las regiones y ubicaciones de tus distribuidores para que aparezcan en tu página de inicio.</p>
-            
-            <div class="space-y-4">
-                <template x-for="(reg, rIdx) in regions" :key="rIdx">
-                    <div class="p-4 rounded-xl border border-white/5 bg-white/3 space-y-3 relative">
-                        <button type="button" @click="removeRegion(rIdx)" class="absolute top-4 right-4 text-xs text-red-400 hover:underline">Eliminar Región</button>
-                        
+<div class="w-full max-w-7xl mx-auto space-y-6">
+    <form method="POST" action="{{ route('dashboard.store.update') }}" class="grid grid-cols-1 lg:grid-cols-2 gap-6">@csrf
+        
+        <!-- Columna Izquierda: Info Básica y Contacto -->
+        <div class="glass-card p-8 space-y-6">
+            <div>
+                <h3 class="text-white font-bold text-lg mb-1 flex items-center gap-2">📝 Información Básica</h3>
+                <p class="text-xs text-white/50 mb-4">Los detalles principales de tu negocio.</p>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div>
-                            <label class="input-label">Región (Ej: AMÉRICA DEL SUR)</label>
-                            <input type="text" :name="'distributors[' + rIdx + '][region]'" x-model="reg.region" class="input-field" required placeholder="Región o Continente">
+                            <label class="input-label">Nombre del negocio *</label>
+                            <input type="text" name="name" class="input-field" value="{{ old('name', $store?->name) }}" required>
                         </div>
-                        
-                        <div class="space-y-2">
-                            <label class="input-label">Ciudades / Sucursales</label>
-                            <template x-for="(loc, lIdx) in reg.locations" :key="lIdx">
-                                <div class="flex gap-2">
-                                    <input type="text" :name="'distributors[' + rIdx + '][locations][' + lIdx + ']'" x-model="reg.locations[lIdx]" class="input-field py-1.5" required placeholder="Ej: Perú (Chiclayo - Oficina Central B2B)">
-                                    <button type="button" @click="removeLocation(rIdx, lIdx)" class="px-3 text-red-400 hover:text-red-300 font-bold">✕</button>
-                                </div>
-                            </template>
-                            <button type="button" @click="addLocation(rIdx)" class="text-[11px] text-[#8B5CF6] hover:underline font-bold mt-1">+ Agregar Ciudad/Sucursal</button>
+                        <div>
+                            <label class="input-label">Enlace de la tienda (Slug)</label>
+                            <div class="flex items-center">
+                                <span class="px-3 py-2 bg-black/20 border border-white/5 border-r-0 rounded-l-lg text-xs text-white/50">tienda/</span>
+                                <input type="text" name="slug" class="input-field rounded-l-none" value="{{ old('slug', $store?->slug) }}" placeholder="mi-tienda">
+                            </div>
                         </div>
                     </div>
-                </template>
-            </div>
-            
-            <button type="button" @click="addRegion()" class="mt-4 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg text-xs font-bold transition-colors">
-                + Agregar Nueva Región
-            </button>
-        </div>
+                    
+                    @if($store)
+                        <p class="text-[11px] text-white/50 mt-1 flex items-center gap-1">
+                            🔗 Enlace público: <a href="{{ $store->url }}" target="_blank" class="text-tribio-cyan hover:underline">{{ $store->url }}</a>
+                        </p>
+                    @endif
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                            <label class="input-label">Categoría / Rubro *</label>
+                            <select name="category" class="input-field" required>
+                                <option value="" disabled>Selecciona una categoría</option>
+                                @foreach(['moda' => 'Moda y Ropa', 'calzado' => 'Calzado', 'tecnologia' => 'Tecnología', 'alimentos' => 'Alimentos y Bebidas', 'joyeria' => 'Joyería y Accesorios', 'hogar' => 'Hogar y Decoración', 'deporte' => 'Deportes', 'salud' => 'Salud y Belleza', 'servicios' => 'Servicios', 'otros' => 'Otros'] as $value => $label)
+                                    <option value="{{ $value }}" {{ old('category', $store?->category) == $value ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div><label class="input-label">Eslogan / Tagline</label><input type="text" name="tagline" class="input-field" value="{{ old('tagline', $store?->tagline) }}" placeholder="Ej: El sabor que te enamora"></div>
+                    </div>
+                    
+                    <div>
+                        <label class="input-label">Modo de Construcción de Sitio *</label>
+                        <select name="build_mode" class="input-field" required>
+                            <option value="builder" {{ old('build_mode', $store?->build_mode) == 'builder' ? 'selected' : '' }}>Constructor Visual Tribio</option>
+                            <option value="custom_code" {{ old('build_mode', $store?->build_mode) == 'custom_code' ? 'selected' : '' }}>Código a Medida (Desarrollador)</option>
+                        </select>
+                        <p class="text-[11px] text-white/40 mt-1">Si seleccionas "Código a Medida", se ignorará el constructor visual y se buscará una plantilla en <code>resources/views/clientes_custom/{{ $store?->slug ?? 'slug' }}/index.blade.php</code>.</p>
+                    </div>
 
-        @if($errors->any())<div class="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">@foreach($errors->all() as $e)<p>• {{ $e }}</p>@endforeach</div>@endif
-        <button type="submit" class="btn-primary btn-primary-lg">Guardar cambios</button>
-    </form>
-</div>
-
-{{-- Logo upload --}}
-<div class="glass-card p-6 max-w-2xl mt-6">
-    <h3 class="text-white font-bold mb-4">🖼️ Logo y Portada</h3>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <form method="POST" action="{{ route('dashboard.store.logo') }}" enctype="multipart/form-data" class="space-y-3">@csrf
-            @if($store?->logo_path)<img src="{{ $store->logo_url }}" class="h-16 w-auto rounded-xl mb-2">@endif
-            <label class="input-label">Logo (PNG recomendado)</label>
-            <input type="file" name="logo" accept="image/*" class="input-field py-2">
-            <button type="submit" class="btn-secondary w-full justify-center">Subir logo</button>
-        </form>
-        <form method="POST" action="{{ route('dashboard.store.cover') }}" enctype="multipart/form-data" class="space-y-3">@csrf
-            @if($store?->cover_path)<img src="{{ $store->cover_url }}" class="h-16 w-full object-cover rounded-xl mb-2">@endif
-            <label class="input-label">Imagen de portada</label>
-            <input type="file" name="cover" accept="image/*" class="input-field py-2">
-            <button type="submit" class="btn-secondary w-full justify-center">Subir portada</button>
-        </form>
-    </div>
-</div>
-
-{{-- Template selection --}}
-<div class="glass-card p-6 max-w-2xl mt-6">
-    <h3 class="text-white font-bold mb-4">🎨 Diseño de la Tienda</h3>
-    <form method="POST" action="{{ route('dashboard.store.template') }}" class="space-y-5">@csrf
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            @foreach($templates as $key => $tpl)
-            <label class="cursor-pointer">
-                <input type="radio" name="template_name" value="{{ $key }}" {{ $store?->template_name === $key ? 'checked' : '' }} class="hidden peer">
-                <div class="template-card peer-checked:selected p-4 text-center {{ $store?->template_name === $key ? 'border-tribio-purple/50 bg-tribio-purple/10' : 'border-white/10 bg-white/3' }} hover:border-white/25 transition-all">
-                    <p class="text-white font-bold text-sm mb-1">{{ $tpl['name'] }}</p>
-                    <p class="text-white/40 text-xs">{{ $tpl['description'] }}</p>
+                    <div><label class="input-label">Descripción</label><textarea name="description" class="input-field" rows="3" placeholder="Breve descripción de tu negocio...">{{ old('description', $store?->description) }}</textarea></div>
                 </div>
-            </label>
-            @endforeach
+            </div>
+
+            <div class="border-t border-white/10 pt-6">
+                <h3 class="text-white font-bold text-lg mb-1 flex items-center gap-2">📱 Contacto y Redes</h3>
+                <p class="text-xs text-white/50 mb-4">Dónde pueden encontrarte tus clientes.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div><label class="input-label">WhatsApp (con código país)</label><input type="tel" name="whatsapp_phone" class="input-field" value="{{ old('whatsapp_phone', $store?->whatsapp_phone) }}" placeholder="51900000000"></div>
+                    <div><label class="input-label">Ciudad</label><input type="text" name="city" class="input-field" value="{{ old('city', $store?->city) }}" placeholder="Lima"></div>
+                    <div><label class="input-label">Facebook</label><input type="url" name="facebook_url" class="input-field" value="{{ old('facebook_url', $store?->facebook_url) }}" placeholder="https://facebook.com/..."></div>
+                    <div><label class="input-label">Instagram</label><input type="url" name="instagram_url" class="input-field" value="{{ old('instagram_url', $store?->instagram_url) }}" placeholder="https://instagram.com/..."></div>
+                </div>
+            </div>
+
+            @if($errors->any())
+                <div class="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm mt-4 space-y-1">
+                    @foreach($errors->all() as $error_msg)
+                        <p>• {{ $error_msg }}</p>
+                    @endforeach
+                </div>
+            @endif
+            
+            <div class="pt-4 border-t border-white/10 mt-6">
+                <button type="submit" class="btn-primary btn-primary-lg w-full justify-center">Guardar Todos los Cambios</button>
+            </div>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><label class="input-label">Color principal</label>
-                <input type="color" name="accent_color" value="{{ $store?->accent_color ?? '#8B5CF6' }}" class="w-full h-10 rounded-xl border-0 cursor-pointer"></div>
-            <div><label class="input-label">Color secundario</label>
-                <input type="color" name="secondary_color" value="{{ $store?->secondary_color ?? '#F59E0B' }}" class="w-full h-10 rounded-xl border-0 cursor-pointer"></div>
+
+        <!-- Columna Derecha: Configuraciones Avanzadas -->
+        <div class="space-y-6">
+            <!-- Dominio Personalizado -->
+            <div class="glass-card p-6">
+                <h3 class="text-white font-bold text-sm mb-2">🌐 Dominio Personalizado</h3>
+                <p class="text-xs text-white/50 mb-4">Configura tu propio dominio de internet para mostrar tu tienda de forma profesional e independiente.</p>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="input-label">Tu Dominio Propio</label>
+                        <input type="text" name="custom_domain" class="input-field" value="{{ old('custom_domain', $store?->custom_domain) }}" placeholder="ejemplo: mitienda.com">
+                        <p class="text-[11px] text-white/40 mt-1">Ingresa el dominio limpio (ej. <code>mitienda.com</code> o <code>tienda.miweb.com</code>). Deja en blanco para usar la URL estándar.</p>
+                    </div>
+
+                    @if($store?->custom_domain)
+                    <div class="p-4 rounded-xl border border-white/5 bg-white/3 space-y-2 text-xs">
+                        <p class="text-white font-bold">⚙️ Configuración de DNS:</p>
+                        <p class="text-white/60">Apunta tu dominio propio a la plataforma configurando estos registros en tu proveedor de dominios (GoDaddy, Namecheap, etc.):</p>
+                        <div class="grid grid-cols-1 gap-2 mt-2 font-mono bg-black/30 p-3 rounded-lg border border-white/5">
+                            <div>
+                                <span class="text-tribio-purple font-bold">Tipo:</span> A | 
+                                <span class="text-tribio-purple font-bold">Nombre:</span> @ | 
+                                <span class="text-tribio-purple font-bold">Valor:</span> <code>{{ request()->server('SERVER_ADDR') && !in_array(request()->server('SERVER_ADDR'), ['127.0.0.1', '::1']) ? request()->server('SERVER_ADDR') : 'IP_DE_TU_SERVIDOR' }}</code>
+                            </div>
+                            <div class="border-t border-white/5 pt-2 mt-1">
+                                <span class="text-tribio-purple font-bold">Tipo:</span> CNAME | 
+                                <span class="text-tribio-purple font-bold">Nombre:</span> www | 
+                                <span class="text-tribio-purple font-bold">Valor:</span> <code>{{ parse_url(config('app.url'), PHP_URL_HOST) }}</code>
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-white/40">Nota: Los cambios en el proveedor de dominio pueden tardar hasta 24-48 horas en propagarse.</p>
+                    </div>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Pasarela de Pagos / Checkout Mode -->
+            <div class="glass-card p-6" x-data="{
+                checkoutMode: '{{ old('checkout_mode', $store?->checkout_mode ?? 'whatsapp') }}',
+                gateway: '{{ old('payment_gateway', $store?->payment_gateway ?? '') }}'
+            }">
+                <h3 class="text-white font-bold text-sm mb-2">💳 Pasarela de Pagos & Métodos de Venta</h3>
+                <p class="text-xs text-white/50 mb-4">Elige cómo concretar tus pedidos y configura tus credenciales para recibir pagos con tarjeta de débito/crédito.</p>
+                
+                <div class="space-y-4">
+                    {{-- Método de Checkout --}}
+                    <div>
+                        <label class="input-label">Modo de Venta / Checkout</label>
+                        <select name="checkout_mode" x-model="checkoutMode" class="input-field">
+                            <option value="whatsapp">Vender por WhatsApp (Redirección Directa)</option>
+                            <option value="card">Vender por Tarjeta (Pasarela de Pago)</option>
+                        </select>
+                    </div>
+
+                    {{-- Opciones de Pasarela (Solo visibles si el checkout_mode es card) --}}
+                    <div x-show="checkoutMode === 'card'" class="space-y-4 bg-white/3 border border-white/5 p-4 rounded-xl" style="display: none;">
+                        <div>
+                            <label class="input-label">Pasarela de Pago Habilitada</label>
+                            <select name="payment_gateway" x-model="gateway" class="input-field">
+                                <option value="">Selecciona una pasarela...</option>
+                                <option value="culqi">Culqi</option>
+                                <option value="mercado_pago">Mercado Pago</option>
+                            </select>
+                        </div>
+
+                        {{-- Campos para Culqi --}}
+                        <div x-show="gateway === 'culqi'" class="space-y-4" style="display: none;">
+                            <p class="text-[10px] text-tribio-cyan font-bold uppercase tracking-wider">Configuración de Culqi (Perú)</p>
+                            <div>
+                                <label class="input-label">Llave Pública (Public Key) *</label>
+                                <input type="text" name="gateway_public_key" value="{{ old('gateway_public_key', $store?->gateway_public_key) }}" class="input-field" placeholder="pk_live_...">
+                            </div>
+                            <div>
+                                <label class="input-label">Llave Privada (Private Key) *</label>
+                                <input type="text" name="gateway_private_key" value="{{ old('gateway_private_key', $store?->gateway_private_key) }}" class="input-field" placeholder="sk_live_...">
+                            </div>
+                        </div>
+
+                        {{-- Campos para Mercado Pago --}}
+                        <div x-show="gateway === 'mercado_pago'" class="space-y-4" style="display: none;">
+                            <p class="text-[10px] text-tribio-cyan font-bold uppercase tracking-wider">Configuración de Mercado Pago (Perú)</p>
+                            <div>
+                                <label class="input-label">Token de Acceso (Access Token) *</label>
+                                <input type="text" name="gateway_access_token" value="{{ old('gateway_access_token', $store?->gateway_access_token) }}" class="input-field" placeholder="APP_USR-...">
+                            </div>
+                            <div>
+                                <label class="input-label">Llave Pública (Public Key) *</label>
+                                <input type="text" name="gateway_public_key" value="{{ old('gateway_public_key', $store?->gateway_public_key) }}" class="input-field" placeholder="APP_USR-...">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Distributors (Distribuidores) Section -->
+            <div class="glass-card p-6" x-data="{
+                regions: {{ json_encode(old('distributors', $store->distributors ?? [])) }} || [],
+                addRegion() {
+                    this.regions.push({ region: '', locations: [''] });
+                },
+                removeRegion(index) {
+                    this.regions.splice(index, 1);
+                },
+                addLocation(regionIndex) {
+                    this.regions[regionIndex].locations.push('');
+                },
+                removeLocation(regionIndex, locIndex) {
+                    this.regions[regionIndex].locations.splice(locIndex, 1);
+                    if (this.regions[regionIndex].locations.length === 0) {
+                        this.regions[regionIndex].locations.push('');
+                    }
+                }
+            }">
+                <h3 class="text-white font-bold text-sm mb-4">🌍 Red de Distribuidores Globales</h3>
+                <p class="text-xs text-white/50 mb-4">Agrega las regiones y ubicaciones de tus distribuidores para que aparezcan en tu página de inicio.</p>
+                
+                <div class="space-y-4">
+                    <template x-for="(reg, rIdx) in regions" :key="rIdx">
+                        <div class="p-4 rounded-xl border border-white/5 bg-white/3 space-y-3 relative">
+                            <button type="button" @click="removeRegion(rIdx)" class="absolute top-4 right-4 text-xs text-red-400 hover:underline">Eliminar Región</button>
+                            
+                            <div>
+                                <label class="input-label">Región (Ej: AMÉRICA DEL SUR)</label>
+                                <input type="text" :name="'distributors[' + rIdx + '][region]'" x-model="reg.region" class="input-field" required placeholder="Región o Continente">
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <label class="input-label">Ciudades / Sucursales</label>
+                                <template x-for="(loc, lIdx) in reg.locations" :key="lIdx">
+                                    <div class="flex gap-2">
+                                        <input type="text" :name="'distributors[' + rIdx + '][locations][' + lIdx + ']'" x-model="reg.locations[lIdx]" class="input-field py-1.5" required placeholder="Ej: Perú (Chiclayo - Oficina Central B2B)">
+                                        <button type="button" @click="removeLocation(rIdx, lIdx)" class="px-3 text-red-400 hover:text-red-300 font-bold">✕</button>
+                                    </div>
+                                </template>
+                                <button type="button" @click="addLocation(rIdx)" class="text-[11px] text-[#8B5CF6] hover:underline font-bold mt-1">+ Agregar Ciudad/Sucursal</button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                
+                <button type="button" @click="addRegion()" class="mt-4 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg text-xs font-bold transition-colors w-full border border-dashed border-white/20">
+                    + Agregar Nueva Región
+                </button>
+            </div>
         </div>
-        <button type="submit" class="btn-primary">Guardar diseño</button>
     </form>
+
+    {{-- Logo upload --}}
+    <div class="glass-card p-8">
+        <h3 class="text-white font-bold text-lg mb-1 flex items-center gap-2">🖼️ Logo y Portada</h3>
+        <p class="text-xs text-white/50 mb-6">Personaliza la apariencia visual de tu tienda.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <form method="POST" action="{{ route('dashboard.store.logo') }}" enctype="multipart/form-data" class="space-y-4 bg-white/3 p-6 rounded-xl border border-white/5">@csrf
+                <div class="flex items-center gap-4">
+                    <div class="w-20 h-20 rounded-xl bg-black/30 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                        @if($store?->logo_path)
+                            <img src="{{ $store->logo_url }}" class="w-full h-full object-contain">
+                        @else
+                            <svg class="w-8 h-8 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        @endif
+                    </div>
+                    <div class="flex-1">
+                        <label class="input-label">Logo (PNG recomendado)</label>
+                        <input type="file" name="logo" accept="image/*" class="input-field py-2 text-xs">
+                    </div>
+                </div>
+                <button type="submit" class="btn-secondary w-full justify-center">Subir logo</button>
+            </form>
+            <form method="POST" action="{{ route('dashboard.store.cover') }}" enctype="multipart/form-data" class="space-y-4 bg-white/3 p-6 rounded-xl border border-white/5">@csrf
+                <div class="space-y-3">
+                    @if($store?->cover_path)
+                        <img src="{{ $store->cover_url }}" class="h-24 w-full object-cover rounded-xl border border-white/10">
+                    @endif
+                    <label class="input-label">Imagen de portada</label>
+                    <input type="file" name="cover" accept="image/*" class="input-field py-2 text-xs">
+                </div>
+                <button type="submit" class="btn-secondary w-full justify-center">Subir portada</button>
+            </form>
+        </div>
+    </div>
 </div>
 @endsection

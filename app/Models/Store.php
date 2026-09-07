@@ -14,17 +14,19 @@ class Store extends Model
     protected $fillable = [
         'user_id', 'name', 'slug', 'description', 'tagline', 'category',
         'logo_path', 'cover_path', 'favicon_path',
-        'template_name', 'accent_color', 'secondary_color', 'text_color', 'bg_color',
+        'template_name', 'build_mode', 'accent_color', 'secondary_color', 'text_color', 'bg_color',
         'hero_carousel', 'hero_style', 'custom_css_vars', 'distributors',
         'whatsapp_phone', 'phone', 'email', 'address', 'city', 'country',
         'facebook_url', 'instagram_url', 'tiktok_url', 'website_url', 'custom_domain',
         'status', 'plan', 'plan_expires_at', 'is_featured',
         'meta_title', 'meta_description',
         'total_views', 'total_orders', 'total_revenue',
+        'checkout_mode', 'payment_gateway', 'gateway_public_key', 'gateway_private_key', 'gateway_access_token',
     ];
 
     protected $casts = [
         'custom_css_vars'  => 'array',
+        'published_layout' => 'array',
         'distributors'     => 'array',
         'hero_carousel'    => 'boolean',
         'is_featured'      => 'boolean',
@@ -60,6 +62,12 @@ class Store extends Model
 
     public function getUrlAttribute(): string
     {
+        if ($this->custom_domain && str_contains($this->custom_domain, '.')) {
+            $scheme = request()->getScheme();
+            $port = request()->getPort();
+            $portStr = ($port && !in_array($port, [80, 443])) ? ':' . $port : '';
+            return "{$scheme}://{$this->custom_domain}{$portStr}";
+        }
         return route('store.show', $this->slug);
     }
 
@@ -105,6 +113,11 @@ class Store extends Model
         return $this->hasMany(Category::class)->orderBy('sort_order');
     }
 
+    public function brands()
+    {
+        return $this->hasMany(Brand::class);
+    }
+
     public function galleryItems()
     {
         return $this->hasMany(GalleryItem::class)->orderBy('sort_order');
@@ -123,5 +136,10 @@ class Store extends Model
     public function inventoryMovements()
     {
         return $this->hasMany(InventoryMovement::class);
+    }
+
+    public function sections()
+    {
+        return $this->hasMany(StoreSection::class)->orderBy('order');
     }
 }

@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'mercadopago' => [
+        'access_token' => env('MERCADO_PAGO_ACCESS_TOKEN', 'TEST-7253579047247781-062603-f38b2d713a21644ca7cb4b6b69fa0670-137901037'),
+        'public_key'   => env('MERCADO_PAGO_PUBLIC_KEY', 'TEST-238d2f59-a292-4217-bc1a-64152df6e5ab'),
+    ],
+
 ];
