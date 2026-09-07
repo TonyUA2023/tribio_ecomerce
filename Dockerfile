@@ -46,7 +46,8 @@ RUN chown -R www-data:www-data /var/www/html \
 
 # Copiar script de inicio
 COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
+    && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 80
 ENTRYPOINT ["docker-entrypoint.sh"]
