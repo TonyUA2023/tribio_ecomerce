@@ -1,4 +1,4 @@
-﻿# Etapa 1: Dependencias de PHP (Composer)
+# Etapa 1: Dependencias de PHP (Composer)
 FROM composer:2.7 AS vendor
 WORKDIR /app
 COPY composer.json composer.lock ./
@@ -16,16 +16,10 @@ RUN npm run build
 FROM php:8.2-apache
 WORKDIR /var/www/html
 
-# Instalar extensiones requeridas y optimizar
-RUN apt-get update && apt-get install -y \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    zip \
-    unzip \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo pdo_mysql opcache \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+# Instalar extensiones usando mlocati (súper rápido, consume casi 0 RAM y evita que el servidor colapse)
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
+RUN apt-get update && apt-get install -y zip unzip && apt-get clean && rm -rf /var/lib/apt/lists/* \
+    && install-php-extensions gd pdo_mysql opcache
 
 # Configurar Apache
 RUN a2enmod rewrite
