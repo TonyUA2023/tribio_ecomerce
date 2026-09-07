@@ -1,15 +1,19 @@
-﻿#!/bin/bash
-set -e
+#!/bin/bash
+set -ex
 
-echo "Optimizando Laravel para producción..."
+echo "Starting container setup..."
+php artisan config:clear || true
+
+echo "Optimizing Laravel..."
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-echo "Ejecutando migraciones..."
+echo "Running migrations..."
 php artisan migrate --force
 
-echo "Creando storage link..."
+echo "Creating storage link..."
 php artisan storage:link
 
+echo "Setup complete! Starting Apache..."
 exec "$@"
