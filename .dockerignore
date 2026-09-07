@@ -1,0 +1,8 @@
+﻿/node_modules
+/public/build
+/vendor
+/.git
+/.env
+/tests
+/phpunit.xml
+/storage/*.key

@@ -138,7 +138,7 @@ Route::domain('{custom_domain}')
     ->group(function () {
         Route::get('/', [StoreController::class, 'show']);
         Route::get('/catalogo', [StoreController::class, 'catalog']);
-        Route::get('/producto/{product:slug}', [StoreController::class, 'product']);
+        Route::get('/producto/{product}', [StoreController::class, 'product']);
         Route::get('/galeria', [StoreController::class, 'gallery']);
         Route::post('/checkout', [StoreController::class, 'checkout']);
         Route::get('/pedido/{order}/confirmacion', [StoreController::class, 'orderConfirmation']);
@@ -150,7 +150,7 @@ Route::domain('{custom_domain}')
 Route::prefix('tienda')->name('store.')->group(function () {
     Route::get('/{slug}', [StoreController::class, 'show'])->name('show');
     Route::get('/{slug}/catalogo', [StoreController::class, 'catalog'])->name('catalog');
-    Route::get('/{slug}/producto/{product:slug}', [StoreController::class, 'product'])->name('product');
+    Route::get('/{slug}/producto/{product}', [StoreController::class, 'product'])->name('product');
     Route::get('/{slug}/galeria', [StoreController::class, 'gallery'])->name('gallery');
     Route::post('/{slug}/checkout', [StoreController::class, 'checkout'])->name('checkout');
     Route::get('/{slug}/pedido/{order}/confirmacion', [StoreController::class, 'orderConfirmation'])->name('order.confirmation');

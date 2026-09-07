@@ -154,16 +154,22 @@ class StoreController extends Controller
         ));
     }
 
-    public function product(string $slug, Product $product)
+    public function product(string $slug, string $product)
     {
         $store = $this->getStore($slug);
-        abort_if($product->store_id !== $store->id, 404);
+        
+        $productModel = Product::where('slug', $product)
+            ->where('store_id', $store->id)
+            ->firstOrFail();
 
-        $product->increment('views');
+        $productModel->increment('views');
         $relatedProducts = $store->activeProducts()
-            ->where('category_id', $product->category_id)
-            ->where('id', '!=', $product->id)
+            ->where('category_id', $productModel->category_id)
+            ->where('id', '!=', $productModel->id)
             ->limit(4)->get();
+            
+        // Rename for view compatibility
+        $product = $productModel;
 
         if ($store->build_mode === 'custom_code') {
             $customView = "clientes_custom.{$store->slug}.product";
