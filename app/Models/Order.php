@@ -15,7 +15,7 @@ class Order extends Model
         'subtotal', 'discount', 'shipping_cost', 'total', 'currency',
         'status', 'payment_status', 'payment_method',
         'whatsapp_sent', 'whatsapp_sent_at',
-        'source', 'internal_notes',
+        'source', 'internal_notes', 'is_express_shipping'
     ];
 
     protected $casts = [
@@ -25,6 +25,7 @@ class Order extends Model
         'total'            => 'decimal:2',
         'whatsapp_sent'    => 'boolean',
         'whatsapp_sent_at' => 'datetime',
+        'is_express_shipping' => 'boolean',
     ];
 
     // ─── Helpers ─────────────────────────────────────────────────

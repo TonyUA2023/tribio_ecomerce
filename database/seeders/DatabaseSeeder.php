@@ -16,10 +16,10 @@ class DatabaseSeeder extends Seeder
         $superAdmin = User::firstOrCreate(
             ['email' => 'admin@tribio.pe'],
             [
-                'name'     => 'Super Admin Tribio',
+                'name' => 'Super Admin Tribio',
                 'password' => Hash::make('Tribio2026!'),
-                'role'     => 'super_admin',
-                'phone'    => '+51902699916',
+                'role' => 'super_admin',
+                'phone' => '+51902699916',
             ]
         );
 
@@ -27,31 +27,31 @@ class DatabaseSeeder extends Seeder
         $demoUser = User::firstOrCreate(
             ['email' => 'demo@tienda.com'],
             [
-                'name'     => 'Sandra Gómez',
+                'name' => 'Sandra Gómez',
                 'password' => Hash::make('demo1234'),
-                'role'     => 'store_owner',
-                'phone'    => '+51987654321',
+                'role' => 'store_owner',
+                'phone' => '+51987654321',
             ]
         );
 
         if (!$demoUser->store) {
             $store = Store::create([
-                'user_id'       => $demoUser->id,
-                'name'          => "Sandra's Cakes",
-                'slug'          => 'sandras-cakes',
-                'description'   => 'Tortas y pasteles personalizados hechos con amor',
-                'tagline'       => '¡El sabor que te enamora!',
-                'category'      => 'alimentos',
+                'user_id' => $demoUser->id,
+                'name' => "Sandra's Cakes",
+                'slug' => 'sandras-cakes',
+                'description' => 'Tortas y pasteles personalizados hechos con amor',
+                'tagline' => '¡El sabor que te enamora!',
+                'category' => 'alimentos',
                 'template_name' => 'vibrant-fresh',
-                'accent_color'  => '#EC4899',
+                'accent_color' => '#EC4899',
                 'secondary_color' => '#F59E0B',
-                'whatsapp_phone'=> '51987654321',
-                'status'        => 'active',
-                'plan'          => 'professional',
+                'whatsapp_phone' => '51987654321',
+                'status' => 'active',
+                'plan' => 'professional',
                 'plan_expires_at' => now()->addYear(),
-                'is_featured'   => true,
-                'city'          => 'Lima',
-                'country'       => 'PE',
+                'is_featured' => true,
+                'city' => 'Lima',
+                'country' => 'PE',
             ]);
 
             // Categorías demo
@@ -75,15 +75,15 @@ class DatabaseSeeder extends Seeder
 
             foreach ($products as $i => $product) {
                 $store->products()->create([
-                    'name'         => $product['name'],
-                    'slug'         => Str::slug($product['name']),
-                    'price'        => $product['price'],
-                    'stock'        => $product['stock'],
-                    'track_stock'  => true,
-                    'is_active'    => true,
-                    'is_featured'  => $i < 2,
-                    'sort_order'   => $i,
-                    'store_id'     => $store->id,
+                    'name' => $product['name'],
+                    'slug' => Str::slug($product['name']),
+                    'price' => $product['price'],
+                    'stock' => $product['stock'],
+                    'track_stock' => true,
+                    'is_active' => true,
+                    'is_featured' => $i < 2,
+                    'sort_order' => $i,
+                    'store_id' => $store->id,
                 ]);
             }
         }

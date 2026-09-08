@@ -70,7 +70,9 @@ class StoreSettingsController extends Controller
                 'max:255',
                 'unique:stores,custom_domain,' . $store->id,
                 'regex:/^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(:[0-9]{1,5})?$/'
-            ]
+            ],
+            'is_express_shipping_enabled' => 'nullable|boolean',
+            'express_shipping_cost'       => 'nullable|numeric|min:0'
         ], [
             'custom_domain.regex' => 'El formato del dominio no es válido. Debe ser similar a "mitienda.com" (sin http:// ni / al final).',
             'custom_domain.unique' => 'Este dominio ya está configurado en otra tienda.',
@@ -83,7 +85,9 @@ class StoreSettingsController extends Controller
             'meta_title', 'meta_description', 'distributors',
             'custom_domain',
             'checkout_mode', 'payment_gateway', 'gateway_public_key', 'gateway_private_key', 'gateway_access_token',
+            'express_shipping_cost',
         ]);
+        $data['is_express_shipping_enabled'] = $request->has('is_express_shipping_enabled');
 
         if ($request->filled('slug')) {
             $data['slug'] = \Illuminate\Support\Str::slug($request->slug);

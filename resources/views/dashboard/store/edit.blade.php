@@ -115,6 +115,30 @@
                     @endif
                 </div>
             </div>
+            <!-- Envíos Express -->
+            <div class="glass-card p-6" x-data="{
+                expressEnabled: {{ old('is_express_shipping_enabled', $store?->is_express_shipping_enabled) ? 'true' : 'false' }}
+            }">
+                <h3 class="text-white font-bold text-sm mb-2">🚀 Envíos Express</h3>
+                <p class="text-xs text-white/50 mb-4">Habilita esta opción si tienes stock local para hacer envíos instantáneos.</p>
+                
+                <div class="space-y-4">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <div class="relative">
+                            <input type="checkbox" name="is_express_shipping_enabled" class="sr-only" x-model="expressEnabled" value="1">
+                            <div class="block bg-white/10 w-10 h-6 rounded-full" :class="{'bg-tribio-cyan': expressEnabled}"></div>
+                            <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition" :class="{'translate-x-4': expressEnabled}"></div>
+                        </div>
+                        <span class="text-sm font-medium text-white">Habilitar Opción de Envío Express</span>
+                    </label>
+
+                    <div x-show="expressEnabled" class="bg-white/3 border border-white/5 p-4 rounded-xl mt-3" style="display: none;">
+                        <label class="input-label">Costo del Envío Express (S/.)</label>
+                        <input type="number" step="0.01" min="0" name="express_shipping_cost" class="input-field" value="{{ old('express_shipping_cost', $store?->express_shipping_cost ?? '0.00') }}" placeholder="0.00">
+                        <p class="text-[10px] text-white/40 mt-1">Si es gratis, déjalo en 0. Este monto se sumará al subtotal del pedido si el cliente lo elige.</p>
+                    </div>
+                </div>
+            </div>
 
             <!-- Pasarela de Pagos / Checkout Mode -->
             <div class="glass-card p-6" x-data="{

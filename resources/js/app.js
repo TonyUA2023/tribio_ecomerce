@@ -145,6 +145,50 @@ document.addEventListener('DOMContentLoaded', () => {
             el.textContent = msg;
             document.body.appendChild(el);
             setTimeout(() => el.remove(), 3000);
+        },
+
+        async checkout(storeSlug, customerData) {
+            if (this.items.length === 0) {
+                alert('El carrito está vacío');
+                return;
+            }
+
+            const payload = {
+                items: this.items,
+                ...customerData
+            };
+
+            try {
+                const response = await fetch(`/tienda/${storeSlug}/checkout`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    this.clear();
+                    if (data.payment_url) {
+                        window.location.href = data.payment_url;
+                    } else if (data.whatsapp_url) {
+                        window.open(data.whatsapp_url, '_blank');
+                        window.location.href = data.redirect_url;
+                    } else {
+                        window.location.href = data.redirect_url;
+                    }
+                } else {
+                    alert(data.error || 'Error al procesar el pedido. Por favor verifica los datos.');
+                    console.error(data);
+                }
+            } catch (error) {
+                console.error('Error during checkout:', error);
+                alert('Ocurrió un error inesperado al procesar el checkout.');
+            }
         }
     };
 

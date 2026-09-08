@@ -210,6 +210,7 @@ class StoreController extends Controller
             'items'            => 'required|array|min:1',
             'items.*.id'       => 'required|integer|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
+            'express_shipping' => 'nullable|boolean',
         ]);
 
         $cartItems = collect($request->items);
@@ -245,28 +246,96 @@ class StoreController extends Controller
             ];
         }
 
+        $shippingCost = 0;
+        $isExpress = false;
+        
+        if ($request->boolean('express_shipping') && $store->is_express_shipping_enabled) {
+            $isExpress = true;
+            $shippingCost = $store->express_shipping_cost;
+        }
+
+        $total = $subtotal + $shippingCost;
+
         $order = Order::create([
-            'store_id'         => $store->id,
-            'order_number'     => Order::generateOrderNumber($store->id),
-            'customer_name'    => $request->customer_name,
-            'customer_phone'   => $request->customer_phone,
-            'customer_address' => $request->customer_address,
-            'customer_notes'   => $request->customer_notes,
-            'subtotal'         => $subtotal,
-            'total'            => $subtotal,
-            'status'           => 'pending',
-            'source'           => 'store',
+            'store_id'            => $store->id,
+            'order_number'        => Order::generateOrderNumber($store->id),
+            'customer_name'       => $request->customer_name,
+            'customer_phone'      => $request->customer_phone,
+            'customer_address'    => $request->customer_address,
+            'customer_notes'      => $request->customer_notes,
+            'subtotal'            => $subtotal,
+            'shipping_cost'       => $shippingCost,
+            'is_express_shipping' => $isExpress,
+            'total'               => $total,
+            'status'              => 'pending',
+            'source'              => 'store',
         ]);
 
         $order->items()->createMany($orderItemsData);
         $store->increment('total_orders');
 
-        return response()->json([
+        $response = [
             'success'      => true,
             'order_number' => $order->order_number,
-            'redirect_url' => route('store.order.confirmation', [$slug, $order]),
+            'redirect_url' => route('store.order.confirmation', [$store->slug, $order->id]),
             'whatsapp_url' => $store->whatsapp_link . '?text=' . $order->buildWhatsappMessage(),
-        ]);
+        ];
+
+        // Mercado Pago Integration
+        if ($store->checkout_mode === 'card' && $store->payment_gateway === 'mercado_pago' && $store->gateway_access_token) {
+            try {
+                $client = new \GuzzleHttp\Client();
+                
+                $items = [];
+                foreach ($order->items as $orderItem) {
+                    $items[] = [
+                        'title'       => $orderItem->product_name,
+                        'quantity'    => $orderItem->quantity,
+                        'unit_price'  => (float) $orderItem->price,
+                        'currency_id' => 'PEN',
+                    ];
+                }
+                
+                if ($isExpress && $shippingCost > 0) {
+                    $items[] = [
+                        'title'       => 'Envío Express',
+                        'quantity'    => 1,
+                        'unit_price'  => (float) $shippingCost,
+                        'currency_id' => 'PEN',
+                    ];
+                }
+
+                $mpResponse = $client->post('https://api.mercadopago.com/checkout/preferences', [
+                    'headers' => [
+                        'Authorization' => 'Bearer ' . $store->gateway_access_token,
+                        'Content-Type'  => 'application/json',
+                    ],
+                    'json' => [
+                        'items' => $items,
+                        'payer' => [
+                            'name' => $order->customer_name,
+                        ],
+                        'back_urls' => [
+                            'success' => route('store.order.confirmation', [$store->slug, $order->id]),
+                            'failure' => route('store.order.confirmation', [$store->slug, $order->id]),
+                            'pending' => route('store.order.confirmation', [$store->slug, $order->id]),
+                        ],
+                        'auto_return' => 'approved',
+                        'external_reference' => $order->order_number,
+                    ]
+                ]);
+
+                $preference = json_decode($mpResponse->getBody()->getContents(), true);
+                if (isset($preference['init_point'])) {
+                    $response['payment_url'] = $preference['init_point'];
+                }
+            } catch (\Exception $e) {
+                \Log::error('Mercado Pago Error: ' . $e->getMessage());
+                // Fallback to whatsapp if mp fails
+            }
+        }
+
+        return response()->json($response);
     }
 
     public function orderConfirmation(string $slug, Order $order)
