@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Category extends Model
 {
     protected $fillable = [
-        'store_id', 'name', 'slug', 'icon', 'color', 'sort_order', 'is_active',
+        'store_id', 'parent_id', 'name', 'slug', 'icon', 'color', 'sort_order', 'is_active',
     ];
 
     protected $casts = [
@@ -22,6 +22,16 @@ class Category extends Model
     public function products()
     {
         return $this->hasMany(Product::class);
+    }
+
+    public function parent()
+    {
+        return $this->belongsTo(Category::class, 'parent_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(Category::class, 'parent_id')->orderBy('sort_order');
     }
 
     public function activeProducts()

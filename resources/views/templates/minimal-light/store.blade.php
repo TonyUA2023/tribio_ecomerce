@@ -29,9 +29,24 @@
         .hover-text-accent:hover { color: var(--accent); }
         .bg-accent { background-color: var(--accent); }
         .text-accent { color: var(--accent); }
+        
+        /* Hide Google Translate Widget */
+        .goog-te-banner-frame.skiptranslate, .goog-te-gadget-icon { display: none !important; }
+        body { top: 0px !important; }
+        #goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
+        .goog-text-highlight { background: none !important; box-shadow: none !important; }
     </style>
 </head>
-<body class="antialiased">
+<body class="antialiased relative">
+    
+    <!-- Google Translate Script -->
+    <div id="google_translate_element" style="display:none;"></div>
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({pageLanguage: 'es', includedLanguages: 'en,es', autoDisplay: false}, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
     <!-- Header -->
     <header class="bg-white sticky top-0 z-50 border-b border-gray-100 shadow-sm" x-data="{ mobileMenuOpen: false }">
@@ -49,19 +64,99 @@
                 </div>
 
                 <!-- Desktop Navigation -->
-                <nav class="hidden md:flex space-x-6">
-                    <a href="#" class="text-gray-700 hover-text-accent font-semibold text-sm transition flex items-center gap-1">Dormitorio <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></a>
-                    <a href="#" class="text-gray-700 hover-text-accent font-semibold text-sm transition flex items-center gap-1">Cocina <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></a>
-                    <a href="#" class="text-gray-700 hover-text-accent font-semibold text-sm transition flex items-center gap-1">Baño <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></a>
-                    <a href="#" class="text-gray-700 hover-text-accent font-semibold text-sm transition flex items-center gap-1">Lavandería <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></a>
-                    <a href="#" class="text-gray-700 hover-text-accent font-semibold text-sm transition flex items-center gap-1">Mascotas <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></a>
-                    <a href="#" class="text-gray-700 hover-text-accent font-semibold text-sm transition flex items-center gap-1">Promociones <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></a>
-                    <a href="#" class="text-gray-700 hover-text-accent font-semibold text-sm transition">Lo nuevo</a>
-                    <a href="{{ route('store.catalog', $store->slug) }}" class="text-gray-700 hover-text-accent font-semibold text-sm transition">Todos</a>
+                <nav class="hidden md:flex space-x-6 h-full items-center">
+                    @foreach($categories as $cat)
+                        @if($cat->children->count() > 0)
+                            <div class="relative h-full flex items-center group" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+                                <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $cat->slug]) }}" 
+                                   class="text-gray-700 group-hover:text-accent font-semibold text-sm transition flex items-center gap-1 h-full">
+                                    {{ $cat->name }} 
+                                    <svg class="w-3 h-3 transition-transform duration-200" :class="{'rotate-180': open}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </a>
+                                
+                                <!-- Mega Menu Dropdown -->
+                                <div x-show="open" 
+                                     x-transition.opacity.duration.200ms
+                                     style="display: none;" 
+                                     class="absolute top-[80px] left-1/2 -translate-x-1/2 w-screen max-w-5xl bg-white shadow-xl border-t border-gray-100 z-50">
+                                    <div class="p-8 grid grid-cols-1 md:grid-cols-4 gap-8">
+                                        <!-- Column 1-3: Subcategories chunks -->
+                                        @php
+                                            $chunks = $cat->children->chunk(ceil($cat->children->count() / 3));
+                                        @endphp
+                                        @foreach($chunks as $chunk)
+                                            <div class="space-y-4">
+                                                @foreach($chunk as $child)
+                                                    <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $child->slug]) }}" class="block text-sm text-gray-500 hover:text-accent transition">{{ $child->name }}</a>
+                                                @endforeach
+                                            </div>
+                                        @endforeach
+                                        
+                                        <!-- Column 4: Featured Product of this parent category -->
+                                        @if($cat->products->isNotEmpty())
+                                            @php $fProd = $cat->products->first(); @endphp
+                                            <div class="border-l border-gray-100 pl-8">
+                                                <a href="{{ route('store.product', [$store->slug, $fProd->slug]) }}" class="block group/prod">
+                                                    <div class="bg-gray-50 rounded-lg overflow-hidden aspect-[4/3] mb-3">
+                                                        @if($fProd->image_path)
+                                                            <img src="{{ $fProd->image_url }}" class="w-full h-full object-cover mix-blend-multiply group-hover/prod:scale-105 transition-transform">
+                                                        @else
+                                                            <div class="w-full h-full flex items-center justify-center text-4xl text-gray-300">📦</div>
+                                                        @endif
+                                                    </div>
+                                                    <h5 class="text-sm font-semibold text-gray-800 mb-1 line-clamp-1 group-hover/prod:text-accent">{{ $fProd->name }}</h5>
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="text-accent font-bold text-sm">S/ {{ number_format($fProd->price, 2) }}</span>
+                                                        @if($fProd->compare_price)
+                                                            <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">-{{ round((($fProd->compare_price - $fProd->price) / $fProd->compare_price) * 100) }}%</span>
+                                                        @endif
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        @else
+                            <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $cat->slug]) }}" class="text-gray-700 hover-text-accent font-semibold text-sm transition h-full flex items-center">
+                                {{ $cat->name }}
+                            </a>
+                        @endif
+                    @endforeach
+                    <a href="{{ route('store.catalog', $store->slug) }}" class="text-gray-700 hover-text-accent font-semibold text-sm transition h-full flex items-center">Todos</a>
                 </nav>
 
-                <!-- Icons (Search, User, Wishlist, Cart) -->
-                <div class="flex items-center space-x-5">
+                <!-- Icons (Language, Search, User, Wishlist, Cart) -->
+                <div class="flex items-center space-x-3 md:space-x-5">
+                    
+                    <!-- Language Switcher -->
+                    <div class="relative" x-data="{ 
+                            langOpen: false, 
+                            currentLang: document.cookie.includes('googtrans=/es/en') ? 'EN' : 'ES',
+                            changeLanguage(lang) {
+                                if(lang === 'EN') {
+                                    document.cookie = 'googtrans=/es/en; path=/';
+                                    document.cookie = 'googtrans=/es/en; domain=' + window.location.hostname + '; path=/';
+                                } else {
+                                    document.cookie = 'googtrans=/es/es; path=/';
+                                    document.cookie = 'googtrans=/es/es; domain=' + window.location.hostname + '; path=/';
+                                    // Limpiar cookies de google para restaurar
+                                    document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                                    document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=' + window.location.hostname + '; path=/;';
+                                }
+                                window.location.reload();
+                            }
+                        }">
+                        <button @click="langOpen = !langOpen" @click.away="langOpen = false" class="flex items-center gap-1 text-gray-600 hover-text-accent text-xs font-bold bg-gray-100 hover:bg-gray-200 px-2 py-1.5 rounded transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path></svg>
+                            <span x-text="currentLang"></span>
+                        </button>
+                        <div x-show="langOpen" style="display: none;" class="absolute right-0 mt-2 w-24 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50">
+                            <button @click="changeLanguage('ES')" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-gray-50 hover-text-accent" :class="currentLang === 'ES' ? 'text-accent' : 'text-gray-700'">Español</button>
+                            <button @click="changeLanguage('EN')" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-gray-50 hover-text-accent" :class="currentLang === 'EN' ? 'text-accent' : 'text-gray-700'">English</button>
+                        </div>
+                    </div>
+
                     <button class="text-gray-700 hover-text-accent transition">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </button>

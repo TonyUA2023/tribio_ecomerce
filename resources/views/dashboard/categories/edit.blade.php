@@ -4,6 +4,17 @@
 <div class="glass-card p-8 max-w-md">
     <form method="POST" action="{{ route('dashboard.categorias.update', $category) }}" class="space-y-4">@csrf @method('PUT')
         <div><label class="input-label">Nombre *</label><input type="text" name="name" class="input-field" value="{{ old('name', $category->name) }}" required></div>
+        
+        <div>
+            <label class="input-label">Categoría Padre (Opcional)</label>
+            <select name="parent_id" class="input-field">
+                <option value="">-- Ninguna (Categoría Principal) --</option>
+                @foreach($parentCategories as $parent)
+                    <option value="{{ $parent->id }}" {{ old('parent_id', $category->parent_id) == $parent->id ? 'selected' : '' }}>{{ $parent->name }}</option>
+                @endforeach
+            </select>
+        </div>
+
         <div><label class="input-label">Ícono</label><input type="text" name="icon" class="input-field" value="{{ old('icon', $category->icon) }}" maxlength="5"></div>
         <div><label class="input-label">Color</label><input type="color" name="color" value="{{ old('color', $category->color ?? '#8B5CF6') }}" class="h-10 w-full rounded-xl border-0 bg-transparent cursor-pointer"></div>
         <label class="flex items-center gap-2"><input type="checkbox" name="is_active" value="1" {{ $category->is_active ? 'checked' : '' }} class="accent-tribio-purple"><span class="text-white/70 text-sm">Activa</span></label>

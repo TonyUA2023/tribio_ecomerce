@@ -35,7 +35,11 @@ class StoreController extends Controller
         $store->increment('total_views');
 
         $featuredProducts = $store->featuredProducts()->with('category')->limit(8)->get();
-        $categories       = $store->categories()->withCount('activeProducts')->get();
+        // Cargar categorias principales con sus hijos, y 1 producto para la mega-imagen
+        $categories       = $store->categories()->whereNull('parent_id')
+                                ->with(['children', 'products' => function($q) { $q->latest()->limit(1); }])
+                                ->withCount('activeProducts')->get();
+        
         $galleryItems     = $store->galleryItems()->where('is_active', true)->limit(12)->get();
         $allProducts      = $store->activeProducts()->with('category')
             ->orderByDesc('is_featured')->orderBy('sort_order')->paginate(12);
@@ -80,7 +84,9 @@ class StoreController extends Controller
         $store = $this->getStore($slug);
         $store->increment('total_views');
 
-        $categories = $store->categories()->withCount('activeProducts')->get();
+        $categories = $store->categories()->whereNull('parent_id')
+                        ->with(['children', 'products' => function($q) { $q->latest()->limit(1); }])
+                        ->withCount('activeProducts')->get();
         $featuredProducts = $store->featuredProducts()->limit(3)->get();
 
         // Query para productos activos

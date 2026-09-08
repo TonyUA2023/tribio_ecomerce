@@ -22,7 +22,8 @@ class CategoryController extends Controller
     public function create()
     {
         $store = $this->getStore();
-        return view('dashboard.categories.create', compact('store'));
+        $parentCategories = $store->categories()->whereNull('parent_id')->get();
+        return view('dashboard.categories.create', compact('store', 'parentCategories'));
     }
 
     public function store(Request $request)
@@ -30,6 +31,7 @@ class CategoryController extends Controller
         $store = $this->getStore();
         $request->validate([
             'name'       => 'required|string|max:100',
+            'parent_id'  => 'nullable|exists:categories,id',
             'icon'       => 'nullable|string|max:10',
             'color'      => 'nullable|string|max:7',
             'is_active'  => 'nullable|boolean',
@@ -37,6 +39,7 @@ class CategoryController extends Controller
 
         $store->categories()->create([
             'name'      => $request->name,
+            'parent_id' => $request->parent_id,
             'slug'      => Str::slug($request->name) . '-' . Str::random(3),
             'icon'      => $request->icon,
             'color'     => $request->color,
@@ -50,7 +53,8 @@ class CategoryController extends Controller
     {
         $store = $this->getStore();
         abort_if($category->store_id !== $store->id, 403);
-        return view('dashboard.categories.edit', compact('store', 'category'));
+        $parentCategories = $store->categories()->whereNull('parent_id')->where('id', '!=', $category->id)->get();
+        return view('dashboard.categories.edit', compact('store', 'category', 'parentCategories'));
     }
 
     public function update(Request $request, Category $category)
@@ -60,13 +64,18 @@ class CategoryController extends Controller
 
         $request->validate([
             'name'      => 'required|string|max:100',
+            'parent_id' => 'nullable|exists:categories,id',
             'icon'      => 'nullable|string|max:10',
             'color'     => 'nullable|string|max:7',
             'is_active' => 'nullable|boolean',
         ]);
 
+        // Prevent circular reference (a category cannot be its own parent)
+        $parentId = $request->parent_id == $category->id ? null : $request->parent_id;
+
         $category->update([
             'name'      => $request->name,
+            'parent_id' => $parentId,
             'icon'      => $request->icon,
             'color'     => $request->color,
             'is_active' => $request->boolean('is_active'),
