@@ -51,12 +51,17 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     Route::get('/', [DashboardController::class, 'index'])->name('index');
 
     // Configuración de la tienda
-    Route::get('/tienda', [StoreSettingsController::class, 'edit'])->name('store.edit');
-    Route::post('/tienda', [StoreSettingsController::class, 'update'])->name('store.update');
+    Route::get('/tienda/configuracion', [StoreSettingsController::class, 'edit'])->name('store.edit');
+    Route::post('/tienda/configuracion', [StoreSettingsController::class, 'update'])->name('store.update');
     Route::post('/tienda/logo', [StoreSettingsController::class, 'uploadLogo'])->name('store.logo');
     Route::post('/tienda/portada', [StoreSettingsController::class, 'uploadCover'])->name('store.cover');
     Route::get('/tienda/plantillas', [StoreSettingsController::class, 'templates'])->name('store.templates');
     Route::post('/tienda/plantilla', [StoreSettingsController::class, 'updateTemplate'])->name('store.template');
+
+    // Shipping
+    Route::get('/tienda/envios', [\App\Http\Controllers\Dashboard\ShippingController::class, 'index'])->name('shipping.index');
+    Route::post('/tienda/envios', [\App\Http\Controllers\Dashboard\ShippingController::class, 'store'])->name('shipping.store');
+    Route::delete('/tienda/envios/{shipping}', [\App\Http\Controllers\Dashboard\ShippingController::class, 'destroy'])->name('shipping.destroy');
 
     // Constructor visual
     Route::get('/tienda/constructor', [StoreBuilderController::class, 'index'])->name('store.builder');
@@ -142,11 +147,11 @@ Route::domain('{custom_domain}')
         Route::get('/galeria', [StoreController::class, 'gallery']);
         Route::post('/checkout', [StoreController::class, 'checkout']);
         Route::get('/pedido/{order}/confirmacion', [StoreController::class, 'orderConfirmation']);
+        Route::get('/contacto', [StoreController::class, 'contact']);
+        Route::post('/contacto', [StoreController::class, 'submitContact']);
     });
 
-// ═══════════════════════════════════════════════════════════════
-//  TIENDAS PÚBLICAS ESTÁNDAR (CON PREFIJO /tienda/{slug})
-// ═══════════════════════════════════════════════════════════════
+// ────────── TIENDAS PÚBLICAS ESTÁNDAR ──────────
 Route::prefix('tienda')->name('store.')->group(function () {
     Route::get('/{slug}', [StoreController::class, 'show'])->name('show');
     Route::get('/{slug}/catalogo', [StoreController::class, 'catalog'])->name('catalog');
@@ -154,4 +159,9 @@ Route::prefix('tienda')->name('store.')->group(function () {
     Route::get('/{slug}/galeria', [StoreController::class, 'gallery'])->name('gallery');
     Route::post('/{slug}/checkout', [StoreController::class, 'checkout'])->name('checkout');
     Route::get('/{slug}/pedido/{order}/confirmacion', [StoreController::class, 'orderConfirmation'])->name('order.confirmation');
+    Route::get('/{slug}/contacto', [StoreController::class, 'contact'])->name('contact');
+    Route::post('/{slug}/contacto', [StoreController::class, 'submitContact'])->name('contact.submit');
 });
+
+// API para costos de envío
+Route::get('/api/shipping-cost/{slug}', [\App\Http\Controllers\StoreController::class, 'getShippingCost']);

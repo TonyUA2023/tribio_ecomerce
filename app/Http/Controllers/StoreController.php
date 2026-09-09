@@ -119,23 +119,30 @@ class StoreController extends Controller
         }
 
         // Precios límite para el slider
-        $minPricePossible = floor($store->activeProducts()->min('price') ?? 0);
-        $maxPricePossible = ceil($store->activeProducts()->max('price') ?? 1000);
+        $isUsd = request()->cookie('user_country') === 'US';
+        $priceColumn = $isUsd ? 'price_usd' : 'price';
+
+        $minPricePossible = floor($store->activeProducts()->min($priceColumn) ?? 0);
+        $maxPricePossible = ceil($store->activeProducts()->max($priceColumn) ?? 1000);
 
         // Filtro por precio (min_price y max_price)
         if ($request->filled('min_price')) {
-            $query->where('price', '>=', floatval($request->input('min_price')));
+            $query->where($priceColumn, '>=', floatval($request->input('min_price')));
         }
         if ($request->filled('max_price')) {
-            $query->where('price', '<=', floatval($request->input('max_price')));
+            $query->where($priceColumn, '<=', floatval($request->input('max_price')));
         }
 
         // Ordenamiento
         $sort = $request->input('sort', 'position');
         if ($sort === 'price_asc') {
-            $query->orderBy('price', 'asc');
+            $query->orderBy($priceColumn, 'asc');
         } elseif ($sort === 'price_desc') {
-            $query->orderBy('price', 'desc');
+            $query->orderBy($priceColumn, 'desc');
+        } elseif ($sort === 'oldest') {
+            $query->orderBy('created_at', 'asc');
+        } elseif ($sort === 'newest') {
+            $query->orderBy('created_at', 'desc');
         } else {
             $query->orderByDesc('is_featured')->orderBy('sort_order');
         }
@@ -204,6 +211,40 @@ class StoreController extends Controller
         return view("templates.{$template}.gallery", compact('store', 'galleryItems'));
     }
 
+    public function getShippingCost(Request $request, string $slug)
+    {
+        $store = $this->getStore($slug);
+        $country = $request->input('country', 'PE');
+        $state = $request->input('state');
+
+        // Look for exact state match first
+        if ($state) {
+            $rate = $store->shippingRates()->where('is_active', true)
+                          ->where('country_code', $country)
+                          ->where('state', $state)
+                          ->first();
+            if ($rate) {
+                return response()->json(['cost' => $rate->cost]);
+            }
+        }
+
+        // Look for country default
+        $rate = $store->shippingRates()->where('is_active', true)
+                      ->where('country_code', $country)
+                      ->whereNull('state')
+                      ->first();
+        if ($rate) {
+            return response()->json(['cost' => $rate->cost]);
+        }
+
+        // Look for ALL (International default)
+        $rate = $store->shippingRates()->where('is_active', true)
+                      ->where('country_code', 'ALL')
+                      ->first();
+        
+        return response()->json(['cost' => $rate ? $rate->cost : 0]);
+    }
+
     public function checkout(Request $request, string $slug)
     {
         $store = $this->getStore($slug);
@@ -211,7 +252,12 @@ class StoreController extends Controller
         $request->validate([
             'customer_name'    => 'required|string|max:255',
             'customer_phone'   => 'required|string|max:20',
+            'customer_email'   => 'required|email|max:255',
             'customer_address' => 'nullable|string|max:500',
+            'customer_country' => 'nullable|string|max:2',
+            'customer_state'   => 'nullable|string|max:100',
+            'customer_city'    => 'nullable|string|max:100',
+            'customer_zipcode' => 'nullable|string|max:20',
             'customer_notes'   => 'nullable|string|max:500',
             'items'            => 'required|array|min:1',
             'items.*.id'       => 'required|integer|exists:products,id',
@@ -238,7 +284,7 @@ class StoreController extends Controller
             if (!$product) continue;
 
             $qty      = (int) $item['quantity'];
-            $itemSubtotal = $product->price * $qty;
+            $itemSubtotal = $product->resolvePrice() * $qty;
             $subtotal += $itemSubtotal;
 
             $orderItemsData[] = [
@@ -246,33 +292,58 @@ class StoreController extends Controller
                 'product_name'  => $product->name,
                 'product_sku'   => $product->sku,
                 'product_image' => $product->image_path,
-                'price'         => $product->price,
+                'price'         => $product->resolvePrice(),
                 'quantity'      => $qty,
                 'subtotal'      => $itemSubtotal,
             ];
         }
 
+        // Calculate dynamic shipping cost
         $shippingCost = 0;
-        $isExpress = false;
+        $country = $request->customer_country ?? 'PE';
+        $state = $request->customer_state;
         
+        $rate = null;
+        if ($state) {
+            $rate = $store->shippingRates()->where('is_active', true)->where('country_code', $country)->where('state', $state)->first();
+        }
+        if (!$rate) {
+            $rate = $store->shippingRates()->where('is_active', true)->where('country_code', $country)->whereNull('state')->first();
+        }
+        if (!$rate) {
+            $rate = $store->shippingRates()->where('is_active', true)->where('country_code', 'ALL')->first();
+        }
+        
+        if ($rate) {
+            $shippingCost = $rate->cost;
+        }
+
+        $isExpress = false;
         if ($request->boolean('express_shipping') && $store->is_express_shipping_enabled) {
             $isExpress = true;
-            $shippingCost = $store->express_shipping_cost;
+            $shippingCost += $store->express_shipping_cost;
         }
 
         $total = $subtotal + $shippingCost;
+        $currency = request()->cookie('user_country') === 'US' ? 'USD' : 'PEN';
 
         $order = Order::create([
             'store_id'            => $store->id,
             'order_number'        => Order::generateOrderNumber($store->id),
             'customer_name'       => $request->customer_name,
             'customer_phone'      => $request->customer_phone,
+            'customer_email'      => $request->customer_email,
             'customer_address'    => $request->customer_address,
+            'customer_country'    => $country,
+            'customer_state'      => $state,
+            'customer_city'       => $request->customer_city,
+            'customer_zipcode'    => $request->customer_zipcode,
             'customer_notes'      => $request->customer_notes,
             'subtotal'            => $subtotal,
             'shipping_cost'       => $shippingCost,
             'is_express_shipping' => $isExpress,
             'total'               => $total,
+            'currency'            => $currency,
             'status'              => 'pending',
             'source'              => 'store',
         ]);
@@ -287,8 +358,9 @@ class StoreController extends Controller
             'whatsapp_url' => $store->whatsapp_link . '?text=' . $order->buildWhatsappMessage(),
         ];
 
-        // Mercado Pago Integration
-        if ($store->checkout_mode === 'card' && $store->payment_gateway === 'mercado_pago' && $store->gateway_access_token) {
+        // Mercado Pago Integration (Use mp_access_token or gateway_access_token)
+        $mpToken = $store->mp_access_token ?? $store->gateway_access_token;
+        if ($mpToken) {
             try {
                 $client = new \GuzzleHttp\Client();
                 
@@ -298,28 +370,29 @@ class StoreController extends Controller
                         'title'       => $orderItem->product_name,
                         'quantity'    => $orderItem->quantity,
                         'unit_price'  => (float) $orderItem->price,
-                        'currency_id' => 'PEN',
+                        'currency_id' => $currency,
                     ];
                 }
                 
-                if ($isExpress && $shippingCost > 0) {
+                if ($shippingCost > 0) {
                     $items[] = [
-                        'title'       => 'Envío Express',
+                        'title'       => 'Costo de Envío',
                         'quantity'    => 1,
                         'unit_price'  => (float) $shippingCost,
-                        'currency_id' => 'PEN',
+                        'currency_id' => $currency,
                     ];
                 }
 
                 $mpResponse = $client->post('https://api.mercadopago.com/checkout/preferences', [
                     'headers' => [
-                        'Authorization' => 'Bearer ' . $store->gateway_access_token,
+                        'Authorization' => 'Bearer ' . $mpToken,
                         'Content-Type'  => 'application/json',
                     ],
                     'json' => [
                         'items' => $items,
                         'payer' => [
                             'name' => $order->customer_name,
+                            'email' => $order->customer_email,
                         ],
                         'back_urls' => [
                             'success' => route('store.order.confirmation', [$store->slug, $order->id]),
@@ -337,7 +410,6 @@ class StoreController extends Controller
                 }
             } catch (\Exception $e) {
                 \Log::error('Mercado Pago Error: ' . $e->getMessage());
-                // Fallback to whatsapp if mp fails
             }
         }
 
@@ -357,5 +429,29 @@ class StoreController extends Controller
 
         $template = $store->template_name;
         return view("templates.{$template}.confirmation", compact('store', 'order'));
+    }
+
+    public function contact(string $slug)
+    {
+        $store = $this->getStore($slug);
+        $categories = $store->categories()->whereNull('parent_id')->get();
+        return view('templates.minimal-light.contact', compact('store', 'categories'));
+    }
+
+    public function submitContact(Request $request, string $slug)
+    {
+        $store = $this->getStore($slug);
+        
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'phone' => 'nullable|string|max:20',
+            'subject' => 'nullable|string|max:255',
+            'message' => 'required|string',
+        ]);
+
+        $store->contactMessages()->create($request->all());
+
+        return back()->with('success', '¡Gracias por contactarnos! Tu mensaje ha sido enviado exitosamente.');
     }
 }

@@ -72,7 +72,15 @@ class StoreSettingsController extends Controller
                 'regex:/^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(:[0-9]{1,5})?$/'
             ],
             'is_express_shipping_enabled' => 'nullable|boolean',
-            'express_shipping_cost'       => 'nullable|numeric|min:0'
+            'express_shipping_cost'       => 'nullable|numeric|min:0',
+            'is_multilanguage_enabled'    => 'nullable|boolean',
+            'hero_title'                  => 'nullable|string|max:100',
+            'hero_subtitle'               => 'nullable|string|max:200',
+            'hero_badge'                  => 'nullable|string|max:50',
+            'mp_access_token'             => 'nullable|string|max:255',
+            'mp_public_key'               => 'nullable|string|max:255',
+            'contact_email'               => 'nullable|email|max:255',
+            'contact_phone'               => 'nullable|string|max:20',
         ], [
             'custom_domain.regex' => 'El formato del dominio no es válido. Debe ser similar a "mitienda.com" (sin http:// ni / al final).',
             'custom_domain.unique' => 'Este dominio ya está configurado en otra tienda.',
@@ -85,9 +93,12 @@ class StoreSettingsController extends Controller
             'meta_title', 'meta_description', 'distributors',
             'custom_domain',
             'checkout_mode', 'payment_gateway', 'gateway_public_key', 'gateway_private_key', 'gateway_access_token',
+            'mp_access_token', 'mp_public_key', 'contact_email', 'contact_phone',
             'express_shipping_cost',
+            'hero_title', 'hero_subtitle', 'hero_badge'
         ]);
         $data['is_express_shipping_enabled'] = $request->has('is_express_shipping_enabled');
+        $data['is_multilanguage_enabled']    = $request->has('is_multilanguage_enabled');
 
         if ($request->filled('slug')) {
             $data['slug'] = \Illuminate\Support\Str::slug($request->slug);

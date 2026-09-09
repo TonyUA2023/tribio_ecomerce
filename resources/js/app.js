@@ -86,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
         save() {
             localStorage.setItem('tribio_cart', JSON.stringify(this.items));
             this.updateUI();
+            window.dispatchEvent(new CustomEvent('cart-updated', { detail: this.items }));
         },
 
         add(id, name, price, image = '') {

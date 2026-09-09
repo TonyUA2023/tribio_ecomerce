@@ -23,6 +23,7 @@ class Store extends Model
         'total_views', 'total_orders', 'total_revenue',
         'checkout_mode', 'payment_gateway', 'gateway_public_key', 'gateway_private_key', 'gateway_access_token',
         'is_express_shipping_enabled', 'express_shipping_cost',
+        'is_multilanguage_enabled', 'hero_badge', 'hero_title', 'hero_subtitle'
     ];
 
     protected $casts = [
@@ -32,6 +33,7 @@ class Store extends Model
         'hero_carousel'    => 'boolean',
         'is_featured'      => 'boolean',
         'is_express_shipping_enabled' => 'boolean',
+        'is_multilanguage_enabled'    => 'boolean',
         'plan_expires_at'  => 'datetime',
         'total_revenue'    => 'decimal:2',
         'express_shipping_cost' => 'decimal:2',
@@ -99,6 +101,16 @@ class Store extends Model
     public function products()
     {
         return $this->hasMany(Product::class);
+    }
+
+    public function shippingRates()
+    {
+        return $this->hasMany(ShippingRate::class);
+    }
+
+    public function contactMessages()
+    {
+        return $this->hasMany(ContactMessage::class);
     }
 
     public function activeProducts()

@@ -12,7 +12,7 @@ class Product extends Model
 
     protected $fillable = [
         'store_id', 'category_id', 'brand_id', 'parent_id', 'name', 'slug', 'description', 'short_description', 'sku', 'origin_code',
-        'price', 'compare_price', 'cost_price',
+        'price', 'compare_price', 'price_usd', 'compare_price_usd', 'cost_price',
         'stock', 'track_stock', 'allow_backorder', 'low_stock_alert', 'unit',
         'image_path', 'gallery_images',
         'is_active', 'is_featured', 'is_new', 'is_digital',
@@ -26,6 +26,8 @@ class Product extends Model
         'tags'            => 'array',
         'price'           => 'decimal:2',
         'compare_price'   => 'decimal:2',
+        'price_usd'       => 'decimal:2',
+        'compare_price_usd' => 'decimal:2',
         'cost_price'      => 'decimal:2',
         'is_active'       => 'boolean',
         'is_featured'     => 'boolean',
@@ -72,6 +74,30 @@ class Product extends Model
             return (int) round((1 - $this->price / $this->compare_price) * 100);
         }
         return null;
+    }
+
+    public function resolvePrice(): float
+    {
+        if (request()->cookie('user_country') === 'US' && $this->price_usd > 0) {
+            return (float) $this->price_usd;
+        }
+        return (float) $this->price;
+    }
+
+    public function resolveComparePrice(): ?float
+    {
+        if (request()->cookie('user_country') === 'US' && $this->compare_price_usd > 0) {
+            return (float) $this->compare_price_usd;
+        }
+        if ($this->compare_price > 0) {
+            return (float) $this->compare_price;
+        }
+        return null;
+    }
+
+    public function resolveCurrencySymbol(): string
+    {
+        return request()->cookie('user_country') === 'US' ? '$' : 'S/';
     }
 
     public function isInStock(): bool

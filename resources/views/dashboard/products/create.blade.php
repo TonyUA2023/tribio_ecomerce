@@ -29,20 +29,30 @@
 
             {{-- Precios y Origen --}}
             <div class="glass-card p-6">
-                <h3 class="text-white font-bold mb-4 text-sm uppercase tracking-wider opacity-60">Precios y Código Origen</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <h3 class="text-white font-bold mb-4 text-sm uppercase tracking-wider opacity-60">Precios (PEN y USD)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
-                        <label class="input-label">Precio (S/.) *</label>
+                        <label class="input-label font-bold text-tribio-cyan">Precio (S/.) *</label>
                         <input type="number" name="price" class="input-field" value="{{ old('price') }}" step="0.01" min="0" required placeholder="0.00">
                     </div>
                     <div>
-                        <label class="input-label">Precio anterior (tachado)</label>
+                        <label class="input-label text-tribio-cyan">Precio anterior (S/.)</label>
                         <input type="number" name="compare_price" class="input-field" value="{{ old('compare_price') }}" step="0.01" min="0" placeholder="0.00">
                     </div>
+                    
                     <div>
-                        <label class="input-label">Código del producto origen</label>
-                        <input type="text" name="origin_code" class="input-field" value="{{ old('origin_code') }}" placeholder="Ej: COD-ORI-99">
+                        <label class="input-label font-bold text-green-400">Precio (USD $)</label>
+                        <input type="number" name="price_usd" class="input-field border-green-500/30 focus:border-green-500" value="{{ old('price_usd') }}" step="0.01" min="0" placeholder="0.00">
                     </div>
+                    <div>
+                        <label class="input-label text-green-400">Precio anterior (USD $)</label>
+                        <input type="number" name="compare_price_usd" class="input-field border-green-500/30 focus:border-green-500" value="{{ old('compare_price_usd') }}" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="input-label">Código del producto origen</label>
+                    <input type="text" name="origin_code" class="input-field" value="{{ old('origin_code') }}" placeholder="Ej: COD-ORI-99">
                 </div>
             </div>
 

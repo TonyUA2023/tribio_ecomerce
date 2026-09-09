@@ -4,31 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $store->name }} - Tienda Online</title>
-    <!-- Use a modern, friendly sans-serif font similar to the screenshot -->
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Fonts: Playfair Display (Serif) & Plus Jakarta Sans (Sans-serif) -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         :root {
-            --accent: {{ $store->accent_color ?? '#8BC34A' }};
-            --secondary: {{ $store->secondary_color ?? '#FF9800' }};
-            --bg: {{ $store->bg_color ?? '#ffffff' }};
-            --text-dark: #333333;
+            --accent: {{ $store->accent_color ?? '#1A1A1A' }};
+            --secondary: {{ $store->secondary_color ?? '#C8A68B' }};
+            --bg: {{ $store->bg_color ?? '#FDF8EF' }};
+            --text-dark: #1A1A1A;
             --text-light: #666666;
+            --font-serif: 'Playfair Display', serif;
+            --font-sans: 'Plus Jakarta Sans', sans-serif;
         }
         body {
-            background-color: #f9f9f9;
-            font-family: 'Quicksand', sans-serif;
+            background-color: var(--bg);
+            font-family: var(--font-sans);
             color: var(--text-dark);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow-x: hidden;
         }
         
         /* Custom Utilities */
+        .font-serif { font-family: var(--font-serif) !important; }
         .hover-text-accent:hover { color: var(--accent); }
         .bg-accent { background-color: var(--accent); }
+        .bg-secondary { background-color: var(--secondary); }
         .text-accent { color: var(--accent); }
+        .text-secondary { color: var(--secondary); }
         
         /* Hide Google Translate Widget */
         .goog-te-banner-frame.skiptranslate, .goog-te-gadget-icon { display: none !important; }
@@ -37,7 +43,7 @@
         .goog-text-highlight { background: none !important; box-shadow: none !important; }
     </style>
 </head>
-<body class="antialiased relative">
+<body class="antialiased relative bg-[#FDF8EF]">
     
     <!-- Google Translate Script -->
     <div id="google_translate_element" style="display:none;"></div>
@@ -49,87 +55,14 @@
     <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
     <!-- Header -->
-    <header class="bg-white sticky top-0 z-50 border-b border-gray-100 shadow-sm" x-data="{ mobileMenuOpen: false }">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-20">
-                <!-- Logo -->
-                <div class="flex-shrink-0 flex items-center">
-                    <a href="{{ route('store.show', $store->slug) }}">
-                        @if($store->logo_path)
-                            <img class="h-12 w-auto" src="{{ $store->logo_url }}" alt="{{ $store->name }}">
-                        @else
-                            <span class="font-bold text-2xl tracking-tight text-accent">{{ $store->name }}</span>
-                        @endif
-                    </a>
-                </div>
-
-                <!-- Desktop Navigation -->
-                <nav class="hidden md:flex space-x-6 h-full items-center">
-                    @foreach($categories as $cat)
-                        @if($cat->children->count() > 0)
-                            <div class="relative h-full flex items-center group" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
-                                <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $cat->slug]) }}" 
-                                   class="text-gray-700 group-hover:text-accent font-semibold text-sm transition flex items-center gap-1 h-full">
-                                    {{ $cat->name }} 
-                                    <svg class="w-3 h-3 transition-transform duration-200" :class="{'rotate-180': open}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                </a>
-                                
-                                <!-- Mega Menu Dropdown -->
-                                <div x-show="open" 
-                                     x-transition.opacity.duration.200ms
-                                     style="display: none;" 
-                                     class="absolute top-[80px] left-1/2 -translate-x-1/2 w-screen max-w-5xl bg-white shadow-xl border-t border-gray-100 z-50">
-                                    <div class="p-8 grid grid-cols-1 md:grid-cols-4 gap-8">
-                                        <!-- Column 1-3: Subcategories chunks -->
-                                        @php
-                                            $chunks = $cat->children->chunk(ceil($cat->children->count() / 3));
-                                        @endphp
-                                        @foreach($chunks as $chunk)
-                                            <div class="space-y-4">
-                                                @foreach($chunk as $child)
-                                                    <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $child->slug]) }}" class="block text-sm text-gray-500 hover:text-accent transition">{{ $child->name }}</a>
-                                                @endforeach
-                                            </div>
-                                        @endforeach
-                                        
-                                        <!-- Column 4: Featured Product of this parent category -->
-                                        @if($cat->products->isNotEmpty())
-                                            @php $fProd = $cat->products->first(); @endphp
-                                            <div class="border-l border-gray-100 pl-8">
-                                                <a href="{{ route('store.product', [$store->slug, $fProd->slug]) }}" class="block group/prod">
-                                                    <div class="bg-gray-50 rounded-lg overflow-hidden aspect-[4/3] mb-3">
-                                                        @if($fProd->image_path)
-                                                            <img src="{{ $fProd->image_url }}" class="w-full h-full object-cover mix-blend-multiply group-hover/prod:scale-105 transition-transform">
-                                                        @else
-                                                            <div class="w-full h-full flex items-center justify-center text-4xl text-gray-300">📦</div>
-                                                        @endif
-                                                    </div>
-                                                    <h5 class="text-sm font-semibold text-gray-800 mb-1 line-clamp-1 group-hover/prod:text-accent">{{ $fProd->name }}</h5>
-                                                    <div class="flex items-center gap-2">
-                                                        <span class="text-accent font-bold text-sm">S/ {{ number_format($fProd->price, 2) }}</span>
-                                                        @if($fProd->compare_price)
-                                                            <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">-{{ round((($fProd->compare_price - $fProd->price) / $fProd->compare_price) * 100) }}%</span>
-                                                        @endif
-                                                    </div>
-                                                </a>
-                                            </div>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-                        @else
-                            <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $cat->slug]) }}" class="text-gray-700 hover-text-accent font-semibold text-sm transition h-full flex items-center">
-                                {{ $cat->name }}
-                            </a>
-                        @endif
-                    @endforeach
-                    <a href="{{ route('store.catalog', $store->slug) }}" class="text-gray-700 hover-text-accent font-semibold text-sm transition h-full flex items-center">Todos</a>
-                </nav>
-
-                <!-- Icons (Language, Search, User, Wishlist, Cart) -->
-                <div class="flex items-center space-x-3 md:space-x-5">
-                    
-                    <!-- Language Switcher -->
+    <header class="bg-[#FDF8EF] sticky top-0 z-50 border-b border-gray-200/50 shadow-sm" x-data="{ mobileMenuOpen: false, searchOpen: false }">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12 py-4 md:py-5">
+            <!-- Top Row -->
+            <div class="flex justify-between items-center">
+                
+                <!-- Left: Settings (Language/Currency) -->
+                <div class="flex-1 flex items-center">
+                    @if($store->is_multilanguage_enabled)
                     <div class="relative" x-data="{ 
                             langOpen: false, 
                             currentLang: document.cookie.includes('googtrans=/es/en') ? 'EN' : 'ES',
@@ -140,49 +73,97 @@
                                 } else {
                                     document.cookie = 'googtrans=/es/es; path=/';
                                     document.cookie = 'googtrans=/es/es; domain=' + window.location.hostname + '; path=/';
-                                    // Limpiar cookies de google para restaurar
                                     document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
                                     document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=' + window.location.hostname + '; path=/;';
                                 }
                                 window.location.reload();
                             }
                         }">
-                        <button @click="langOpen = !langOpen" @click.away="langOpen = false" class="flex items-center gap-1 text-gray-600 hover-text-accent text-xs font-bold bg-gray-100 hover:bg-gray-200 px-2 py-1.5 rounded transition">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path></svg>
+                        <button @click="langOpen = !langOpen" @click.away="langOpen = false" class="flex items-center gap-1 text-[#1A1A1A] hover:text-[#C8A68B] text-xs font-semibold tracking-wider transition">
                             <span x-text="currentLang"></span>
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
-                        <div x-show="langOpen" style="display: none;" class="absolute right-0 mt-2 w-24 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50">
-                            <button @click="changeLanguage('ES')" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-gray-50 hover-text-accent" :class="currentLang === 'ES' ? 'text-accent' : 'text-gray-700'">Español</button>
-                            <button @click="changeLanguage('EN')" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-gray-50 hover-text-accent" :class="currentLang === 'EN' ? 'text-accent' : 'text-gray-700'">English</button>
+                        <div x-show="langOpen" style="display: none;" class="absolute left-0 mt-2 w-24 bg-white rounded-lg shadow-xl border border-gray-100 py-1 z-50">
+                            <button @click="changeLanguage('ES')" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-gray-50" :class="currentLang === 'ES' ? 'text-[#C8A68B]' : 'text-gray-700'">Español</button>
+                            <button @click="changeLanguage('EN')" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-gray-50" :class="currentLang === 'EN' ? 'text-[#C8A68B]' : 'text-gray-700'">English</button>
                         </div>
                     </div>
+                    @endif
+                </div>
 
-                    <button class="text-gray-700 hover-text-accent transition">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <!-- Center: Logo -->
+                <div class="flex-shrink-0 flex items-center justify-center">
+                    <a href="{{ route('store.show', $store->slug) }}" class="pointer-events-auto">
+                        @if($store->logo_path)
+                            <img class="h-10 md:h-14 w-auto" src="{{ $store->logo_url }}" alt="{{ $store->name }}">
+                        @else
+                            <span class="font-serif font-semibold text-2xl md:text-3xl tracking-wide text-[#1A1A1A]">{{ $store->name }}</span>
+                        @endif
+                    </a>
+                </div>
+
+                <!-- Right: Icons -->
+                <div class="flex-1 flex items-center justify-end space-x-4 md:space-x-5">
+                    <button class="text-[#1A1A1A] hover:text-[#C8A68B] transition hidden md:block">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                     </button>
-                    <button class="text-gray-700 hover-text-accent transition">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    <button @click="searchOpen = true" class="text-[#1A1A1A] hover:text-[#C8A68B] transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </button>
-                    <button class="text-gray-700 hover-text-accent transition">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                    <button onclick="document.getElementById('cartDrawer').style.display='flex'" class="text-[#1A1A1A] hover:text-[#C8A68B] transition relative">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                        <span data-cart-count class="absolute -top-1.5 -right-2 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">0</span>
                     </button>
-                    <button onclick="document.getElementById('cartDrawer').style.display='flex'" class="text-gray-700 hover-text-accent transition relative" x-data>
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                        <span data-cart-count class="absolute -top-2 -right-2 bg-accent text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">0</span>
-                    </button>
-                    <!-- Mobile Menu Button -->
-                    <button class="md:hidden text-gray-700" @click="mobileMenuOpen = !mobileMenuOpen">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    
+                    <button class="md:hidden text-[#1A1A1A]" @click="mobileMenuOpen = !mobileMenuOpen">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                     </button>
                 </div>
             </div>
+
+            <!-- Bottom Row: Navigation (Desktop) -->
+            <nav class="hidden md:flex justify-center space-x-10 mt-6 pb-2">
+                <a href="{{ route('store.show', $store->slug) }}" class="text-[#1A1A1A] hover:text-[#C8A68B] font-medium text-sm transition">Home</a>
+                <a href="{{ route('store.catalog', $store->slug) }}" class="text-[#1A1A1A] hover:text-[#C8A68B] font-medium text-sm transition">Shop</a>
+                
+                @foreach($categories->take(3) as $cat)
+                    <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $cat->slug]) }}" class="text-[#1A1A1A] hover:text-[#C8A68B] font-medium text-sm transition">
+                        {{ $cat->name }}
+                    </a>
+                @endforeach
+                
+                <a href="#" class="text-[#1A1A1A] hover:text-[#C8A68B] font-medium text-sm transition">Contact</a>
+            </nav>
         </div>
-        <!-- Mobile Menu -->
+
+        <!-- Mobile Menu Dropdown -->
         <div class="md:hidden" x-show="mobileMenuOpen" style="display: none;">
-            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-b border-gray-100">
-                <a href="#" class="block px-3 py-2 text-base font-medium text-gray-700">Dormitorio</a>
-                <a href="#" class="block px-3 py-2 text-base font-medium text-gray-700">Cocina</a>
-                <a href="{{ route('store.catalog', $store->slug) }}" class="block px-3 py-2 text-base font-medium text-gray-700">Todos</a>
+            <div class="px-4 pt-2 pb-4 space-y-1 bg-white border-t border-gray-100 shadow-inner">
+                <a href="{{ route('store.show', $store->slug) }}" class="block px-3 py-2 text-sm font-medium text-gray-800">Home</a>
+                <a href="{{ route('store.catalog', $store->slug) }}" class="block px-3 py-2 text-sm font-medium text-gray-800">Shop</a>
+                @foreach($categories as $cat)
+                    <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $cat->slug]) }}" class="block px-3 py-2 text-sm font-medium text-gray-800">{{ $cat->name }}</a>
+                @endforeach
+            </div>
+        </div>
+
+        <!-- Search Overlay -->
+        <div x-show="searchOpen" style="display: none;" 
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 -translate-y-4"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 -translate-y-4"
+             class="absolute top-0 inset-x-0 bg-white border-b border-gray-100 shadow-2xl z-50 p-6 md:p-10">
+            <div class="max-w-4xl mx-auto relative">
+                <form action="{{ route('store.catalog', $store->slug) }}" method="GET" class="flex items-center">
+                    <svg class="w-6 h-6 text-gray-400 absolute left-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input type="text" name="search" placeholder="Search for products, categories..." class="w-full pl-14 pr-12 py-4 md:py-5 text-lg md:text-2xl font-serif text-[#1A1A1A] bg-gray-50 rounded-full border-none focus:ring-0 focus:outline-none placeholder-gray-300" autofocus>
+                </form>
+                <button @click="searchOpen = false" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
             </div>
         </div>
     </header>
@@ -217,40 +198,53 @@
             </div>
         </section>
 
-        <!-- Hero Banner -->
-        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div class="relative w-full rounded-2xl overflow-hidden shadow-sm bg-gradient-to-r from-green-500 to-green-600 h-[250px] md:h-[350px] flex items-center">
-                <div class="absolute inset-0 opacity-10" style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
-                <div class="relative z-10 p-8 md:p-12 text-white w-full">
-                    <div class="max-w-xl">
-                        <div class="flex items-center gap-2 mb-2">
-                            <svg class="w-8 h-8 md:w-12 md:h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                            <h2 class="text-3xl md:text-5xl font-black italic tracking-tight">ENVÍO EXPRESS</h2>
-                        </div>
-                        <div class="inline-block bg-orange-500 text-white font-black px-4 py-1 rounded-full text-xl md:text-3xl mb-6 shadow-md transform -rotate-2">
-                            SIN COSTO
-                        </div>
-                        
-                        <div class="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 inline-flex items-center gap-2 mb-8 border border-white/30">
-                            <span class="font-bold">COMPRA HOY</span> 
-                            <span class="text-orange-300 font-medium">y recoge a partir de</span> 
-                            <span class="bg-orange-500 text-white font-bold px-2 py-0.5 rounded">60 min</span>
-                        </div>
-
-                        <div>
-                            <a href="{{ route('store.catalog', $store->slug) }}" class="inline-flex items-center gap-2 bg-transparent border-2 border-white text-white hover:bg-white hover:text-green-600 font-bold py-3 px-8 rounded-full transition-colors text-lg">
-                                COMPRAR AHORA 
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                            </a>
-                        </div>
+        <!-- Elegant Hero Banner -->
+        <section class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12 py-12 md:py-20">
+            <div class="flex flex-col lg:flex-row items-center justify-between gap-10">
+                
+                <!-- Left Image (Oval/Pill) -->
+                <div class="hidden lg:block w-[300px] h-[450px] flex-shrink-0 relative" data-animate>
+                    <div class="w-full h-full rounded-full overflow-hidden shadow-lg border-8 border-[#FDF8EF]">
+                        <img src="{{ $store->cover_path ? $store->cover_url : 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&q=80&w=800' }}" alt="Hero Image" class="w-full h-full object-cover">
                     </div>
                 </div>
-                <!-- Decorative elements on the right (Optional if you have images, skipped for now to keep it clean) -->
-                <div class="absolute right-0 bottom-0 top-0 w-1/3 hidden lg:block opacity-20 bg-cover bg-left" style="background-image: url('https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?auto=format&fit=crop&q=80'); mask-image: linear-gradient(to right, transparent, black);">
+
+                <!-- Center Text -->
+                <div class="flex-1 text-center max-w-2xl mx-auto z-10" data-animate>
+                    @if($store->hero_badge)
+                    <div class="inline-block px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase mb-6" style="background-color: var(--secondary); color: white;">
+                        {{ $store->hero_badge }}
+                    </div>
+                    @endif
+
+                    <h2 class="text-4xl md:text-6xl font-serif text-[#1A1A1A] mb-4 leading-tight">
+                        {{ $store->hero_title ?? 'Welcome to the world of elegance' }}
+                    </h2>
+
+                    @if($store->hero_subtitle)
+                    <p class="text-gray-500 text-sm md:text-base mb-10 max-w-lg mx-auto leading-relaxed">
+                        {{ $store->hero_subtitle }}
+                    </p>
+                    @else
+                    <p class="text-gray-500 text-sm md:text-base mb-10 max-w-lg mx-auto leading-relaxed">
+                        Descubre nuestra colección única. Diseñada con pasión para la vida moderna, ofreciendo productos funcionales y elegantes.
+                    </p>
+                    @endif
+
+                    <a href="{{ route('store.catalog', $store->slug) }}" class="inline-flex items-center justify-center w-32 h-32 rounded-full border border-gray-200 hover:border-[#C8A68B] transition-colors relative group mx-auto">
+                        <div class="absolute inset-2 rounded-full flex items-center justify-center transition-transform group-hover:scale-95" style="background-color: #E2CDBC;">
+                            <span class="text-[#1A1A1A] text-sm font-medium">Ver Todo</span>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Right Image -->
+                <div class="hidden lg:block w-[350px] h-[400px] flex-shrink-0" data-animate>
+                    <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=800" alt="Collection" class="w-full h-full object-cover rounded-tl-[100px]">
                 </div>
             </div>
-            <p class="text-center text-xs text-gray-500 mt-2">*Válido para pedidos realizados hasta las 5:00 p.m. Aplica T&C.</p>
         </section>
+        <p class="text-center text-xs text-gray-500 mt-2">*Válido para pedidos realizados hasta las 5:00 p.m. Aplica T&C.</p>
 
         <!-- Featured Categories -->
         <section class="py-12 bg-white border-t border-gray-100">
@@ -309,56 +303,66 @@
             </div>
         </section>
 
-        <!-- Products Section -->
-        <section class="py-12 bg-[#f9f9f9]">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h2 class="text-2xl font-bold text-gray-900 mb-8 uppercase tracking-wide border-b-2 border-accent pb-2 inline-block">Nuestros Productos</h2>
+        <!-- Products Section (Bento Gallery) -->
+        <section class="py-16 bg-[#FDF8EF]">
+            <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12">
+                <div class="flex items-center mb-10" data-animate>
+                    <h2 class="text-3xl md:text-4xl font-serif text-[#1A1A1A] italic tracking-wide">Best Selling</h2>
+                </div>
                 
                 @if($allProducts->isEmpty())
                 <p class="text-gray-400 text-center py-12">Próximamente productos disponibles...</p>
                 @else
-                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[auto]">
                     @foreach($allProducts as $product)
-                    <div class="bg-white rounded-xl overflow-hidden hover:shadow-lg transition-shadow border border-gray-100 group flex flex-col relative">
+                    @php
+                        // First item is large (bento style)
+                        $isLarge = $loop->first || $loop->iteration == 6;
+                    @endphp
+                    <div class="{{ $isLarge ? 'md:col-span-2 md:row-span-2' : 'col-span-1 row-span-1' }} group flex flex-col relative" data-animate>
                         
-                        <!-- Actions overlay -->
-                        <div class="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                            <button class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-500 hover:text-red-500 shadow-sm border border-gray-100">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-                            </button>
-                        </div>
-
-                        <a href="{{ route('store.product', [$store->slug, $product->slug]) }}" class="block relative aspect-square overflow-hidden bg-gray-50 p-4">
+                        <a href="{{ route('store.product', [$store->slug, $product->slug]) }}" class="block relative w-full {{ $isLarge ? 'aspect-[4/3] md:aspect-square' : 'aspect-square' }} overflow-hidden rounded-md bg-[#F4F2EE] mb-4">
                             @if($product->image_path)
                                 <img src="{{ $product->image_url }}" alt="{{ $product->name }}"
-                                     class="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300">
+                                     class="w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-700 ease-in-out">
                             @else
                                 <div class="w-full h-full flex items-center justify-center text-4xl text-gray-300">📦</div>
                             @endif
+
+                            @if($product->resolveComparePrice())
+                            <div class="absolute top-3 left-3">
+                                <span class="bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm tracking-widest">
+                                    -{{ round((($product->resolveComparePrice() - $product->resolvePrice()) / $product->resolveComparePrice()) * 100) }}% SALE
+                                </span>
+                            </div>
+                            @endif
+
+                            <!-- Quick add overlay on hover (Desktop) -->
+                            <div class="absolute inset-x-0 bottom-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-4 group-hover:translate-y-0 hidden md:block">
+                                <button onclick="event.preventDefault(); window.TribioCart && window.TribioCart.add({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->resolvePrice() }}, '{{ $product->image_path ? $product->image_url : '' }}')" 
+                                        class="w-full py-3 bg-[#1A1A1A]/90 backdrop-blur-sm text-white rounded-md text-sm font-semibold hover:bg-[#C8A68B] transition-colors flex items-center justify-center gap-2 shadow-lg">
+                                    Add to cart
+                                </button>
+                            </div>
                         </a>
                         
-                        <div class="p-4 flex flex-col flex-grow">
-                            <!-- Brand / Category placeholder -->
-                            <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">EN KASA</span>
-                            
-                            <a href="{{ route('store.product', [$store->slug, $product->slug]) }}" class="text-gray-800 font-medium text-sm leading-snug line-clamp-2 hover-text-accent mb-2 flex-grow">
+                        <div class="flex flex-col flex-grow px-1">
+                            <a href="{{ route('store.product', [$store->slug, $product->slug]) }}" class="text-[#1A1A1A] font-medium text-sm leading-snug line-clamp-2 hover:text-[#C8A68B] transition-colors mb-1">
                                 {{ $product->name }}
                             </a>
                             
-                            <div class="mt-auto">
-                                <div class="flex items-center gap-2 mb-3">
-                                    <span class="font-bold text-lg text-gray-900">S/ {{ number_format($product->price, 2) }}</span>
-                                    @if($product->compare_price)
-                                    <span class="text-gray-400 text-xs line-through">S/ {{ number_format($product->compare_price, 2) }}</span>
-                                    @endif
-                                </div>
-                                
-                                <button onclick="window.TribioCart && window.TribioCart.add({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->price }}, '{{ $product->image_path ? $product->image_url : '' }}')" 
-                                        class="w-full py-2 bg-gray-900 hover:bg-accent text-white rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                                    Agregar
-                                </button>
+                            <div class="mt-auto flex items-center gap-2">
+                                <span class="font-bold text-sm text-red-600">{{ $product->resolveCurrencySymbol() }} {{ number_format($product->resolvePrice(), 2) }}</span>
+                                @if($product->resolveComparePrice())
+                                <span class="text-gray-400 text-[11px] line-through">{{ $product->resolveCurrencySymbol() }} {{ number_format($product->resolveComparePrice(), 2) }}</span>
+                                @endif
                             </div>
+
+                            <!-- Mobile Quick Add -->
+                            <button onclick="window.TribioCart && window.TribioCart.add({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->resolvePrice() }}, '{{ $product->image_path ? $product->image_url : '' }}')" 
+                                    class="mt-3 md:hidden w-full py-2.5 bg-[#1A1A1A] text-white rounded-md text-xs font-semibold hover:bg-[#C8A68B] transition-colors">
+                                Add to cart
+                            </button>
                         </div>
                     </div>
                     @endforeach
@@ -481,18 +485,32 @@
     {{-- Cart Drawer (Keep the same logic we just built for checkout) --}}
     <div id="cartDrawer" x-data="{
              checkoutStep: 1,
-             customer: { name: '', phone: '', address: '', notes: '', express_shipping: false },
+             customer: { name: '', email: '', phone: '', address: '', country: '{{ request()->cookie('user_country') ?? 'PE' }}', state: '', city: '', zipcode: '', notes: '', express_shipping: false },
              storeSlug: '{{ $store->slug }}',
              isExpressEnabled: {{ $store->is_express_shipping_enabled ? 'true' : 'false' }},
              expressCost: {{ $store->express_shipping_cost ?? 0 }},
-             get cartItems() { return window.TribioCart ? window.TribioCart.items : []; },
+             currencySymbol: '{{ request()->cookie("user_country") === "US" ? "$" : "S/" }}',
+             shippingCost: 0,
+             cartItems: window.TribioCart ? window.TribioCart.items : [],
              get cartTotal() { 
                  let total = this.cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
                  if (this.customer.express_shipping) total += this.expressCost;
+                 total += this.shippingCost;
                  return total;
              },
+             updateShipping() {
+                 if(!this.customer.country) return;
+                 fetch(`/api/shipping-cost/${this.storeSlug}?country=${this.customer.country}&state=${this.customer.state}`)
+                     .then(res => res.json())
+                     .then(data => {
+                         this.shippingCost = parseFloat(data.cost) || 0;
+                     }).catch(() => this.shippingCost = 0);
+             },
+             init() {
+                 this.updateShipping();
+             },
              submitOrder() {
-                 if(!this.customer.name || !this.customer.phone) {
+                 if(!this.customer.name || !this.customer.phone || !this.customer.email) {
                      alert('Por favor completa los campos obligatorios (Nombre y Teléfono).');
                      return;
                  }
@@ -504,7 +522,7 @@
                  }
              }
          }"
-         @cart-updated.window="$forceUpdate()"
+         @cart-updated.window="cartItems = $event.detail"
          style="display:none; position: fixed; inset: 0; z-index: 999; justify-content: flex-end;">
         <div style="background: rgba(0,0,0,0.5);" class="absolute inset-0" onclick="document.getElementById('cartDrawer').style.display='none'"></div>
         <div class="relative w-full max-w-md h-full flex flex-col bg-white border-l border-gray-200 shadow-2xl">
@@ -530,12 +548,12 @@
                                 </template>
                                 <div class="flex-1">
                                     <h4 class="text-gray-800 font-semibold text-sm leading-tight" x-text="item.name"></h4>
-                                    <div class="flex justify-between items-center mt-2">
-                                        <p class="text-accent font-bold text-sm" x-text="'S/ ' + (item.price * item.quantity).toFixed(2)"></p>
+                                     <div class="flex justify-between items-center mt-2">
+                                        <p class="text-accent font-bold text-sm" x-text="currencySymbol + ' ' + (item.price * item.quantity).toFixed(2)"></p>
                                         <div class="flex items-center gap-2 text-gray-600 text-xs bg-white rounded-full border border-gray-200 p-1">
-                                            <button @click="window.TribioCart.updateQuantity(item.id, item.quantity - 1); $dispatch('cart-updated')" class="w-5 h-5 rounded-full hover:bg-gray-100 flex items-center justify-center font-bold">-</button>
+                                            <button @click="window.TribioCart.updateQuantity(item.id, item.quantity - 1)" class="w-5 h-5 rounded-full hover:bg-gray-100 flex items-center justify-center font-bold">-</button>
                                             <span x-text="item.quantity" class="w-4 text-center font-medium"></span>
-                                            <button @click="window.TribioCart.updateQuantity(item.id, item.quantity + 1); $dispatch('cart-updated')" class="w-5 h-5 rounded-full hover:bg-gray-100 flex items-center justify-center font-bold">+</button>
+                                            <button @click="window.TribioCart.updateQuantity(item.id, item.quantity + 1)" class="w-5 h-5 rounded-full hover:bg-gray-100 flex items-center justify-center font-bold">+</button>
                                         </div>
                                     </div>
                                 </div>
@@ -550,13 +568,48 @@
                             <label class="block text-xs font-bold text-gray-500 mb-1">Nombre Completo *</label>
                             <input type="text" x-model="customer.name" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none transition" required>
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1">Teléfono (WhatsApp) *</label>
-                            <input type="text" x-model="customer.phone" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none transition" required>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Correo Electrónico *</label>
+                                <input type="email" x-model="customer.email" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none transition" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Teléfono (WhatsApp) *</label>
+                                <input type="text" x-model="customer.phone" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none transition" required>
+                            </div>
                         </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">País *</label>
+                                <select x-model="customer.country" @change="updateShipping()" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none transition" required>
+                                    <option value="PE">Perú</option>
+                                    <option value="US">Estados Unidos</option>
+                                    <option value="MX">México</option>
+                                    <option value="CO">Colombia</option>
+                                    <option value="ES">España</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Estado / Departamento</label>
+                                <input type="text" x-model="customer.state" @change="updateShipping()" placeholder="Ej: Lima, California" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none transition">
+                            </div>
+                        </div>
+
                         <div>
                             <label class="block text-xs font-bold text-gray-500 mb-1">Dirección de Envío</label>
                             <input type="text" x-model="customer.address" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none transition">
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Ciudad</label>
+                                <input type="text" x-model="customer.city" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Código Postal</label>
+                                <input type="text" x-model="customer.zipcode" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none transition">
+                            </div>
                         </div>
                         
                         <template x-if="isExpressEnabled">
@@ -568,7 +621,7 @@
                                     <input type="checkbox" x-model="customer.express_shipping" class="mt-1 accent-green-600 w-4 h-4 rounded">
                                     <div>
                                         <p class="font-bold text-sm text-green-700 flex items-center gap-1">🚀 ¡Quiero Envío Express!</p>
-                                        <p class="text-xs text-green-600/80 mt-1">Llega más rápido a tu domicilio. <span x-show="expressCost > 0" x-text="'+ S/ ' + expressCost.toFixed(2)"></span><span x-show="expressCost == 0">¡Es gratis!</span></p>
+                                        <p class="text-xs text-green-600/80 mt-1">Llega más rápido a tu domicilio. <span x-show="expressCost > 0" x-text="'+ ' + currencySymbol + ' ' + expressCost.toFixed(2)"></span><span x-show="expressCost == 0">¡Es gratis!</span></p>
                                     </div>
                                 </label>
                             </div>
@@ -584,9 +637,21 @@
             
             <template x-if="cartItems.length > 0">
                 <div class="p-5 border-t border-gray-100 bg-gray-50">
-                    <div class="flex justify-between items-center mb-4 text-gray-800">
+                    <div class="flex justify-between items-center mb-2 text-gray-600 text-sm">
+                        <span>Subtotal:</span>
+                        <span x-text="currencySymbol + ' ' + (cartTotal - shippingCost - (customer.express_shipping ? expressCost : 0)).toFixed(2)"></span>
+                    </div>
+                    
+                    <template x-if="shippingCost > 0">
+                        <div class="flex justify-between items-center mb-2 text-gray-600 text-sm">
+                            <span>Envío:</span>
+                            <span x-text="'+ ' + currencySymbol + ' ' + shippingCost.toFixed(2)"></span>
+                        </div>
+                    </template>
+
+                    <div class="flex justify-between items-center mb-4 text-gray-800 border-t border-gray-200 pt-2 mt-2">
                         <span class="font-bold text-sm">Total a pagar:</span>
-                        <span class="font-black text-xl text-accent" x-text="'S/ ' + cartTotal.toFixed(2)"></span>
+                        <span class="font-black text-xl text-accent" x-text="currencySymbol + ' ' + cartTotal.toFixed(2)"></span>
                     </div>
                     
                     <template x-if="checkoutStep === 1">
@@ -597,10 +662,10 @@
                     
                     <template x-if="checkoutStep === 2">
                         <div class="flex gap-2">
-                            <button @click="checkoutStep = 1" class="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 transition-colors">
+                            <button @click="checkoutStep = 1" class="px-4 py-3 bg-white border border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition">
                                 ←
                             </button>
-                            <button id="btnSubmitOrder" @click="submitOrder()" class="flex-1 py-3 rounded-xl font-bold text-white transition-all shadow-md text-center" style="background: var(--accent)">
+                            <button id="btnSubmitOrder" @click="submitOrder" class="flex-1 py-3 bg-[#1A1A1A] hover:bg-[#C8A68B] rounded-xl font-bold text-white transition-colors shadow-md text-center flex items-center justify-center gap-2" style="background: var(--accent)">
                                 Confirmar y Pagar
                             </button>
                         </div>
@@ -609,6 +674,36 @@
             </template>
         </div>
     </div>
+
+    </div>
+
+    <!-- Modal de Selección de País (Se muestra si no hay cookie 'user_country') -->
+    @if(!request()->hasCookie('user_country'))
+    <div x-data="{
+        showModal: true,
+        selectCountry(countryCode) {
+            document.cookie = 'user_country=' + countryCode + '; path=/; max-age=31536000; domain=' + window.location.hostname;
+            this.showModal = false;
+            window.location.reload();
+        }
+    }" x-show="showModal" style="display:none;" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div @click.away="showModal = true" class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center animate-fade-in-up">
+            <h2 class="text-2xl font-black text-gray-900 mb-2">¡Hola! 👋</h2>
+            <p class="text-gray-500 mb-6 text-sm">Antes de continuar, cuéntanos desde qué país nos estás visitando para mostrarte los precios y opciones correctas.</p>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <button @click="selectCountry('PE')" class="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-gray-100 hover:border-green-500 hover:bg-green-50 transition-all group">
+                    <span class="text-4xl group-hover:scale-110 transition-transform">🇵🇪</span>
+                    <span class="font-bold text-gray-700 group-hover:text-green-600">Perú</span>
+                </button>
+                <button @click="selectCountry('US')" class="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-gray-100 hover:border-green-500 hover:bg-green-50 transition-all group">
+                    <span class="text-4xl group-hover:scale-110 transition-transform">🇺🇸</span>
+                    <span class="font-bold text-gray-700 group-hover:text-green-600">Estados Unidos</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
 
 </body>
 </html>

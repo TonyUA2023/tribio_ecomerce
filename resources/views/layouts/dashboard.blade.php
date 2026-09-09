@@ -53,9 +53,8 @@
                 ['route' => 'dashboard.galeria.index', 'icon' => '🖼️', 'label' => 'Galería'],
                 ['route' => 'dashboard.pedidos.index', 'icon' => '🛒', 'label' => 'Pedidos'],
                 ['route' => 'dashboard.inventario.index', 'icon' => '📋', 'label' => 'Inventario'],
+                ['route' => 'dashboard.shipping.index', 'icon' => '🚚', 'label' => 'Zonas de Envío'],
                 ['route' => 'dashboard.store.edit', 'icon' => '⚙️', 'label' => 'Mi Tienda'],
-                // ['route' => 'dashboard.store.templates', 'icon' => '🎨', 'label' => 'Plantillas'],
-                // ['route' => 'dashboard.store.builder', 'icon' => '🏗️', 'label' => 'Editor Web'],
             ];
             @endphp
             @foreach($navItems as $item)
