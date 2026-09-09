@@ -17,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
+        $middleware->encryptCookies(except: [
+            'user_country',
+        ]);
         $middleware->validateCsrfTokens(except: [
             '/plan/webhook',
         ]);
