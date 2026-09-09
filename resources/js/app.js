@@ -78,121 +78,125 @@ document.addEventListener('DOMContentLoaded', () => {
             reader.readAsDataURL(file);
         });
     });
+});
 
-    // ── Cart system (Tribio store public pages) ──
-    window.TribioCart = {
-        items: JSON.parse(localStorage.getItem('tribio_cart') || '[]'),
+// 🛒 Cart system (Tribio store public pages) 🛒
+window.TribioCart = {
+    items: JSON.parse(localStorage.getItem('tribio_cart') || '[]'),
 
-        save() {
-            localStorage.setItem('tribio_cart', JSON.stringify(this.items));
-            this.updateUI();
-            window.dispatchEvent(new CustomEvent('cart-updated', { detail: this.items }));
-        },
+    save() {
+        localStorage.setItem('tribio_cart', JSON.stringify(this.items));
+        this.updateUI();
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: this.items }));
+    },
 
-        add(id, name, price, image = '') {
-            const existing = this.items.find(i => i.id === id);
-            if (existing) {
-                existing.quantity++;
-            } else {
-                this.items.push({ id, name, price, image, quantity: 1 });
-            }
-            this.save();
-            this.showNotification(`✅ ${name} añadido al carrito`);
-        },
-
-        remove(id) {
-            this.items = this.items.filter(i => i.id !== id);
-            this.save();
-        },
-
-        updateQuantity(id, qty) {
-            const item = this.items.find(i => i.id === id);
-            if (item) {
-                item.quantity = Math.max(1, qty);
-                this.save();
-            }
-        },
-
-        clear() {
-            this.items = [];
-            this.save();
-        },
-
-        total() {
-            return this.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-        },
-
-        count() {
-            return this.items.reduce((sum, i) => sum + i.quantity, 0);
-        },
-
-        updateUI() {
-            // Update cart badge count
-            document.querySelectorAll('[data-cart-count]').forEach(el => {
-                el.textContent = this.count();
-                el.style.display = this.count() > 0 ? 'flex' : 'none';
-            });
-
-            // Update cart total
-            document.querySelectorAll('[data-cart-total]').forEach(el => {
-                el.textContent = 'S/. ' + this.total().toFixed(2);
-            });
-        },
-
-        showNotification(msg) {
-            const el = document.createElement('div');
-            el.className = 'fixed bottom-6 right-6 z-[9999] px-5 py-3 rounded-2xl text-white text-sm font-medium shadow-2xl';
-            el.style.cssText = 'background: rgba(26,26,46,0.95); border: 1px solid rgba(124,58,237,0.4); backdrop-filter: blur(20px); animation: slide-up 0.3s ease;';
-            el.textContent = msg;
-            document.body.appendChild(el);
-            setTimeout(() => el.remove(), 3000);
-        },
-
-        async checkout(storeSlug, customerData) {
-            if (this.items.length === 0) {
-                alert('El carrito está vacío');
-                return;
-            }
-
-            const payload = {
-                items: this.items,
-                ...customerData
-            };
-
-            try {
-                const response = await fetch(`/tienda/${storeSlug}/checkout`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                const data = await response.json();
-
-                if (response.ok && data.success) {
-                    this.clear();
-                    if (data.payment_url) {
-                        window.location.href = data.payment_url;
-                    } else if (data.whatsapp_url) {
-                        window.open(data.whatsapp_url, '_blank');
-                        window.location.href = data.redirect_url;
-                    } else {
-                        window.location.href = data.redirect_url;
-                    }
-                } else {
-                    alert(data.error || 'Error al procesar el pedido. Por favor verifica los datos.');
-                    console.error(data);
-                }
-            } catch (error) {
-                console.error('Error during checkout:', error);
-                alert('Ocurrió un error inesperado al procesar el checkout.');
-            }
+    add(id, name, price, image = '') {
+        const existing = this.items.find(i => i.id === id);
+        if (existing) {
+            existing.quantity++;
+        } else {
+            this.items.push({ id, name, price, image, quantity: 1 });
         }
-    };
+        this.save();
+        this.showNotification(`🛍️ ${name} añadido al carrito`);
+    },
 
+    remove(id) {
+        this.items = this.items.filter(i => i.id !== id);
+        this.save();
+    },
+
+    updateQuantity(id, qty) {
+        const item = this.items.find(i => i.id === id);
+        if (item) {
+            item.quantity = Math.max(1, qty);
+            this.save();
+        }
+    },
+
+    clear() {
+        this.items = [];
+        this.save();
+    },
+
+    total() {
+        return this.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+    },
+
+    count() {
+        return this.items.reduce((sum, i) => sum + i.quantity, 0);
+    },
+
+    updateUI() {
+        // Update cart badge count
+        document.querySelectorAll('[data-cart-count]').forEach(el => {
+            el.textContent = this.count();
+            el.style.display = this.count() > 0 ? 'flex' : 'none';
+        });
+
+        // Update cart total
+        document.querySelectorAll('[data-cart-total]').forEach(el => {
+            el.textContent = 'S/. ' + this.total().toFixed(2);
+        });
+        
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: this.items }));
+    },
+
+    showNotification(msg) {
+        const el = document.createElement('div');
+        el.className = 'fixed bottom-6 right-6 z-[9999] px-5 py-3 rounded-2xl text-white text-sm font-medium shadow-2xl';
+        el.style.cssText = 'background: rgba(26,26,46,0.95); border: 1px solid rgba(124,58,237,0.4); backdrop-filter: blur(20px); animation: slide-up 0.3s ease;';
+        el.textContent = msg;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 3000);
+    },
+
+    async checkout(storeSlug, customerData) {
+        if (this.items.length === 0) {
+            alert('El carrito está vacío');
+            return;
+        }
+
+        const payload = {
+            items: this.items,
+            ...customerData
+        };
+
+        try {
+            const response = await fetch(`/tienda/${storeSlug}/checkout`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                this.clear();
+                if (data.payment_url) {
+                    window.location.href = data.payment_url;
+                } else if (data.whatsapp_url) {
+                    window.open(data.whatsapp_url, '_blank');
+                    window.location.href = data.redirect_url;
+                } else {
+                    window.location.href = data.redirect_url;
+                }
+            } else {
+                alert(data.error || 'Error al procesar el pedido. Por favor verifica los datos.');
+                console.error(data);
+            }
+        } catch (error) {
+            console.error('Error during checkout:', error);
+            alert('Ocurrió un error inesperado al procesar el checkout.');
+        }
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
     // Initialize cart UI
     window.TribioCart.updateUI();
 });
