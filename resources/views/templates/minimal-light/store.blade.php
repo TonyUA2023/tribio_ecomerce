@@ -682,7 +682,7 @@
     <div x-data="{
         showModal: true,
         selectCountry(countryCode) {
-            document.cookie = 'user_country=' + countryCode + '; path=/; max-age=31536000; domain=' + window.location.hostname;
+            document.cookie = 'user_country=' + countryCode + '; path=/; max-age=31536000';
             this.showModal = false;
             window.location.reload();
         }
