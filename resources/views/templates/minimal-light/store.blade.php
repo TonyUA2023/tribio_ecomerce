@@ -12,7 +12,7 @@
         :root {
             --accent: {{ $store->accent_color ?? '#1A1A1A' }};
             --secondary: {{ $store->secondary_color ?? '#C8A68B' }};
-            --bg: {{ $store->bg_color ?? '#FDF8EF' }};
+            --bg: #FDF8EF;
             --text-dark: #1A1A1A;
             --text-light: #666666;
             --font-serif: 'Playfair Display', serif;
