@@ -80,6 +80,8 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     // Categorías
     Route::resource('categorias', CategoryController::class)->parameters(['categorias' => 'category']);
     Route::post('/categorias/reordenar', [CategoryController::class, 'reorder'])->name('categorias.reorder');
+    Route::post('/categorias/{category}/toggle-header', [CategoryController::class, 'toggleHeader'])->name('categorias.toggle-header');
+    Route::post('/categorias/{category}/toggle-featured', [CategoryController::class, 'toggleFeatured'])->name('categorias.toggle-featured');
 
     // Marcas
     Route::resource('marcas', BrandController::class)->parameters(['marcas' => 'brand']);
@@ -165,3 +167,17 @@ Route::prefix('tienda')->name('store.')->group(function () {
 
 // API para costos de envío
 Route::get('/api/shipping-cost/{slug}', [\App\Http\Controllers\StoreController::class, 'getShippingCost']);
+
+// ────────── PORTAL DEL CLIENTE / COMPRADOR UNIVERSAL ──────────
+Route::prefix('customer')->name('customer.')->group(function () {
+    Route::post('/check-email', [\App\Http\Controllers\CustomerPortalController::class, 'checkEmail'])->name('check-email');
+    Route::get('/current', [\App\Http\Controllers\CustomerPortalController::class, 'current'])->name('current');
+    Route::post('/login', [\App\Http\Controllers\CustomerPortalController::class, 'login'])->name('login');
+    Route::post('/register', [\App\Http\Controllers\CustomerPortalController::class, 'register'])->name('register');
+    Route::post('/logout', [\App\Http\Controllers\CustomerPortalController::class, 'logout'])->name('logout');
+    Route::get('/orders', [\App\Http\Controllers\CustomerPortalController::class, 'orders'])->name('orders');
+    Route::match(['get', 'post'], '/track-order', [\App\Http\Controllers\CustomerPortalController::class, 'trackOrder'])->name('track-order');
+    Route::get('/addresses', [\App\Http\Controllers\CustomerPortalController::class, 'addresses'])->name('addresses');
+    Route::post('/addresses', [\App\Http\Controllers\CustomerPortalController::class, 'saveAddress'])->name('addresses.save');
+    Route::delete('/addresses/{id}', [\App\Http\Controllers\CustomerPortalController::class, 'deleteAddress'])->name('addresses.delete');
+});

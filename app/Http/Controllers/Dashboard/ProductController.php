@@ -114,6 +114,38 @@ class ProductController extends Controller
 
         $product = Product::create($data);
 
+        // Guardar variantes si tiene activado has_variants
+        if ($request->boolean('has_variants')) {
+            $product->has_variants = true;
+            if ($request->filled('variant_options_json')) {
+                $product->variant_options = json_decode($request->input('variant_options_json'), true);
+            }
+            $product->save();
+
+            if ($request->filled('variants_json')) {
+                $variantsData = json_decode($request->input('variants_json'), true);
+                if (is_array($variantsData)) {
+                    $totalVariantStock = 0;
+                    foreach ($variantsData as $v) {
+                        $vStock = intval($v['stock'] ?? 0);
+                        $totalVariantStock += $vStock;
+                        $product->variants()->create([
+                            'sku'           => !empty($v['sku']) ? $v['sku'] : ($product->sku . '-' . Str::random(4)),
+                            'price'         => !empty($v['price']) ? floatval($v['price']) : null,
+                            'compare_price' => !empty($v['compare_price']) ? floatval($v['compare_price']) : null,
+                            'price_usd'     => !empty($v['price_usd']) ? floatval($v['price_usd']) : null,
+                            'stock'         => $vStock,
+                            'attributes'    => $v['attributes'] ?? [],
+                            'is_active'     => isset($v['is_active']) ? (bool) $v['is_active'] : true,
+                        ]);
+                    }
+                    if ($totalVariantStock > 0 && $product->stock == 0) {
+                        $product->update(['stock' => $totalVariantStock]);
+                    }
+                }
+            }
+        }
+
         // Registro de movimiento de inventario inicial
         if ($data['track_stock'] && $data['stock'] > 0) {
             InventoryMovement::create([
@@ -138,6 +170,7 @@ class ProductController extends Controller
         abort_if($product->store_id !== $store->id, 403);
         $categories = $store->categories;
         $brands     = $store->brands;
+        $product->load('variants');
 
         return view('dashboard.products.edit', compact('store', 'product', 'categories', 'brands'));
     }
@@ -169,6 +202,8 @@ class ProductController extends Controller
             'is_featured'       => 'nullable|boolean',
             'is_new'            => 'nullable|boolean',
             'image'             => 'nullable|image|mimes:png,jpg,jpeg,webp|max:3072',
+            'gallery.*'         => 'nullable|image|mimes:png,jpg,jpeg,webp|max:3072',
+            'remove_gallery'    => 'nullable|array',
             'tags'              => 'nullable|string',
         ]);
 
@@ -178,6 +213,15 @@ class ProductController extends Controller
         $data['is_featured']   = $request->boolean('is_featured');
         $data['is_new']        = $request->boolean('is_new');
         $data['tags']          = $request->tags ? array_map('trim', explode(',', $request->tags)) : null;
+
+        // Variantes
+        $hasVariants = $request->boolean('has_variants');
+        $data['has_variants'] = $hasVariants;
+        if ($hasVariants && $request->filled('variant_options_json')) {
+            $data['variant_options'] = json_decode($request->input('variant_options_json'), true);
+        } else if (!$hasVariants) {
+            $data['variant_options'] = null;
+        }
 
         // Registrar movimiento si cambió el stock
         if ($data['track_stock'] && (int)$data['stock'] !== $product->stock) {
@@ -199,7 +243,71 @@ class ProductController extends Controller
             $data['image_path'] = $request->file('image')->store("stores/{$store->id}/products", 'public');
         }
 
+        // Gestión de Galería de Imágenes Secundarias
+        $currentGallery = is_array($product->gallery_images) ? $product->gallery_images : [];
+
+        // Eliminar imágenes seleccionadas para borrar
+        if ($request->filled('remove_gallery')) {
+            foreach ($request->input('remove_gallery') as $pathToRemove) {
+                if (in_array($pathToRemove, $currentGallery)) {
+                    Storage::disk('public')->delete($pathToRemove);
+                    $currentGallery = array_values(array_filter($currentGallery, fn($p) => $p !== $pathToRemove));
+                }
+            }
+        }
+
+        // Agregar nuevas fotos secundarias
+        if ($request->hasFile('gallery')) {
+            foreach ($request->file('gallery') as $img) {
+                $currentGallery[] = $img->store("stores/{$store->id}/gallery-products", 'public');
+            }
+        }
+
+        $data['gallery_images'] = array_values($currentGallery);
+
         $product->update($data);
+
+        // Sincronizar Variantes
+        if ($hasVariants && $request->filled('variants_json')) {
+            $variantsData = json_decode($request->input('variants_json'), true);
+            if (is_array($variantsData)) {
+                $keptIds = [];
+                $totalVariantStock = 0;
+                foreach ($variantsData as $v) {
+                    $vStock = intval($v['stock'] ?? 0);
+                    $totalVariantStock += $vStock;
+                    $payload = [
+                        'sku'           => !empty($v['sku']) ? $v['sku'] : ($product->sku . '-' . Str::random(4)),
+                        'price'         => !empty($v['price']) ? floatval($v['price']) : null,
+                        'compare_price' => !empty($v['compare_price']) ? floatval($v['compare_price']) : null,
+                        'price_usd'     => !empty($v['price_usd']) ? floatval($v['price_usd']) : null,
+                        'stock'         => $vStock,
+                        'attributes'    => $v['attributes'] ?? [],
+                        'is_active'     => isset($v['is_active']) ? (bool) $v['is_active'] : true,
+                    ];
+
+                    if (!empty($v['id'])) {
+                        $existing = $product->variants()->find($v['id']);
+                        if ($existing) {
+                            $existing->update($payload);
+                            $keptIds[] = $existing->id;
+                            continue;
+                        }
+                    }
+
+                    $created = $product->variants()->create($payload);
+                    $keptIds[] = $created->id;
+                }
+
+                $product->variants()->whereNotIn('id', $keptIds)->delete();
+
+                if ($totalVariantStock > 0 && $product->stock == 0) {
+                    $product->update(['stock' => $totalVariantStock]);
+                }
+            }
+        } elseif (!$hasVariants) {
+            $product->variants()->delete();
+        }
 
         return redirect()->route('dashboard.productos.index')
             ->with('success', "Producto '{$product->name}' actualizado correctamente.");
@@ -211,6 +319,11 @@ class ProductController extends Controller
         abort_if($product->store_id !== $store->id, 403);
 
         if ($product->image_path) Storage::disk('public')->delete($product->image_path);
+        if (!empty($product->gallery_images) && is_array($product->gallery_images)) {
+            foreach ($product->gallery_images as $img) {
+                Storage::disk('public')->delete($img);
+            }
+        }
         $product->delete();
 
         return back()->with('success', 'Producto eliminado.');

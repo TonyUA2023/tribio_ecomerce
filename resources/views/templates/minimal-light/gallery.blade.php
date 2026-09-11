@@ -27,6 +27,9 @@
                 </div>
 
                 <div class="flex-1 flex items-center justify-end space-x-4 md:space-x-5">
+                    <button @click="$dispatch('open-customer-modal')" class="text-[#1A1A1A] hover:text-[#C8A68B] transition" title="Mi Cuenta / Pedidos">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    </button>
                     <button @click="searchOpen = true" class="text-[#1A1A1A] hover:text-[#C8A68B] transition">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </button>
@@ -95,8 +98,15 @@
             </div>
         @endif
     </div>
+
+    <!-- Footer -->
+    <footer class="bg-[#FDF8EF] border-t border-stone-200/60 py-8 text-center mt-12">
+        <p class="text-xs font-semibold text-gray-500 tracking-wider">
+            Impulsado por <span class="text-[#1A1A1A] font-bold">Tribio</span>
+        </p>
+    </footer>
 </div>
 
-<!-- Re-include Cart Drawer (Just like catalog) -->
-@include('templates.minimal-light.store', ['only_cart_drawer' => true])
+<!-- Cart Drawer -->
+@include('templates.minimal-light.cart-drawer')
 @endsection

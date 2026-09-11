@@ -22,6 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->validateCsrfTokens(except: [
             '/plan/webhook',
+            'tienda/*/checkout',
+            'checkout',
+            'customer/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

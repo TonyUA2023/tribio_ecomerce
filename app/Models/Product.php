@@ -16,6 +16,7 @@ class Product extends Model
         'stock', 'track_stock', 'allow_backorder', 'low_stock_alert', 'unit',
         'image_path', 'gallery_images',
         'is_active', 'is_featured', 'is_new', 'is_digital',
+        'has_variants', 'variant_options',
         'is_composite', 'composite_type', 'is_sold', 'sold_at',
         'weight', 'dimensions', 'tags', 'meta_title', 'meta_description',
         'views', 'sold_count', 'sort_order',
@@ -24,6 +25,8 @@ class Product extends Model
     protected $casts = [
         'gallery_images'  => 'array',
         'tags'            => 'array',
+        'variant_options' => 'array',
+        'has_variants'    => 'boolean',
         'price'           => 'decimal:2',
         'compare_price'   => 'decimal:2',
         'price_usd'       => 'decimal:2',
@@ -66,6 +69,30 @@ class Product extends Model
         return $this->image_path
             ? asset('storage/' . $this->image_path)
             : asset('images/default-product.jpg');
+    }
+
+    public function getGalleryUrlsAttribute(): array
+    {
+        if (empty($this->gallery_images) || !is_array($this->gallery_images)) {
+            return [];
+        }
+        return array_map(function ($path) {
+            return asset('storage/' . $path);
+        }, $this->gallery_images);
+    }
+
+    public function getAllImagesAttribute(): array
+    {
+        $images = [];
+        if ($this->image_path) {
+            $images[] = asset('storage/' . $this->image_path);
+        } else {
+            $images[] = asset('images/default-product.jpg');
+        }
+        foreach ($this->gallery_urls as $url) {
+            $images[] = $url;
+        }
+        return $images;
     }
 
     public function getDiscountPercentAttribute(): ?int
@@ -205,5 +232,54 @@ class Product extends Model
     public function inventoryMovements()
     {
         return $this->hasMany(InventoryMovement::class);
+    }
+
+    public function variants()
+    {
+        return $this->hasMany(ProductVariant::class)->orderBy('id');
+    }
+
+    public function activeVariants()
+    {
+        return $this->hasMany(ProductVariant::class)->where('is_active', true)->orderBy('id');
+    }
+
+    public function hasVariants(): bool
+    {
+        return (bool) $this->has_variants && $this->activeVariants()->count() > 0;
+    }
+
+    public function availableColors(): array
+    {
+        if (!$this->has_variants) {
+            return [];
+        }
+        $colors = [];
+        foreach ($this->activeVariants as $v) {
+            $attrs = $v->attributes ?? [];
+            foreach ($attrs as $key => $val) {
+                if (strtolower($key) === 'color' && !empty($val)) {
+                    $colors[$val] = true;
+                }
+            }
+        }
+        return array_keys($colors);
+    }
+
+    public function availableSizes(): array
+    {
+        if (!$this->has_variants) {
+            return [];
+        }
+        $sizes = [];
+        foreach ($this->activeVariants as $v) {
+            $attrs = $v->attributes ?? [];
+            foreach ($attrs as $key => $val) {
+                if (in_array(strtolower($key), ['talla', 'tamaño', 'size']) && !empty($val)) {
+                    $sizes[$val] = true;
+                }
+            }
+        }
+        return array_keys($sizes);
     }
 }

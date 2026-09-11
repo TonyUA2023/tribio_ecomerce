@@ -76,10 +76,10 @@ class Store extends Model
         return route('store.show', $this->slug);
     }
 
-    public function getWhatsappLinkAttribute(): string
+    public function getWhatsappLinkAttribute(): ?string
     {
         $phone = preg_replace('/[^0-9]/', '', $this->whatsapp_phone ?? '');
-        return "https://wa.me/{$phone}";
+        return !empty($phone) ? "https://wa.me/{$phone}" : null;
     }
 
     public function isActive(): bool

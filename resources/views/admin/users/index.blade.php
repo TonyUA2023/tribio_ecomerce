@@ -9,6 +9,7 @@
             <option value="">Todos los roles</option>
             <option value="store_owner" {{ request('role') === 'store_owner' ? 'selected' : '' }}>Vendedor</option>
             <option value="super_admin" {{ request('role') === 'super_admin' ? 'selected' : '' }}>Super Admin</option>
+            <option value="cliente" {{ request('role') === 'cliente' ? 'selected' : '' }}>Cliente (Comprador)</option>
         </select>
         <button type="submit" class="btn-primary px-5">Filtrar</button>
     </form>
@@ -37,9 +38,15 @@
                         </div>
                     </td>
                     <td class="py-3 px-3">
-                        <span class="badge badge-{{ $user->isSuperAdmin() ? 'red' : 'purple' }}">
-                            {{ $user->isSuperAdmin() ? '🛡 Super Admin' : '🏪 Vendedor' }}
-                        </span>
+                        @if($user->isSuperAdmin())
+                            <span class="badge badge-red">🛡 Super Admin</span>
+                        @elseif($user->isStoreOwner())
+                            <span class="badge badge-purple">🏪 Vendedor</span>
+                        @elseif($user->isCliente())
+                            <span class="badge badge-cyan">🛍 Cliente</span>
+                        @else
+                            <span class="badge badge-purple">{{ ucfirst($user->role) }}</span>
+                        @endif
                     </td>
                     <td class="py-3 px-3">
                         @if($user->store)

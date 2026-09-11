@@ -11,6 +11,9 @@ use App\Http\Controllers\Api\StoreController;
 // Autenticación pública
 Route::post('/login', [AuthController::class, 'login']);
 
+// Webhook Mercado Pago
+Route::post('/mercadopago/webhook/{store}', [\App\Http\Controllers\StoreController::class, 'mercadopagoWebhook'])->name('api.mercadopago.webhook');
+
 // Rutas protegidas
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);

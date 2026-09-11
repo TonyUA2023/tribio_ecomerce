@@ -33,15 +33,30 @@ class User extends Authenticatable
         ];
     }
 
+    // ─── Roles ───────────────────────────────────────────────────
+    public const ROLE_SUPER_ADMIN = 'super_admin';
+    public const ROLE_STORE_OWNER = 'store_owner';
+    public const ROLE_CLIENTE     = 'cliente';
+
     // ─── Helpers ────────────────────────────────────────────────
     public function isSuperAdmin(): bool
     {
-        return $this->role === 'super_admin';
+        return $this->role === self::ROLE_SUPER_ADMIN;
     }
 
     public function isStoreOwner(): bool
     {
-        return $this->role === 'store_owner';
+        return $this->role === self::ROLE_STORE_OWNER;
+    }
+
+    public function isCliente(): bool
+    {
+        return in_array($this->role, [self::ROLE_CLIENTE, 'customer']);
+    }
+
+    public function isCustomer(): bool
+    {
+        return $this->isCliente();
     }
 
     // ─── Relationships ───────────────────────────────────────────
@@ -53,5 +68,15 @@ class User extends Authenticatable
     public function activityLogs()
     {
         return $this->hasMany(ActivityLog::class);
+    }
+
+    public function customerAddresses()
+    {
+        return $this->hasMany(CustomerAddress::class);
+    }
+
+    public function customerOrders()
+    {
+        return $this->hasMany(Order::class)->latest();
     }
 }

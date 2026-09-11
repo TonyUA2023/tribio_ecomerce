@@ -229,14 +229,55 @@
 
                         {{-- Campos para Mercado Pago --}}
                         <div x-show="gateway === 'mercado_pago'" class="space-y-4" style="display: none;">
-                            <p class="text-[10px] text-tribio-cyan font-bold uppercase tracking-wider">Configuración de Mercado Pago</p>
+                            <div class="flex items-center justify-between">
+                                <p class="text-[11px] text-tribio-cyan font-bold uppercase tracking-wider">Configuración de Mercado Pago (Tarjetas Débito y Crédito)</p>
+                                @php
+                                    $currentMpToken = $store?->mp_access_token ?? $store?->gateway_access_token;
+                                    $isTest = $currentMpToken && str_starts_with(trim($currentMpToken), 'TEST-');
+                                    $isLive = $currentMpToken && str_starts_with(trim($currentMpToken), 'APP_USR-');
+                                @endphp
+                                @if($isTest)
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                        🧪 Modo Pruebas (Sandbox)
+                                    </span>
+                                @elseif($isLive)
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                        🟢 Modo Producción (En Vivo)
+                                    </span>
+                                @else
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/10 text-white/50">
+                                        No configurado
+                                    </span>
+                                @endif
+                            </div>
+
+                            <div class="p-3 bg-white/5 rounded-xl border border-white/10 text-xs text-slate-300 space-y-1.5">
+                                <p class="font-semibold text-white flex items-center gap-1.5">
+                                    <span>🔒 Pagos 100% Seguros y Certificados PCI-DSS</span>
+                                </p>
+                                <p class="text-white/60 text-[11px]">
+                                    Los datos de tarjeta se procesan directamente en Mercado Pago. Obtén tus credenciales en el 
+                                    <a href="https://www.mercadopago.com/developers/panel/app" target="_blank" class="text-tribio-cyan underline font-bold hover:text-white">Panel de Desarrolladores de Mercado Pago ↗</a>.
+                                </p>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] pt-1">
+                                    <div class="bg-black/30 p-2 rounded-lg border border-white/5">
+                                        <span class="font-bold text-amber-300">🧪 Para pruebas (Sandbox):</span>
+                                        <p class="text-white/60 mt-0.5">Usa credenciales que inician con <code class="text-tribio-cyan">TEST-...</code> para pagar con tarjetas de test sin dinero real.</p>
+                                    </div>
+                                    <div class="bg-black/30 p-2 rounded-lg border border-white/5">
+                                        <span class="font-bold text-emerald-300">🚀 Para vender en vivo:</span>
+                                        <p class="text-white/60 mt-0.5">Usa credenciales que inician con <code class="text-emerald-400">APP_USR-...</code> para recibir dinero real en tu cuenta.</p>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div>
                                 <label class="input-label">Token de Acceso (Access Token) *</label>
-                                <input type="text" name="mp_access_token" value="{{ old('mp_access_token', $store?->mp_access_token ?? $store?->gateway_access_token) }}" class="input-field" placeholder="APP_USR-...">
+                                <input type="text" name="mp_access_token" value="{{ old('mp_access_token', $store?->mp_access_token ?? $store?->gateway_access_token) }}" class="input-field font-mono text-xs" placeholder="TEST-... o APP_USR-...">
                             </div>
                             <div>
                                 <label class="input-label">Llave Pública (Public Key) *</label>
-                                <input type="text" name="mp_public_key" value="{{ old('mp_public_key', $store?->mp_public_key ?? $store?->gateway_public_key) }}" class="input-field" placeholder="APP_USR-...">
+                                <input type="text" name="mp_public_key" value="{{ old('mp_public_key', $store?->mp_public_key ?? $store?->gateway_public_key) }}" class="input-field font-mono text-xs" placeholder="TEST-... o APP_USR-...">
                             </div>
                         </div>
                     </div>

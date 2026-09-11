@@ -68,35 +68,11 @@
     </main>
 
     <!-- Footer -->
-    <footer class="er-footer">
+    <footer class="er-footer" style="padding: 2rem 0; text-align: center; border-top: 1px solid var(--border-color);">
         <div class="er-container">
-            <div class="er-footer-grid">
-                <div>
-                    <h4>Acerca de iStack</h4>
-                    <p style="color: var(--text-muted); font-size: 0.9rem;">Especialistas en equipos Apple reacondicionados. Calidad premium y precios inteligentes en Perú.</p>
-                </div>
-                <div>
-                    <h4>Productos</h4>
-                    <ul>
-                        <li><a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => 'iphone']) }}">iPhones</a></li>
-                        <li><a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => 'mac']) }}">Macs</a></li>
-                        <li><a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => 'ipad']) }}">iPads</a></li>
-                        <li><a href="{{ route('store.catalog', ['slug' => $store->slug]) }}">Todos los productos</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4>Soporte</h4>
-                    <ul>
-                        <li><a href="#">Garantía</a></li>
-                        <li><a href="#">Preguntas Frecuentes</a></li>
-                        <li><a href="#">Términos y Condiciones</a></li>
-                        <li><a href="#">Contacto</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="er-footer-bottom">
-                &copy; {{ date('Y') }} {{ $store->name ?? 'iStack' }}. Todos los derechos reservados.
-            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">
+                Impulsado por <strong style="color: var(--text-color);">Tribio</strong>
+            </p>
         </div>
     </footer>
 

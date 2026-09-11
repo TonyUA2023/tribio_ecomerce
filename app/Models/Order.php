@@ -10,7 +10,7 @@ class Order extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'store_id', 'order_number',        'customer_name',
+        'store_id', 'user_id', 'order_number',        'customer_name',
         'customer_phone',
         'customer_email',
         'customer_address',
@@ -98,6 +98,11 @@ class Order extends Model
     public function store()
     {
         return $this->belongsTo(Store::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function items()

@@ -82,7 +82,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 🛒 Cart system (Tribio store public pages) 🛒
 window.TribioCart = {
-    items: JSON.parse(localStorage.getItem('tribio_cart') || '[]'),
+    items: JSON.parse(localStorage.getItem('tribio_cart') || '[]').map(i => {
+        if (!i.cartKey) {
+            i.cartKey = i.variant_id ? `${i.id}-${i.variant_id}` : `${i.id}`;
+        }
+        return i;
+    }),
 
     save() {
         localStorage.setItem('tribio_cart', JSON.stringify(this.items));
@@ -90,27 +95,48 @@ window.TribioCart = {
         window.dispatchEvent(new CustomEvent('cart-updated', { detail: JSON.parse(JSON.stringify(this.items)) }));
     },
 
-    add(id, name, price, image = '') {
-        const existing = this.items.find(i => i.id === id);
+    add(id, name, price, image = '', variant = null) {
+        const variantId = variant && variant.id ? variant.id : null;
+        const variantTitle = variant && variant.title ? variant.title : null;
+        const variantAttributes = variant && variant.attributes ? variant.attributes : null;
+        const cartKey = variantId ? `${id}-${variantId}` : `${id}`;
+
+        const existing = this.items.find(i => (i.cartKey === cartKey || (!i.cartKey && i.id === id && !variantId)));
         if (existing) {
             existing.quantity++;
+            existing.cartKey = cartKey;
         } else {
-            this.items.push({ id, name, price, image, quantity: 1 });
+            this.items.push({
+                id,
+                cartKey,
+                name,
+                price: parseFloat(price) || 0,
+                image,
+                quantity: 1,
+                variant_id: variantId,
+                variant_title: variantTitle,
+                variant_attributes: variantAttributes
+            });
         }
         this.save();
-        this.showNotification(`🛍️ ${name} añadido al carrito`);
+        const displayName = variantTitle ? `${name} (${variantTitle})` : name;
+        this.showNotification(`🛍️ ${displayName} añadido al carrito`);
     },
 
-    remove(id) {
-        this.items = this.items.filter(i => i.id !== id);
+    remove(cartKeyOrId) {
+        this.items = this.items.filter(i => i.cartKey !== String(cartKeyOrId) && i.id !== cartKeyOrId);
         this.save();
     },
 
-    updateQuantity(id, qty) {
-        const item = this.items.find(i => i.id === id);
+    updateQuantity(cartKeyOrId, qty) {
+        const item = this.items.find(i => i.cartKey === String(cartKeyOrId) || i.id === cartKeyOrId);
         if (item) {
-            item.quantity = Math.max(1, qty);
-            this.save();
+            if (qty <= 0) {
+                this.remove(cartKeyOrId);
+            } else {
+                item.quantity = qty;
+                this.save();
+            }
         }
     },
 
@@ -157,8 +183,20 @@ window.TribioCart = {
             return;
         }
 
+        const token = document.querySelector('meta[name="csrf-token"]')?.content || window.tribioCsrfToken || customerData._token || '';
         const payload = {
+            _token: token,
             items: this.items,
+            customer_name: customerData.customer_name || customerData.name || '',
+            customer_email: customerData.customer_email || customerData.email || '',
+            customer_phone: customerData.customer_phone || customerData.phone || '',
+            customer_address: customerData.customer_address || customerData.address || '',
+            customer_country: customerData.customer_country || customerData.country || 'PE',
+            customer_state: customerData.customer_state || customerData.state || '',
+            customer_city: customerData.customer_city || customerData.city || '',
+            customer_zipcode: customerData.customer_zipcode || customerData.zipcode || '',
+            customer_notes: customerData.customer_notes || customerData.notes || '',
+            express_shipping: !!customerData.express_shipping,
             ...customerData
         };
 
@@ -168,7 +206,7 @@ window.TribioCart = {
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    'X-CSRF-TOKEN': token
                 },
                 body: JSON.stringify(payload)
             });
@@ -186,12 +224,27 @@ window.TribioCart = {
                     window.location.href = data.redirect_url;
                 }
             } else {
-                alert(data.error || 'Error al procesar el pedido. Por favor verifica los datos.');
+                let errorMsg = data.error || data.message;
+                if (!errorMsg && data.errors) {
+                    errorMsg = Object.values(data.errors).flat().join('\n');
+                }
+                alert(errorMsg || 'Error al procesar el pedido. Por favor verifica los datos.');
                 console.error(data);
+
+                const btn = document.getElementById('btnSubmitOrder');
+                if (btn) {
+                    btn.innerText = 'Confirmar y Pagar';
+                    btn.disabled = false;
+                }
             }
         } catch (error) {
             console.error('Error during checkout:', error);
             alert('Ocurrió un error inesperado al procesar el checkout.');
+            const btn = document.getElementById('btnSubmitOrder');
+            if (btn) {
+                btn.innerText = 'Confirmar y Pagar';
+                btn.disabled = false;
+            }
         }
     }
 };

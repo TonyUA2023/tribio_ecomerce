@@ -625,11 +625,10 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-gray-900 text-gray-500 text-xs py-8 border-t border-gray-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-2">
-            <p>© {{ date('Y') }} {{ $store->name }}. Todos los derechos reservados.</p>
-            <p>Desarrollado en la plataforma multi-tienda <a href="{{ route('home') }}" class="text-gray-400 hover:text-white underline">Tribio</a></p>
-        </div>
+    <footer class="bg-gray-900 text-gray-400 text-xs py-8 border-t border-gray-800 text-center">
+        <p class="font-medium tracking-wider">
+            Impulsado por <strong class="text-white font-bold">Tribio</strong>
+        </p>
     </footer>
 
     <!-- Cart Drawer Container -->

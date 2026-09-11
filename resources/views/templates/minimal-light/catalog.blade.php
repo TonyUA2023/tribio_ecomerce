@@ -3,7 +3,10 @@
 @section('title', 'Catálogo | ' . $store->name)
 
 @section('content')
-<div class="bg-white" x-data="{ mobileMenuOpen: false, searchOpen: false }">
+@php
+    $products = $products ?? $allProducts ?? collect();
+@endphp
+<div class="bg-[#FDF8EF] min-h-screen text-[#1A1A1A]" x-data="{ mobileMenuOpen: false, searchOpen: false }">
     
     <!-- Header Minimalista -->
     <header class="bg-[#FDF8EF] border-b border-gray-200/50 shadow-sm">
@@ -22,12 +25,15 @@
                         @if($store->logo_path)
                             <img src="{{ $store->logo_url }}" alt="{{ $store->name }}" class="h-10 md:h-12 w-auto mx-auto object-contain">
                         @else
-                            <span class=" font-semibold text-2xl md:text-3xl tracking-wide text-[#1A1A1A]">{{ $store->name }}</span>
+                            <span class="font-semibold text-2xl md:text-3xl tracking-wide text-[#1A1A1A]">{{ $store->name }}</span>
                         @endif
                     </a>
                 </div>
 
                 <div class="flex-1 flex items-center justify-end space-x-4 md:space-x-5">
+                    <button @click="$dispatch('open-customer-modal')" class="text-[#1A1A1A] hover:text-[#C8A68B] transition hidden md:block" title="Mi Cuenta / Pedidos">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    </button>
                     <button @click="searchOpen = true" class="text-[#1A1A1A] hover:text-[#C8A68B] transition">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </button>
@@ -41,10 +47,17 @@
                 </div>
             </div>
 
+            <!-- Navigation (Desktop) -->
+            @php
+                $headerCategories = $categories->where('show_in_header', true)->take(5);
+                if ($headerCategories->isEmpty()) {
+                    $headerCategories = $categories->take(5);
+                }
+            @endphp
             <nav class="hidden md:flex justify-center space-x-10 mt-6 pb-2">
                 <a href="{{ route('store.show', $store->slug) }}" class="text-[#1A1A1A] hover:text-[#C8A68B] font-medium text-sm transition">Home</a>
                 <a href="{{ route('store.catalog', $store->slug) }}" class="text-[#C8A68B] font-bold text-sm transition">Shop</a>
-                @foreach($categories->take(3) as $cat)
+                @foreach($headerCategories as $cat)
                     <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $cat->slug]) }}" class="text-[#1A1A1A] hover:text-[#C8A68B] font-medium text-sm transition">{{ $cat->name }}</a>
                 @endforeach
                 <a href="{{ route('store.contact', $store->slug) }}" class="text-[#1A1A1A] hover:text-[#C8A68B] font-medium text-sm transition">Contact</a>
@@ -54,11 +67,16 @@
         <!-- Mobile Menu Dropdown -->
         <div class="md:hidden" x-show="mobileMenuOpen" style="display: none;">
             <div class="px-4 pt-2 pb-4 space-y-1 bg-white border-t border-gray-100 shadow-inner">
+                <button @click="$dispatch('open-customer-modal'); mobileMenuOpen = false" class="w-full text-left px-3 py-2 text-sm font-bold text-[#C8A68B] flex items-center gap-2 border-b border-gray-100 pb-2 mb-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    Mi Cuenta / Pedidos Tribio
+                </button>
                 <a href="{{ route('store.show', $store->slug) }}" class="block px-3 py-2 text-sm font-medium text-gray-800">Home</a>
-                <a href="{{ route('store.catalog', $store->slug) }}" class="block px-3 py-2 text-sm font-medium text-[#C8A68B] font-bold">Shop</a>
-                @foreach($categories as $cat)
+                <a href="{{ route('store.catalog', $store->slug) }}" class="block px-3 py-2 text-sm font-bold text-[#C8A68B]">Shop</a>
+                @foreach($headerCategories as $cat)
                     <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $cat->slug]) }}" class="block px-3 py-2 text-sm font-medium text-gray-800">{{ $cat->name }}</a>
                 @endforeach
+                <a href="{{ route('store.contact', $store->slug) }}" class="block px-3 py-2 text-sm font-medium text-gray-800">Contact</a>
             </div>
         </div>
 
@@ -68,18 +86,18 @@
             <div class="max-w-4xl mx-auto relative">
                 <form action="{{ route('store.catalog', $store->slug) }}" method="GET" class="flex items-center">
                     <svg class="w-6 h-6 text-gray-400 absolute left-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <input type="text" name="q" placeholder="Buscar productos..." class="w-full pl-14 pr-12 py-4 text-xl  border-none rounded-full bg-gray-50 focus:ring-0" autofocus>
+                    <input type="text" name="q" placeholder="Buscar productos..." class="w-full pl-14 pr-12 py-4 text-xl border-none rounded-full bg-gray-50 focus:ring-0" autofocus>
                 </form>
-                <button @click="searchOpen = false" type="button" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500">
+                <button @click="searchOpen = false" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
         </div>
     </header>
 
-    <!-- Page Header -->
-    <div class="bg-[#FDF8EF] py-10 md:py-16 text-center border-b border-gray-200">
-        <h1 class="text-4xl md:text-5xl  text-[#1A1A1A] mb-4">Catálogo de Productos</h1>
+    <!-- Page Title Banner -->
+    <div class="bg-white border-b border-stone-200/60 py-12 text-center">
+        <h1 class="text-4xl font-bold text-[#1A1A1A] mb-3">Nuestra Colección</h1>
         <p class="text-gray-600 max-w-2xl mx-auto px-4">Explora nuestra colección y encuentra piezas únicas para ti.</p>
     </div>
 
@@ -98,63 +116,210 @@
 
             <!-- Sidebar Filters -->
             <aside class="w-full lg:w-64 flex-shrink-0" :class="{'hidden lg:block': !filtersOpen}">
-                <form action="{{ route('store.catalog', $store->slug) }}" method="GET" class="space-y-8 sticky top-32">
-                    <!-- Búsqueda Activa -->
+                <form id="catalogFilterForm" action="{{ route('store.catalog', $store->slug) }}" method="GET" class="space-y-6 sticky top-32">
+                    <!-- Búsqueda Activa (Preservar) -->
                     @if(request('q'))
-                        <div class="mb-4">
-                            <input type="hidden" name="q" value="{{ request('q') }}">
-                            <span class="inline-flex items-center gap-2 bg-[#FDF8EF] px-3 py-1.5 rounded-full text-sm font-medium text-[#1A1A1A]">
-                                "{{ request('q') }}"
-                                <a href="{{ request()->fullUrlWithQuery(['q' => null]) }}" class="text-gray-400 hover:text-red-500">✕</a>
+                        <input type="hidden" name="q" value="{{ request('q') }}">
+                        <div class="mb-2">
+                            <span class="inline-flex items-center gap-2 bg-white px-3 py-1.5 rounded-full text-xs font-semibold text-[#1A1A1A] border border-stone-200">
+                                🔍 "{{ request('q') }}"
+                                <a href="{{ request()->fullUrlWithQuery(['q' => null]) }}" class="text-gray-400 hover:text-red-500 font-bold">✕</a>
                             </span>
                         </div>
                     @endif
 
+                    <input type="hidden" name="category" id="filterCategory" value="{{ request('category') }}">
+                    <input type="hidden" name="brand" id="filterBrand" value="{{ request('brand') }}">
+
                     <!-- Categorías -->
                     <div>
-                        <h3 class="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider mb-4">Categorías</h3>
-                        <div class="space-y-3">
-                            <a href="{{ request()->fullUrlWithQuery(['category' => null]) }}" class="block text-sm {{ !request('category') ? 'text-[#C8A68B] font-bold' : 'text-gray-600 hover:text-[#1A1A1A]' }}">
-                                Todas
-                            </a>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider">Categorías</h3>
+                            @if(request('category'))
+                                <button type="button" onclick="setCategoryFilter('')" class="text-[11px] font-medium text-gray-400 hover:text-red-500 transition">Quitar</button>
+                            @endif
+                        </div>
+                        <div class="space-y-1">
+                            <button type="button" onclick="setCategoryFilter('')" 
+                                    class="w-full flex justify-between items-center text-sm py-1.5 px-2.5 rounded-lg transition text-left {{ !request('category') ? 'text-[#C8A68B] font-bold bg-[#C8A68B]/10' : 'text-gray-600 hover:text-[#1A1A1A] hover:bg-stone-100/60' }}">
+                                <span>Todas</span>
+                            </button>
                             @foreach($categories as $cat)
-                                <a href="{{ request()->fullUrlWithQuery(['category' => $cat->slug]) }}" class="flex justify-between items-center text-sm {{ request('category') === $cat->slug ? 'text-[#C8A68B] font-bold' : 'text-gray-600 hover:text-[#1A1A1A]' }}">
-                                    <span>{{ $cat->name }}</span>
-                                    <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{{ $cat->active_products_count }}</span>
-                                </a>
+                                @php
+                                    $isSelected = request('category') === $cat->slug || request('category') == $cat->id;
+                                @endphp
+                                <button type="button" onclick="setCategoryFilter('{{ $isSelected ? '' : $cat->slug }}')" 
+                                        class="w-full flex justify-between items-center text-sm py-1.5 px-2.5 rounded-lg transition text-left {{ $isSelected ? 'text-[#C8A68B] font-bold bg-[#C8A68B]/10' : 'text-gray-600 hover:text-[#1A1A1A] hover:bg-stone-100/60' }}">
+                                    <span class="truncate pr-2">{{ $cat->name }}</span>
+                                    <span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0 transition {{ $isSelected ? 'bg-[#C8A68B] text-white font-bold' : 'bg-gray-100 text-gray-500' }}">
+                                        {{ $cat->active_products_count }}
+                                    </span>
+                                </button>
                             @endforeach
                         </div>
                     </div>
 
+                    <!-- Marcas -->
+                    @if($brands->isNotEmpty())
+                    <div class="pt-4 border-t border-gray-200/60">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider">Marcas</h3>
+                            @if(request('brand'))
+                                <button type="button" onclick="setBrandFilter('')" class="text-[11px] font-medium text-gray-400 hover:text-red-500 transition">Quitar</button>
+                            @endif
+                        </div>
+                        <div class="space-y-1 max-h-52 overflow-y-auto pr-1">
+                            <button type="button" onclick="setBrandFilter('')" 
+                                    class="w-full flex justify-between items-center text-sm py-1.5 px-2.5 rounded-lg transition text-left {{ !request('brand') ? 'text-[#C8A68B] font-bold bg-[#C8A68B]/10' : 'text-gray-600 hover:text-[#1A1A1A] hover:bg-stone-100/60' }}">
+                                <span>Todas las marcas</span>
+                            </button>
+                            @foreach($brands as $b)
+                                @php
+                                    $isBrandSelected = request('brand') === $b->slug || request('brand') == $b->id;
+                                @endphp
+                                <button type="button" onclick="setBrandFilter('{{ $isBrandSelected ? '' : $b->slug }}')" 
+                                        class="w-full flex justify-between items-center text-sm py-1.5 px-2.5 rounded-lg transition text-left {{ $isBrandSelected ? 'text-[#C8A68B] font-bold bg-[#C8A68B]/10' : 'text-gray-600 hover:text-[#1A1A1A] hover:bg-stone-100/60' }}">
+                                    <span class="truncate pr-2">{{ $b->name }}</span>
+                                    <span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0 transition {{ $isBrandSelected ? 'bg-[#C8A68B] text-white font-bold' : 'bg-gray-100 text-gray-500' }}">
+                                        {{ $b->products_count }}
+                                    </span>
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+
                     <!-- Precio -->
-                    <div>
-                        <h3 class="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider mb-4">Precio</h3>
-                        <div class="flex items-center gap-2">
-                            <input type="number" name="min_price" value="{{ request('min_price') }}" placeholder="Min" class="w-full text-sm border-gray-300 rounded-lg focus:ring-[#C8A68B] focus:border-[#C8A68B]">
-                            <span class="text-gray-400">-</span>
-                            <input type="number" name="max_price" value="{{ request('max_price') }}" placeholder="Max" class="w-full text-sm border-gray-300 rounded-lg focus:ring-[#C8A68B] focus:border-[#C8A68B]">
+                    <div class="pt-4 border-t border-gray-200/60">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider">Precio</h3>
+                            @if(request('min_price') || request('max_price'))
+                                <button type="button" onclick="clearPriceFilter()" class="text-[11px] font-medium text-gray-400 hover:text-red-500 transition">Reset</button>
+                            @endif
+                        </div>
+                        <div class="flex items-center gap-2 mb-2.5">
+                            <div class="relative flex-1">
+                                <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">{{ $currencySymbol }}</span>
+                                <input type="number" step="any" name="min_price" id="minPriceInput" value="{{ request('min_price') }}" placeholder="Min" class="w-full pl-7 pr-2 py-2 text-xs bg-white border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#C8A68B] focus:border-[#C8A68B] outline-none">
+                            </div>
+                            <span class="text-gray-400 font-bold">-</span>
+                            <div class="relative flex-1">
+                                <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">{{ $currencySymbol }}</span>
+                                <input type="number" step="any" name="max_price" id="maxPriceInput" value="{{ request('max_price') }}" placeholder="Max" class="w-full pl-7 pr-2 py-2 text-xs bg-white border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#C8A68B] focus:border-[#C8A68B] outline-none">
+                            </div>
+                        </div>
+                        {{-- Presets rápidos de precio --}}
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <button type="button" onclick="setQuickPrice('', 50)" class="px-2 py-1 text-[11px] font-medium border border-gray-200 rounded-lg bg-white hover:border-[#C8A68B] hover:text-[#C8A68B] transition text-center {{ request('max_price') == 50 && !request('min_price') ? 'border-[#C8A68B] text-[#C8A68B] font-bold bg-[#C8A68B]/10' : '' }}">&lt; 50</button>
+                            <button type="button" onclick="setQuickPrice(50, 100)" class="px-2 py-1 text-[11px] font-medium border border-gray-200 rounded-lg bg-white hover:border-[#C8A68B] hover:text-[#C8A68B] transition text-center {{ request('min_price') == 50 && request('max_price') == 100 ? 'border-[#C8A68B] text-[#C8A68B] font-bold bg-[#C8A68B]/10' : '' }}">50 - 100</button>
+                            <button type="button" onclick="setQuickPrice(100, '')" class="px-2 py-1 text-[11px] font-medium border border-gray-200 rounded-lg bg-white hover:border-[#C8A68B] hover:text-[#C8A68B] transition text-center {{ request('min_price') == 100 && !request('max_price') ? 'border-[#C8A68B] text-[#C8A68B] font-bold bg-[#C8A68B]/10' : '' }}">&gt; 100</button>
                         </div>
                     </div>
 
+                    <!-- Disponibilidad y Ofertas -->
+                    <div class="pt-4 border-t border-gray-200/60 space-y-2">
+                        <label class="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer hover:text-black">
+                            <input type="checkbox" name="on_sale" value="1" {{ request('on_sale') ? 'checked' : '' }} onchange="this.form.submit()" class="rounded border-gray-300 text-[#1A1A1A] focus:ring-[#C8A68B]">
+                            <span>🔥 En oferta / descuento</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer hover:text-black">
+                            <input type="checkbox" name="in_stock" value="1" {{ request('in_stock') ? 'checked' : '' }} onchange="this.form.submit()" class="rounded border-gray-300 text-[#1A1A1A] focus:ring-[#C8A68B]">
+                            <span>📦 Solo con stock disponible</span>
+                        </label>
+                    </div>
+
                     <!-- Ordenar -->
-                    <div>
-                        <h3 class="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider mb-4">Ordenar por</h3>
-                        <select name="sort" class="w-full text-sm border-gray-300 rounded-lg focus:ring-[#C8A68B] focus:border-[#C8A68B]" onchange="this.form.submit()">
+                    <div class="pt-4 border-t border-gray-200/60">
+                        <h3 class="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider mb-2.5">Ordenar por</h3>
+                        <select name="sort" class="w-full text-xs py-2.5 px-3 bg-white border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#C8A68B] focus:border-[#C8A68B] outline-none" onchange="this.form.submit()">
                             <option value="position" {{ request('sort') == 'position' ? 'selected' : '' }}>Recomendados</option>
                             <option value="price_asc" {{ request('sort') == 'price_asc' ? 'selected' : '' }}>Precio: Menor a Mayor</option>
                             <option value="price_desc" {{ request('sort') == 'price_desc' ? 'selected' : '' }}>Precio: Mayor a Menor</option>
                             <option value="newest" {{ request('sort') == 'newest' ? 'selected' : '' }}>Más nuevos</option>
+                            <option value="name_asc" {{ request('sort') == 'name_asc' ? 'selected' : '' }}>Nombre: A a Z</option>
                         </select>
                     </div>
 
-                    <button type="submit" class="w-full py-3 bg-[#1A1A1A] hover:bg-[#C8A68B] text-white font-bold text-sm rounded-lg transition-colors">
-                        Aplicar Filtros
-                    </button>
+                    <div class="space-y-2 pt-2">
+                        <button type="submit" class="w-full py-3 bg-[#1A1A1A] hover:bg-[#C8A68B] text-white font-bold text-sm rounded-lg transition-colors shadow-sm">
+                            Aplicar Filtros
+                        </button>
+                        @if(request()->hasAny(['category', 'brand', 'min_price', 'max_price', 'on_sale', 'in_stock', 'q']))
+                            <a href="{{ route('store.catalog', $store->slug) }}" class="block text-center py-2 text-xs font-semibold text-gray-500 hover:text-red-500 transition">
+                                Limpiar todos los filtros
+                            </a>
+                        @endif
+                    </div>
                 </form>
             </aside>
 
             <!-- Product Grid -->
             <div class="flex-1">
+                @php
+                    $activeFiltersCount = (request('q') ? 1 : 0)
+                                        + (request('category') ? 1 : 0)
+                                        + (request('brand') ? 1 : 0)
+                                        + (request('min_price') || request('max_price') ? 1 : 0)
+                                        + (request('on_sale') ? 1 : 0)
+                                        + (request('in_stock') ? 1 : 0);
+                @endphp
+                @if($activeFiltersCount > 0)
+                    <div class="mb-6 flex flex-wrap items-center gap-2 p-3 bg-white rounded-xl border border-stone-200/80 shadow-sm">
+                        <span class="text-xs font-bold text-gray-500 mr-1">Filtros aplicados ({{ $activeFiltersCount }}):</span>
+
+                        @if(request('q'))
+                            <a href="{{ request()->fullUrlWithQuery(['q' => null]) }}" class="inline-flex items-center gap-1.5 px-3 py-1 bg-stone-100 hover:bg-stone-200 text-[#1A1A1A] rounded-full text-xs font-medium transition">
+                                <span>Búsqueda: "{{ request('q') }}"</span>
+                                <span class="text-gray-400 hover:text-red-600 font-bold">✕</span>
+                            </a>
+                        @endif
+
+                        @if(request('category'))
+                            @php
+                                $activeCategoryName = $categories->firstWhere('slug', request('category'))?->name ?? (request('category') === 'destacados' ? 'Destacados' : request('category'));
+                            @endphp
+                            <a href="{{ request()->fullUrlWithQuery(['category' => null]) }}" class="inline-flex items-center gap-1.5 px-3 py-1 bg-[#C8A68B]/15 text-[#C8A68B] rounded-full text-xs font-bold transition hover:bg-[#C8A68B]/25">
+                                <span>Categoría: {{ $activeCategoryName }}</span>
+                                <span class="font-bold">✕</span>
+                            </a>
+                        @endif
+
+                        @if(request('brand'))
+                            @php
+                                $activeBrandName = $brands->firstWhere('slug', request('brand'))?->name ?? request('brand');
+                            @endphp
+                            <a href="{{ request()->fullUrlWithQuery(['brand' => null]) }}" class="inline-flex items-center gap-1.5 px-3 py-1 bg-[#C8A68B]/15 text-[#C8A68B] rounded-full text-xs font-bold transition hover:bg-[#C8A68B]/25">
+                                <span>Marca: {{ $activeBrandName }}</span>
+                                <span class="font-bold">✕</span>
+                            </a>
+                        @endif
+
+                        @if(request('min_price') || request('max_price'))
+                            <a href="{{ request()->fullUrlWithQuery(['min_price' => null, 'max_price' => null]) }}" class="inline-flex items-center gap-1.5 px-3 py-1 bg-stone-100 hover:bg-stone-200 text-[#1A1A1A] rounded-full text-xs font-medium transition">
+                                <span>Precio: {{ $currencySymbol }}{{ request('min_price', 0) }} - {{ request('max_price') ? $currencySymbol . request('max_price') : 'Max' }}</span>
+                                <span class="text-gray-400 hover:text-red-600 font-bold">✕</span>
+                            </a>
+                        @endif
+
+                        @if(request('on_sale'))
+                            <a href="{{ request()->fullUrlWithQuery(['on_sale' => null]) }}" class="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-600 rounded-full text-xs font-semibold transition hover:bg-red-100">
+                                <span>🔥 En oferta</span>
+                                <span class="font-bold">✕</span>
+                            </a>
+                        @endif
+
+                        @if(request('in_stock'))
+                            <a href="{{ request()->fullUrlWithQuery(['in_stock' => null]) }}" class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-semibold transition hover:bg-emerald-100">
+                                <span>📦 Con stock</span>
+                                <span class="font-bold">✕</span>
+                            </a>
+                        @endif
+
+                        <a href="{{ route('store.catalog', $store->slug) }}" class="ml-auto text-xs font-bold text-red-500 hover:text-red-700 underline">
+                            Limpiar todo
+                        </a>
+                    </div>
+                @endif
                 @if($products->isEmpty())
                     <div class="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-300">
                         <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
@@ -186,7 +351,7 @@
                                     <h3 class="text-[#1A1A1A] font-semibold text-sm md:text-base mb-1 truncate">{{ $p->name }}</h3>
                                     <div class="flex items-center gap-2">
                                         <p class="text-[#C8A68B] font-bold text-sm md:text-base">
-                                            {{ request()->cookie('user_country') === 'US' ? '$' : 'S/' }} {{ number_format($p->resolvePrice(), 2) }}
+                                             {{ request()->cookie('user_country') === 'US' ? '$' : 'S/' }} {{ number_format($p->resolvePrice(), 2) }}
                                         </p>
                                         @if($p->resolveComparePrice() > $p->resolvePrice())
                                             <p class="text-gray-400 text-xs md:text-sm line-through">
@@ -210,182 +375,44 @@
     </div>
     
     <!-- Footer -->
-    <footer class="bg-white border-t border-gray-100 py-12 mt-20">
-        <div class="max-w-7xl mx-auto px-4 text-center">
-            <h3 class=" text-2xl font-bold text-[#1A1A1A] mb-4">{{ $store->name }}</h3>
-            <p class="text-gray-500 text-sm mb-6">Gracias por confiar en nosotros.</p>
-            <p class="text-xs text-gray-400">© {{ date('Y') }} {{ $store->name }}. Todos los derechos reservados.</p>
-        </div>
+    <footer class="bg-[#FDF8EF] border-t border-gray-200/60 py-8 mt-20 text-center">
+        <p class="text-xs font-semibold text-gray-500 tracking-wider">
+            Impulsado por <span class="text-[#1A1A1A] font-bold">Tribio</span>
+        </p>
     </footer>
 </div>
 
-<!-- Render Cart Drawer logic (reused from store.blade.php but rendered manually here for simplicity if not abstracted) -->
-<div id="cartDrawer" x-data="{
-             checkoutStep: 1,
-             customer: { name: '', email: '', phone: '', address: '', country: '{{ request()->cookie('user_country') ?? 'PE' }}', state: '', city: '', zipcode: '', notes: '', express_shipping: false },
-             storeSlug: '{{ $store->slug }}',
-             isExpressEnabled: {{ $store->is_express_shipping_enabled ? 'true' : 'false' }},
-             expressCost: {{ $store->express_shipping_cost ?? 0 }},
-             currencySymbol: '{{ request()->cookie('user_country') === 'US' ? '$' : 'S/' }}',
-             shippingCost: 0,
-             cartItems: window.TribioCart ? window.TribioCart.items : [],
-             get cartTotal() { 
-                 let total = this.cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-                 if (this.customer.express_shipping) total += this.expressCost;
-                 total += this.shippingCost;
-                 return total;
-             },
-             updateShipping() {
-                 if(!this.customer.country) return;
-                 fetch(`/api/shipping-cost/${this.storeSlug}?country=${this.customer.country}&state=${this.customer.state}`)
-                     .then(res => res.json())
-                     .then(data => {
-                         this.shippingCost = parseFloat(data.cost) || 0;
-                     }).catch(() => this.shippingCost = 0);
-             },
-             init() {
-                 this.updateShipping();
-             },
-             submitOrder() {
-                 if(!this.customer.name || !this.customer.phone || !this.customer.email) {
-                     alert('Por favor completa los campos obligatorios.');
-                     return;
-                 }
-                 if(window.TribioCart) {
-                     const btn = document.getElementById('btnSubmitOrderCat');
-                     if(btn) { btn.innerText = 'Procesando...'; btn.disabled = true; }
-                     window.TribioCart.checkout(this.storeSlug, this.customer);
-                 }
-             }
-         }"
-         @cart-updated.window="cartItems = $event.detail"
-         style="display:none; position: fixed; inset: 0; z-index: 999; justify-content: flex-end;">
-         <div style="background: rgba(0,0,0,0.5);" class="absolute inset-0" onclick="document.getElementById('cartDrawer').style.display='none'"></div>
-         <div class="relative w-full max-w-md h-full flex flex-col bg-white border-l border-gray-200 shadow-2xl">
-            <div class="flex items-center justify-between p-5 border-b border-gray-100">
-                <h3 class="text-gray-900 font-bold text-lg" x-text="checkoutStep === 1 ? '🛒 Mi carrito' : 'Finalizar Compra'"></h3>
-                <button onclick="document.getElementById('cartDrawer').style.display='none'" class="text-gray-400 hover:text-gray-700">✕</button>
-            </div>
-            
-            <div class="flex-1 p-5 overflow-y-auto">
-                <template x-if="cartItems.length === 0">
-                    <p class="text-gray-400 text-sm text-center mt-8">Tu carrito está vacío.</p>
-                </template>
+<!-- Cart Drawer -->
+@include('templates.minimal-light.cart-drawer')
 
-                <template x-if="cartItems.length > 0 && checkoutStep === 1">
-                    <div class="space-y-4">
-                        <template x-for="(item, index) in cartItems" :key="index">
-                            <div class="flex gap-4 p-3 bg-gray-50 rounded-xl border border-gray-100 items-center">
-                                <template x-if="item.image">
-                                    <img :src="item.image" class="w-16 h-16 object-cover rounded-lg">
-                                </template>
-                                <div class="flex-1">
-                                    <h4 class="text-gray-800 font-semibold text-sm leading-tight" x-text="item.name"></h4>
-                                     <div class="flex justify-between items-center mt-2">
-                                        <p class="text-[#C8A68B] font-bold text-sm" x-text="currencySymbol + ' ' + (item.price * item.quantity).toFixed(2)"></p>
-                                        <div class="flex items-center gap-2 text-gray-600 text-xs bg-white rounded-full border border-gray-200 p-1">
-                                            <button @click="window.TribioCart.updateQuantity(item.id, item.quantity - 1)" class="w-5 h-5 rounded-full hover:bg-gray-100 flex items-center justify-center font-bold">-</button>
-                                            <span x-text="item.quantity" class="w-4 text-center font-medium"></span>
-                                            <button @click="window.TribioCart.updateQuantity(item.id, item.quantity + 1)" class="w-5 h-5 rounded-full hover:bg-gray-100 flex items-center justify-center font-bold">+</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-                </template>
+<script>
+    function setCategoryFilter(slug) {
+        const input = document.getElementById('filterCategory');
+        if (input) input.value = slug;
+        document.getElementById('catalogFilterForm').submit();
+    }
 
-                <template x-if="cartItems.length > 0 && checkoutStep === 2">
-                    <div class="space-y-4 text-gray-700">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1">Nombre Completo *</label>
-                            <input type="text" x-model="customer.name" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none transition" required>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 mb-1">Correo Electrónico *</label>
-                                <input type="email" x-model="customer.email" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none transition" required>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 mb-1">Teléfono *</label>
-                                <input type="text" x-model="customer.phone" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none transition" required>
-                            </div>
-                        </div>
+    function setBrandFilter(slug) {
+        const input = document.getElementById('filterBrand');
+        if (input) input.value = slug;
+        document.getElementById('catalogFilterForm').submit();
+    }
 
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 mb-1">País *</label>
-                                <select x-model="customer.country" @change="updateShipping()" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none transition" required>
-                                    <option value="PE">Perú</option>
-                                    <option value="US">Estados Unidos</option>
-                                    <option value="MX">México</option>
-                                    <option value="CO">Colombia</option>
-                                    <option value="ES">España</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 mb-1">Estado / Depto.</label>
-                                <input type="text" x-model="customer.state" @change="updateShipping()" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none transition">
-                            </div>
-                        </div>
+    function clearPriceFilter() {
+        const min = document.getElementById('minPriceInput');
+        const max = document.getElementById('maxPriceInput');
+        if (min) min.value = '';
+        if (max) max.value = '';
+        document.getElementById('catalogFilterForm').submit();
+    }
 
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1">Dirección</label>
-                            <input type="text" x-model="customer.address" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none transition">
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 mb-1">Ciudad</label>
-                                <input type="text" x-model="customer.city" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none transition">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 mb-1">Código Postal</label>
-                                <input type="text" x-model="customer.zipcode" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none transition">
-                            </div>
-                        </div>
-                    </div>
-                </template>
-            </div>
-            
-            <template x-if="cartItems.length > 0">
-                <div class="p-5 border-t border-gray-100 bg-gray-50">
-                    <div class="flex justify-between items-center mb-2 text-gray-600 text-sm">
-                        <span>Subtotal:</span>
-                        <span x-text="currencySymbol + ' ' + (cartTotal - shippingCost - (customer.express_shipping ? expressCost : 0)).toFixed(2)"></span>
-                    </div>
-                    
-                    <template x-if="shippingCost > 0">
-                        <div class="flex justify-between items-center mb-2 text-gray-600 text-sm">
-                            <span>Envío:</span>
-                            <span x-text="'+ ' + currencySymbol + ' ' + shippingCost.toFixed(2)"></span>
-                        </div>
-                    </template>
-
-                    <div class="flex justify-between items-center mb-4 text-gray-800 border-t border-gray-200 pt-2 mt-2">
-                        <span class="font-bold text-sm">Total a pagar:</span>
-                        <span class="font-black text-xl text-[#C8A68B]" x-text="currencySymbol + ' ' + cartTotal.toFixed(2)"></span>
-                    </div>
-                    
-                    <template x-if="checkoutStep === 1">
-                        <button @click="checkoutStep = 2" class="w-full py-3 rounded-xl font-bold text-white bg-[#1A1A1A] hover:bg-[#C8A68B] transition-colors shadow-md">
-                            Siguiente Paso →
-                        </button>
-                    </template>
-                    
-                    <template x-if="checkoutStep === 2">
-                        <div class="flex gap-2">
-                            <button @click="checkoutStep = 1" class="px-4 py-3 bg-white border border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition">
-                                ←
-                            </button>
-                            <button id="btnSubmitOrderCat" @click="submitOrder" class="flex-1 py-3 bg-[#1A1A1A] hover:bg-[#C8A68B] rounded-xl font-bold text-white transition-colors shadow-md">
-                                Confirmar y Pagar
-                            </button>
-                        </div>
-                    </template>
-                </div>
-            </template>
-        </div>
-    </div>
+    function setQuickPrice(min, max) {
+        const minEl = document.getElementById('minPriceInput');
+        const maxEl = document.getElementById('maxPriceInput');
+        if (minEl) minEl.value = min;
+        if (maxEl) maxEl.value = max;
+        document.getElementById('catalogFilterForm').submit();
+    }
+</script>
 
 @endsection
