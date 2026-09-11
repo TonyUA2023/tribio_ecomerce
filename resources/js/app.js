@@ -87,7 +87,7 @@ window.TribioCart = {
     save() {
         localStorage.setItem('tribio_cart', JSON.stringify(this.items));
         this.updateUI();
-        window.dispatchEvent(new CustomEvent('cart-updated', { detail: this.items }));
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: JSON.parse(JSON.stringify(this.items)) }));
     },
 
     add(id, name, price, image = '') {
@@ -139,7 +139,7 @@ window.TribioCart = {
             el.textContent = 'S/. ' + this.total().toFixed(2);
         });
         
-        window.dispatchEvent(new CustomEvent('cart-updated', { detail: this.items }));
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: JSON.parse(JSON.stringify(this.items)) }));
     },
 
     showNotification(msg) {

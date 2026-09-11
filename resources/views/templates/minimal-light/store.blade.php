@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $store->name }} - Tienda Online</title>
-    <!-- Fonts: Playfair Display (Serif) & Plus Jakarta Sans (Sans-serif) -->
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Fonts: Plus Jakarta Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -15,7 +15,7 @@
             --bg: #FDF8EF;
             --text-dark: #1A1A1A;
             --text-light: #666666;
-            --font-serif: 'Playfair Display', serif;
+            
             --font-sans: 'Plus Jakarta Sans', sans-serif;
         }
         body {
@@ -29,7 +29,7 @@
         }
         
         /* Custom Utilities */
-        .font-serif { font-family: var(--font-serif) !important; }
+        . { font-family: var(--) !important; }
         .hover-text-accent:hover { color: var(--accent); }
         .bg-accent { background-color: var(--accent); }
         .bg-secondary { background-color: var(--secondary); }
@@ -97,7 +97,7 @@
                         @if($store->logo_path)
                             <img class="h-10 md:h-14 w-auto" src="{{ $store->logo_url }}" alt="{{ $store->name }}">
                         @else
-                            <span class="font-serif font-semibold text-2xl md:text-3xl tracking-wide text-[#1A1A1A]">{{ $store->name }}</span>
+                            <span class=" font-semibold text-2xl md:text-3xl tracking-wide text-[#1A1A1A]">{{ $store->name }}</span>
                         @endif
                     </a>
                 </div>
@@ -159,7 +159,7 @@
             <div class="max-w-4xl mx-auto relative">
                 <form action="{{ route('store.catalog', $store->slug) }}" method="GET" class="flex items-center">
                     <svg class="w-6 h-6 text-gray-400 absolute left-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <input type="text" name="search" placeholder="Search for products, categories..." class="w-full pl-14 pr-12 py-4 md:py-5 text-lg md:text-2xl font-serif text-[#1A1A1A] bg-gray-50 rounded-full border-none focus:ring-0 focus:outline-none placeholder-gray-300" autofocus>
+                    <input type="text" name="search" placeholder="Search for products, categories..." class="w-full pl-14 pr-12 py-4 md:py-5 text-lg md:text-2xl  text-[#1A1A1A] bg-gray-50 rounded-full border-none focus:ring-0 focus:outline-none placeholder-gray-300" autofocus>
                 </form>
                 <button @click="searchOpen = false" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -185,8 +185,8 @@
                             ['title' => 'De S/10', 'bg' => '#0ea5e9', 'text' => 'white', 'icon' => 'S/ 10'],
                         ];
                     @endphp
-                    @foreach($highlights as $h)
-                        <div class="flex flex-col items-center gap-2 cursor-pointer group">
+                    @foreach($highlights as $index => $h)
+                        <div class="flex flex-col items-center gap-2 cursor-pointer group" data-animate style="animation-delay: {{ $index * 50 }}ms;">
                             <div class="w-16 h-16 md:w-20 md:h-20 rounded-xl flex items-center justify-center text-lg md:text-xl font-bold shadow-sm group-hover:shadow-md transition-shadow" 
                                  style="background-color: {{ $h['bg'] }}; color: {{ $h['text'] === 'white' ? '#fff' : '#1f2937' }}">
                                 {{ $h['icon'] }}
@@ -198,51 +198,69 @@
             </div>
         </section>
 
-        <!-- Elegant Hero Banner -->
-        <section class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12 py-12 md:py-20">
-            <div class="flex flex-col lg:flex-row items-center justify-between gap-10">
+        <!-- Full-Width Professional Hero Banner -->
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
+            .font-script { font-family: 'Great Vibes', cursive; }
+        </style>
+        
+        <section class="relative w-full h-[60vh] md:h-[80vh] min-h-[500px] overflow-hidden bg-[#FDF8EF]" x-data="{ currentSlide: 1, totalSlides: 3 }">
+            <!-- Background Images (Carousel) -->
+            <div class="absolute inset-0 w-full h-full">
+                <!-- Slide 1 -->
+                <img x-show="currentSlide === 1" x-transition.opacity.duration.1000ms src="{{ $store->cover_path ? $store->cover_url : 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&q=80&w=1920' }}" alt="Hero Image 1" class="absolute inset-0 w-full h-full object-cover">
+                <!-- Slide 2 -->
+                <img x-show="currentSlide === 2" x-transition.opacity.duration.1000ms src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1920" alt="Hero Image 2" class="absolute inset-0 w-full h-full object-cover" style="display: none;">
+                <!-- Slide 3 -->
+                <img x-show="currentSlide === 3" x-transition.opacity.duration.1000ms src="https://images.unsplash.com/photo-1583847268964-b28e50b58b44?auto=format&fit=crop&q=80&w=1920" alt="Hero Image 3" class="absolute inset-0 w-full h-full object-cover" style="display: none;">
                 
-                <!-- Left Image (Oval/Pill) -->
-                <div class="hidden lg:block w-[300px] h-[450px] flex-shrink-0 relative" data-animate>
-                    <div class="w-full h-full rounded-full overflow-hidden shadow-lg border-8 border-[#FDF8EF]">
-                        <img src="{{ $store->cover_path ? $store->cover_url : 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&q=80&w=800' }}" alt="Hero Image" class="w-full h-full object-cover">
-                    </div>
-                </div>
+                <!-- Subtle Dark Overlay for Text Readability -->
+                <div class="absolute inset-0 bg-black/30 md:bg-black/20"></div>
+            </div>
 
-                <!-- Center Text -->
-                <div class="flex-1 text-center max-w-2xl mx-auto z-10" data-animate>
-                    @if($store->hero_badge)
-                    <div class="inline-block px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase mb-6" style="background-color: var(--secondary); color: white;">
-                        {{ $store->hero_badge }}
-                    </div>
-                    @endif
-
-                    <h2 class="text-4xl md:text-6xl font-serif text-[#1A1A1A] mb-4 leading-tight">
-                        {{ $store->hero_title ?? 'Welcome to the world of elegance' }}
+            <!-- Content Container -->
+            <div class="relative z-10 w-full h-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12 flex flex-col justify-center">
+                <div class="max-w-2xl text-white md:ml-10" data-animate>
+                    <h1 class="text-5xl md:text-7xl font-script tracking-wide mb-2 text-white/90 drop-shadow-md">
+                        {{ $store->name }}
+                    </h1>
+                    <h2 class="text-3xl md:text-5xl font-medium mb-12 drop-shadow-md leading-tight">
+                        {{ $store->hero_title ?? 'Your Perfect Home Awaits' }}
                     </h2>
 
-                    @if($store->hero_subtitle)
-                    <p class="text-gray-500 text-sm md:text-base mb-10 max-w-lg mx-auto leading-relaxed">
-                        {{ $store->hero_subtitle }}
-                    </p>
-                    @else
-                    <p class="text-gray-500 text-sm md:text-base mb-10 max-w-lg mx-auto leading-relaxed">
-                        Descubre nuestra colección única. Diseñada con pasión para la vida moderna, ofreciendo productos funcionales y elegantes.
-                    </p>
-                    @endif
-
-                    <a href="{{ route('store.catalog', $store->slug) }}" class="inline-flex items-center justify-center w-32 h-32 rounded-full border border-gray-200 hover:border-[#C8A68B] transition-colors relative group mx-auto">
-                        <div class="absolute inset-2 rounded-full flex items-center justify-center transition-transform group-hover:scale-95" style="background-color: #E2CDBC;">
-                            <span class="text-[#1A1A1A] text-sm font-medium">Ver Todo</span>
+                    <!-- Circular "Shop Now" Button -->
+                    <div class="relative inline-flex items-center justify-center w-32 h-32 md:w-40 md:h-40 group cursor-pointer" onclick="window.location='{{ route('store.catalog', $store->slug) }}'">
+                        <!-- Outer Thin Ring -->
+                        <div class="absolute inset-0 rounded-full border border-white/50 group-hover:scale-110 transition-transform duration-500"></div>
+                        <!-- Inner Solid Circle -->
+                        <div class="absolute inset-2 md:inset-3 rounded-full bg-[#1A1A1A] flex items-center justify-center shadow-2xl group-hover:bg-[#C8A68B] transition-colors duration-500">
+                            <span class="text-white text-xs md:text-sm tracking-widest uppercase font-semibold">Shop Now</span>
                         </div>
-                    </a>
-                </div>
-
-                <!-- Right Image -->
-                <div class="hidden lg:block w-[350px] h-[400px] flex-shrink-0" data-animate>
-                    <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=800" alt="Collection" class="w-full h-full object-cover rounded-tl-[100px]">
+                    </div>
                 </div>
             </div>
+
+            <!-- Bottom Left Carousel Indicators -->
+            <div class="absolute bottom-8 left-4 sm:left-6 lg:left-12 md:ml-10 z-20 flex items-center gap-4 text-white/80 text-sm font-medium">
+                <span x-text="String(currentSlide).padStart(2, '0')">01</span>
+                <div class="flex items-center gap-2">
+                    <button @click="currentSlide = currentSlide > 1 ? currentSlide - 1 : totalSlides" class="hover:text-white transition-colors focus:outline-none">
+                        <svg class="w-8 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M7 16l-4-4m0 0l4-4m-4 4h18"></path></svg>
+                    </button>
+                    <div class="w-8 h-[1px] bg-white/30"></div>
+                    <button @click="currentSlide = currentSlide < totalSlides ? currentSlide + 1 : 1" class="hover:text-white transition-colors focus:outline-none">
+                        <svg class="w-8 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                    </button>
+                </div>
+                <span x-text="String(totalSlides).padStart(2, '0')">03</span>
+            </div>
+            
+            <!-- Bottom Right Tagline (Optional) -->
+            @if($store->hero_subtitle)
+            <div class="absolute bottom-8 right-4 sm:right-6 lg:right-12 hidden md:block z-20 text-white/80 text-sm font-medium max-w-xs text-right">
+                {{ $store->hero_subtitle }}
+            </div>
+            @endif
         </section>
         <p class="text-center text-xs text-gray-500 mt-2">*Válido para pedidos realizados hasta las 5:00 p.m. Aplica T&C.</p>
 
@@ -262,8 +280,8 @@
                             ['title' => 'Irresistibles', 'bg' => '#d1f2eb', 'icon' => 'coin', 'image' => null, 'custom' => '<div class="absolute inset-0 flex flex-col items-center justify-center"><span class="text-red-600 font-bold text-[15px] tracking-wide mb-1 z-10">DESDE</span><span class="bg-red-600 text-white font-black text-3xl px-4 py-1.5 rounded-lg shadow-sm z-10">S/ 1.20</span></div>'],
                         ];
                     @endphp
-                    @foreach($featuredCats as $cat)
-                        <div class="relative overflow-hidden rounded-sm h-56 flex flex-col items-center justify-center cursor-pointer group" style="background-color: {{ $cat['bg'] }}">
+                    @foreach($featuredCats as $index => $cat)
+                        <div class="relative overflow-hidden rounded-sm h-56 flex flex-col items-center justify-center cursor-pointer group" style="background-color: {{ $cat['bg'] }}; animation-delay: {{ $index * 100 }}ms;" data-animate>
                             <!-- Image -->
                             @if($cat['image'])
                                 <img src="{{ $cat['image'] }}" class="absolute inset-0 w-full h-full object-cover mix-blend-multiply opacity-80 group-hover:scale-105 transition-transform duration-500">
@@ -307,7 +325,7 @@
         <section class="py-16 bg-[#FDF8EF]">
             <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12">
                 <div class="flex items-center mb-10" data-animate>
-                    <h2 class="text-3xl md:text-4xl font-serif text-[#1A1A1A] italic tracking-wide">Best Selling</h2>
+                    <h2 class="text-3xl md:text-4xl  text-[#1A1A1A] italic tracking-wide">Best Selling</h2>
                 </div>
                 
                 @if($allProducts->isEmpty())
@@ -319,7 +337,7 @@
                         // First item is large (bento style)
                         $isLarge = $loop->first || $loop->iteration == 6;
                     @endphp
-                    <div class="{{ $isLarge ? 'md:col-span-2 md:row-span-2' : 'col-span-1 row-span-1' }} group flex flex-col relative" data-animate>
+                    <div class="{{ $isLarge ? 'md:col-span-2 md:row-span-2' : 'col-span-1 row-span-1' }} group flex flex-col relative" data-animate style="animation-delay: {{ $loop->index * 100 }}ms;">
                         
                         <a href="{{ route('store.product', [$store->slug, $product->slug]) }}" class="block relative w-full {{ $isLarge ? 'aspect-[4/3] md:aspect-square' : 'aspect-square' }} overflow-hidden rounded-md bg-[#F4F2EE] mb-4">
                             @if($product->image_path)
@@ -376,25 +394,25 @@
     <div class="bg-white border-y border-gray-200 py-8">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center divide-x divide-gray-100">
-                <div class="px-4">
+                <div class="px-4" data-animate style="animation-delay: 100ms;">
                     <svg class="w-8 h-8 mx-auto mb-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
                     <h4 class="font-bold text-sm text-gray-900 mb-1">Envíos a nivel nacional</h4>
-                    <p class="text-xs text-gray-500">Llegamos a todo el Perú</p>
+                    <p class="text-xs text-gray-500">A todo el Perú vía Shalom, Olva o agencia</p>
                 </div>
-                <div class="px-4">
+                <div class="px-4" data-animate style="animation-delay: 200ms;">
                     <svg class="w-8 h-8 mx-auto mb-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
                     <h4 class="font-bold text-sm text-gray-900 mb-1">Múltiples formas de pago</h4>
-                    <p class="text-xs text-gray-500">Aceptamos todas las tarjetas</p>
+                    <p class="text-xs text-gray-500">Tarjetas, transferencias y Yape</p>
                 </div>
-                <div class="px-4">
-                    <svg class="w-8 h-8 mx-auto mb-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                <div class="px-4" data-animate style="animation-delay: 300ms;">
+                    <svg class="w-8 h-8 mx-auto mb-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
                     <h4 class="font-bold text-sm text-gray-900 mb-1">Pagos seguros</h4>
-                    <p class="text-xs text-gray-500">Pasarelas confiables</p>
+                    <p class="text-xs text-gray-500">Transacciones 100% encriptadas</p>
                 </div>
-                <div class="px-4">
-                    <svg class="w-8 h-8 mx-auto mb-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                <div class="px-4" data-animate style="animation-delay: 400ms;">
+                    <svg class="w-8 h-8 mx-auto mb-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
                     <h4 class="font-bold text-sm text-gray-900 mb-1">Asesoría personalizada</h4>
-                    <p class="text-xs text-gray-500">Te ayudamos en el proceso</p>
+                    <p class="text-xs text-gray-500">Te ayudamos a elegir por WhatsApp</p>
                 </div>
             </div>
         </div>

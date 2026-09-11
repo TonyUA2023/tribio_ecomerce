@@ -12,7 +12,7 @@
             </svg>
         </div>
 
-        <h1 class="text-3xl md:text-4xl font-serif text-[#1A1A1A] font-bold mb-4">¡Gracias por tu compra!</h1>
+        <h1 class="text-3xl md:text-4xl  text-[#1A1A1A] font-bold mb-4">¡Gracias por tu compra!</h1>
         <p class="text-gray-600 mb-8">Tu pedido ha sido registrado con éxito. Hemos enviado un correo de confirmación con los detalles.</p>
 
         <div class="bg-gray-50 rounded-2xl p-6 mb-8 text-left border border-gray-100">

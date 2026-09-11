@@ -21,7 +21,7 @@
                         @if($store->logo_path)
                             <img src="{{ $store->logo_url }}" alt="{{ $store->name }}" class="h-10 md:h-12 w-auto mx-auto object-contain">
                         @else
-                            <span class="font-serif font-semibold text-2xl md:text-3xl tracking-wide text-[#1A1A1A]">{{ $store->name }}</span>
+                            <span class=" font-semibold text-2xl md:text-3xl tracking-wide text-[#1A1A1A]">{{ $store->name }}</span>
                         @endif
                     </a>
                 </div>
@@ -60,7 +60,7 @@
                     <span class="text-gray-800">{{ $product->name }}</span>
                 </nav>
 
-                <h1 class="text-3xl md:text-5xl font-serif text-[#1A1A1A] mb-4">{{ $product->name }}</h1>
+                <h1 class="text-3xl md:text-5xl  text-[#1A1A1A] mb-4">{{ $product->name }}</h1>
                 
                 <div class="flex items-center gap-4 mb-8">
                     <span class="text-2xl md:text-3xl font-bold text-[#C8A68B]">
@@ -108,7 +108,7 @@
     @if($relatedProducts->count() > 0)
     <div class="bg-gray-50 py-20 border-t border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 class="text-3xl font-serif font-bold text-[#1A1A1A] mb-12 text-center">También te podría gustar</h2>
+            <h2 class="text-3xl  font-bold text-[#1A1A1A] mb-12 text-center">También te podría gustar</h2>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
                 @foreach($relatedProducts as $related)
                 <div class="group block relative cursor-pointer" onclick="window.location='{{ route('store.product', ['slug' => $store->slug, 'product' => $related->slug]) }}'">

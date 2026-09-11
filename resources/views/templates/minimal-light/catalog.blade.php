@@ -22,7 +22,7 @@
                         @if($store->logo_path)
                             <img src="{{ $store->logo_url }}" alt="{{ $store->name }}" class="h-10 md:h-12 w-auto mx-auto object-contain">
                         @else
-                            <span class="font-serif font-semibold text-2xl md:text-3xl tracking-wide text-[#1A1A1A]">{{ $store->name }}</span>
+                            <span class=" font-semibold text-2xl md:text-3xl tracking-wide text-[#1A1A1A]">{{ $store->name }}</span>
                         @endif
                     </a>
                 </div>
@@ -68,7 +68,7 @@
             <div class="max-w-4xl mx-auto relative">
                 <form action="{{ route('store.catalog', $store->slug) }}" method="GET" class="flex items-center">
                     <svg class="w-6 h-6 text-gray-400 absolute left-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <input type="text" name="q" placeholder="Buscar productos..." class="w-full pl-14 pr-12 py-4 text-xl font-serif border-none rounded-full bg-gray-50 focus:ring-0" autofocus>
+                    <input type="text" name="q" placeholder="Buscar productos..." class="w-full pl-14 pr-12 py-4 text-xl  border-none rounded-full bg-gray-50 focus:ring-0" autofocus>
                 </form>
                 <button @click="searchOpen = false" type="button" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -79,7 +79,7 @@
 
     <!-- Page Header -->
     <div class="bg-[#FDF8EF] py-10 md:py-16 text-center border-b border-gray-200">
-        <h1 class="text-4xl md:text-5xl font-serif text-[#1A1A1A] mb-4">Catálogo de Productos</h1>
+        <h1 class="text-4xl md:text-5xl  text-[#1A1A1A] mb-4">Catálogo de Productos</h1>
         <p class="text-gray-600 max-w-2xl mx-auto px-4">Explora nuestra colección y encuentra piezas únicas para ti.</p>
     </div>
 
@@ -212,7 +212,7 @@
     <!-- Footer -->
     <footer class="bg-white border-t border-gray-100 py-12 mt-20">
         <div class="max-w-7xl mx-auto px-4 text-center">
-            <h3 class="font-serif text-2xl font-bold text-[#1A1A1A] mb-4">{{ $store->name }}</h3>
+            <h3 class=" text-2xl font-bold text-[#1A1A1A] mb-4">{{ $store->name }}</h3>
             <p class="text-gray-500 text-sm mb-6">Gracias por confiar en nosotros.</p>
             <p class="text-xs text-gray-400">© {{ date('Y') }} {{ $store->name }}. Todos los derechos reservados.</p>
         </div>
