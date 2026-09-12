@@ -111,6 +111,23 @@ class StoreSettingsController extends Controller
                 $counter++;
             }
             $data['slug'] = $slug;
+        if ($data['checkout_mode'] === 'card' && empty($data['payment_gateway'])) {
+            $data['payment_gateway'] = 'mercado_pago';
+        }
+
+        if ($request->filled('mp_access_token')) {
+            $data['gateway_access_token'] = trim($request->input('mp_access_token'));
+            $data['mp_access_token'] = trim($request->input('mp_access_token'));
+        }
+        if ($request->filled('mp_public_key')) {
+            $data['gateway_public_key'] = trim($request->input('mp_public_key'));
+            $data['mp_public_key'] = trim($request->input('mp_public_key'));
+        }
+        if ($request->filled('gateway_access_token') && empty($data['mp_access_token'])) {
+            $data['mp_access_token'] = trim($request->input('gateway_access_token'));
+        }
+        if ($request->filled('gateway_public_key') && empty($data['mp_public_key'])) {
+            $data['mp_public_key'] = trim($request->input('gateway_public_key'));
         }
 
         $store->update($data);

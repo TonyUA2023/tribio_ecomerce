@@ -17,7 +17,7 @@ class ProductController extends Controller
             return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);
         }
 
-        $query = $store->products()->with(['category', 'brand']);
+        $query = $store->products()->with(['categories', 'category', 'brand']);
 
         // Por defecto, no listamos subcomponentes en el catálogo general
         if (!$request->has('include_subcomponents') || $request->include_subcomponents == 'false') {
@@ -36,7 +36,11 @@ class ProductController extends Controller
         }
 
         if ($request->has('category_id') && $request->category_id !== 'all') {
-            $query->where('category_id', $request->category_id);
+            $catId = $request->category_id;
+            $query->where(function($sub) use ($catId) {
+                $sub->where('category_id', $catId)
+                    ->orWhereHas('categories', fn($sq) => $sq->where('categories.id', $catId));
+            });
         }
 
         $products = $query->orderBy('sort_order')->latest()->paginate(15);
@@ -104,6 +108,8 @@ class ProductController extends Controller
             'cost_price' => 'nullable|numeric|min:0',
             'stock' => 'nullable|integer|min:0',
             'category_id' => 'nullable|exists:categories,id',
+            'categories' => 'nullable|array',
+            'categories.*' => 'integer|exists:categories,id',
             'brand_id' => 'nullable|exists:brands,id',
             'parent_id' => 'nullable|exists:products,id',
             'description' => 'nullable|string',
@@ -138,7 +144,29 @@ class ProductController extends Controller
 
         unset($data['image']);
 
+        $categoryIds = $request->input('categories', []);
+        if (is_string($categoryIds)) {
+            $categoryIds = json_decode($categoryIds, true) ?? [];
+        }
+        if (!is_array($categoryIds)) {
+            $categoryIds = [];
+        }
+        $categoryIds = array_values(array_filter(array_map('intval', $categoryIds)));
+
+        if ($request->filled('category_id') && in_array((int)$request->category_id, $categoryIds)) {
+            $data['category_id'] = (int)$request->category_id;
+        } elseif (!empty($categoryIds)) {
+            $data['category_id'] = $categoryIds[0];
+        } elseif ($request->filled('category_id')) {
+            $data['category_id'] = (int)$request->category_id;
+            $categoryIds = [(int)$request->category_id];
+        }
+
         $product = Product::create($data);
+
+        if (!empty($categoryIds)) {
+            $product->categories()->sync($categoryIds);
+        }
 
         // Crear historial de registro inicial si hay imagen
         if ($product->image_path) {
@@ -182,6 +210,8 @@ class ProductController extends Controller
             'cost_price' => 'nullable|numeric|min:0',
             'stock' => 'nullable|integer|min:0',
             'category_id' => 'nullable|exists:categories,id',
+            'categories' => 'nullable|array',
+            'categories.*' => 'integer|exists:categories,id',
             'brand_id' => 'nullable|exists:brands,id',
             'parent_id' => 'nullable|exists:products,id',
             'description' => 'nullable|string',
@@ -222,7 +252,26 @@ class ProductController extends Controller
 
         unset($data['image']);
 
+        $categoryIds = $request->input('categories', null);
+        if ($categoryIds !== null) {
+            if (is_string($categoryIds)) {
+                $categoryIds = json_decode($categoryIds, true) ?? [];
+            }
+            if (is_array($categoryIds)) {
+                $categoryIds = array_values(array_filter(array_map('intval', $categoryIds)));
+                if (!empty($categoryIds) && !$request->filled('category_id')) {
+                    $data['category_id'] = $categoryIds[0];
+                }
+            }
+        }
+
         $product->update($data);
+
+        if ($categoryIds !== null && is_array($categoryIds)) {
+            $product->categories()->sync($categoryIds);
+        } elseif ($request->filled('category_id')) {
+            $product->categories()->sync([(int)$request->category_id]);
+        }
 
         // Si se subió nueva imagen y no existía historial previo, podemos crearlo
         if ($request->hasFile('image')) {

@@ -22,9 +22,15 @@ class ProductController extends Controller
         $store = $this->getStore();
 
         $products = $store->products()
-            ->with('category')
+            ->with(['categories', 'category'])
             ->when($request->search, fn($q) => $q->where('name', 'like', "%{$request->search}%"))
-            ->when($request->category, fn($q) => $q->where('category_id', $request->category))
+            ->when($request->category, function($q) use ($request) {
+                $catId = $request->category;
+                $q->where(function($sub) use ($catId) {
+                    $sub->where('category_id', $catId)
+                        ->orWhereHas('categories', fn($sq) => $sq->where('categories.id', $catId));
+                });
+            })
             ->when($request->status === 'active', fn($q) => $q->where('is_active', true))
             ->when($request->status === 'inactive', fn($q) => $q->where('is_active', false))
             ->when($request->stock === 'low', fn($q) => $q->where('track_stock', true)->whereColumn('stock', '<=', 'low_stock_alert')->where('stock', '>', 0))
@@ -56,6 +62,8 @@ class ProductController extends Controller
             'sku'               => 'nullable|string|max:50',
             'origin_code'       => 'nullable|string|max:100',
             'category_id'       => 'nullable|integer|exists:categories,id',
+            'categories'        => 'nullable|array',
+            'categories.*'      => 'integer|exists:categories,id',
             'brand_id'          => 'nullable|integer|exists:brands,id',
             'price'             => 'required|numeric|min:0',
             'compare_price'     => 'nullable|numeric|min:0',
@@ -112,7 +120,33 @@ class ProductController extends Controller
             $data['gallery_images'] = $galleryPaths;
         }
 
+        // Resolución de categorías múltiples y principal
+        $categoryIds = $request->input('categories', []);
+        if (is_string($categoryIds)) {
+            $categoryIds = json_decode($categoryIds, true) ?? [];
+        }
+        if (!is_array($categoryIds)) {
+            $categoryIds = [];
+        }
+        $categoryIds = array_values(array_filter(array_map('intval', $categoryIds)));
+
+        if ($request->filled('category_id') && in_array((int)$request->category_id, $categoryIds)) {
+            $data['category_id'] = (int)$request->category_id;
+        } elseif (!empty($categoryIds)) {
+            $data['category_id'] = $categoryIds[0];
+        } elseif ($request->filled('category_id')) {
+            $data['category_id'] = (int)$request->category_id;
+            $categoryIds = [(int)$request->category_id];
+        } else {
+            $data['category_id'] = null;
+        }
+
         $product = Product::create($data);
+
+        // Sincronizar categorías en la tabla pivot
+        if (!empty($categoryIds)) {
+            $product->categories()->sync($categoryIds);
+        }
 
         // Guardar variantes si tiene activado has_variants
         if ($request->boolean('has_variants')) {
@@ -170,7 +204,7 @@ class ProductController extends Controller
         abort_if($product->store_id !== $store->id, 403);
         $categories = $store->categories;
         $brands     = $store->brands;
-        $product->load('variants');
+        $product->load(['variants', 'categories']);
 
         return view('dashboard.products.edit', compact('store', 'product', 'categories', 'brands'));
     }
@@ -187,6 +221,8 @@ class ProductController extends Controller
             'sku'               => 'nullable|string|max:50',
             'origin_code'       => 'nullable|string|max:100',
             'category_id'       => 'nullable|integer|exists:categories,id',
+            'categories'        => 'nullable|array',
+            'categories.*'      => 'integer|exists:categories,id',
             'brand_id'          => 'nullable|integer|exists:brands,id',
             'price'             => 'required|numeric|min:0',
             'compare_price'     => 'nullable|numeric|min:0',
@@ -265,7 +301,29 @@ class ProductController extends Controller
 
         $data['gallery_images'] = array_values($currentGallery);
 
+        // Resolución de categorías múltiples y principal
+        $categoryIds = $request->input('categories', []);
+        if (is_string($categoryIds)) {
+            $categoryIds = json_decode($categoryIds, true) ?? [];
+        }
+        if (!is_array($categoryIds)) {
+            $categoryIds = [];
+        }
+        $categoryIds = array_values(array_filter(array_map('intval', $categoryIds)));
+
+        if ($request->filled('category_id') && in_array((int)$request->category_id, $categoryIds)) {
+            $data['category_id'] = (int)$request->category_id;
+        } elseif (!empty($categoryIds)) {
+            $data['category_id'] = $categoryIds[0];
+        } elseif ($request->filled('category_id')) {
+            $data['category_id'] = (int)$request->category_id;
+            $categoryIds = [(int)$request->category_id];
+        } else {
+            $data['category_id'] = null;
+        }
+
         $product->update($data);
+        $product->categories()->sync($categoryIds);
 
         // Sincronizar Variantes
         if ($hasVariants && $request->filled('variants_json')) {

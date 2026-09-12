@@ -34,7 +34,20 @@
                             </div>
                             <div>
                                 <p class="text-white font-medium">{{ $product->name }}</p>
-                                <p class="text-white/40 text-xs">{{ $product->category?->name }}</p>
+                                @if($product->categories && $product->categories->count() > 0)
+                                    <div class="flex items-center gap-1 mt-0.5 flex-wrap">
+                                        <span class="text-white/60 text-xs">{{ $product->categories->first()->icon ?? '' }} {{ $product->categories->first()->name }}</span>
+                                        @if($product->categories->count() > 1)
+                                            <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-sky-400 font-bold cursor-default" title="{{ $product->categories->pluck('name')->implode(', ') }}">
+                                                +{{ $product->categories->count() - 1 }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                @elseif($product->category)
+                                    <p class="text-white/40 text-xs">{{ $product->category->name }}</p>
+                                @else
+                                    <p class="text-white/20 text-xs italic">Sin categoría</p>
+                                @endif
                             </div>
                         </div>
                     </td>

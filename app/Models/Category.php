@@ -17,7 +17,7 @@ class Category extends Model
         'is_featured' => 'boolean',
     ];
 
-    protected $appends = ['image_url'];
+    protected $appends = ['image_url', 'translated_name'];
 
     public function getImageUrlAttribute(): ?string
     {
@@ -28,6 +28,16 @@ class Category extends Model
         // Fallback al primer producto activo con imagen
         $prod = $this->products()->whereNotNull('image_path')->first();
         return $prod ? $prod->image_url : null;
+    }
+
+    public function getTranslatedName(?string $lang = null): string
+    {
+        return \App\Helpers\TranslationHelper::transCategory($this->name, $lang);
+    }
+
+    public function getTranslatedNameAttribute(): string
+    {
+        return $this->getTranslatedName();
     }
 
     public function scopeFeatured($query)
@@ -42,7 +52,7 @@ class Category extends Model
 
     public function products()
     {
-        return $this->hasMany(Product::class);
+        return $this->belongsToMany(Product::class, 'category_product')->withTimestamps();
     }
 
     public function parent()
@@ -57,6 +67,8 @@ class Category extends Model
 
     public function activeProducts()
     {
-        return $this->hasMany(Product::class)->where('is_active', true);
+        return $this->belongsToMany(Product::class, 'category_product')
+                    ->where('products.is_active', true)
+                    ->withTimestamps();
     }
 }

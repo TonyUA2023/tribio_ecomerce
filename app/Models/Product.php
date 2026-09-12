@@ -219,6 +219,19 @@ class Product extends Model
         return $this->belongsTo(Category::class);
     }
 
+    public function categories()
+    {
+        return $this->belongsToMany(Category::class, 'category_product')->withTimestamps();
+    }
+
+    public function getCategoryNamesAttribute(): string
+    {
+        if ($this->relationLoaded('categories') && $this->categories->isNotEmpty()) {
+            return $this->categories->pluck('name')->implode(', ');
+        }
+        return $this->category?->name ?? '';
+    }
+
     public function brand()
     {
         return $this->belongsTo(Brand::class);

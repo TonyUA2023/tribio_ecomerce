@@ -37,14 +37,14 @@ class StoreController extends Controller
         $store = $this->getStore($slug);
         $store->increment('total_views');
 
-        $featuredProducts = $store->featuredProducts()->with('category')->limit(8)->get();
+        $featuredProducts = $store->featuredProducts()->with(['categories', 'category'])->limit(8)->get();
         // Cargar categorias principales con sus hijos, y 1 producto para la mega-imagen
         $categories       = $store->categories()->whereNull('parent_id')
                                 ->with(['children', 'products' => function($q) { $q->latest()->limit(1); }])
                                 ->withCount('activeProducts')->get();
         
         $galleryItems     = $store->galleryItems()->where('is_active', true)->limit(12)->get();
-        $allProducts      = $store->activeProducts()->with('category')
+        $allProducts      = $store->activeProducts()->with(['categories', 'category'])
             ->orderByDesc('is_featured')->orderBy('sort_order')->paginate(12);
 
         $isEditor = request()->query('editor') == 1 || request()->query('preview') == 1;
@@ -99,7 +99,7 @@ class StoreController extends Controller
         $featuredProducts = $store->featuredProducts()->limit(3)->get();
 
         // Query para productos activos
-        $query = $store->activeProducts()->with(['category', 'brand']);
+        $query = $store->activeProducts()->with(['categories', 'category', 'brand']);
 
         // Filtros
         if ($request->filled('q')) {
@@ -124,10 +124,17 @@ class StoreController extends Controller
                 if ($categoryObj) {
                     $childIds = $categoryObj->children()->pluck('id')->toArray();
                     $catIds = array_merge([$categoryObj->id], $childIds);
-                    $query->whereIn('category_id', $catIds);
+                    $query->where(function($sub) use ($catIds) {
+                        $sub->whereIn('category_id', $catIds)
+                            ->orWhereHas('categories', fn($sq) => $sq->whereIn('categories.id', $catIds));
+                    });
                 } else {
-                    $query->whereHas('category', function($q) use ($catVal) {
-                        $q->where('slug', $catVal)->orWhere('id', $catVal);
+                    $query->where(function($sub) use ($catVal) {
+                        $sub->whereHas('category', function($q) use ($catVal) {
+                            $q->where('slug', $catVal)->orWhere('id', $catVal);
+                        })->orWhereHas('categories', function($q) use ($catVal) {
+                            $q->where('categories.slug', $catVal)->orWhere('categories.id', $catVal);
+                        });
                     });
                 }
             }
@@ -135,7 +142,10 @@ class StoreController extends Controller
             $catSlugs = $request->input('categories');
             $catIds = $store->categories()->whereIn('slug', $catSlugs)->orWhereIn('id', $catSlugs)->pluck('id')->toArray();
             if (!empty($catIds)) {
-                $query->whereIn('category_id', $catIds);
+                $query->where(function($sub) use ($catIds) {
+                    $sub->whereIn('category_id', $catIds)
+                        ->orWhereHas('categories', fn($sq) => $sq->whereIn('categories.id', $catIds));
+                });
             }
         }
 
@@ -225,15 +235,39 @@ class StoreController extends Controller
     {
         $store = $this->getStore($slug);
         
-        $productModel = Product::where('slug', $product)
+        $productModel = Product::with(['categories', 'category'])
+            ->where('slug', $product)
             ->where('store_id', $store->id)
             ->firstOrFail();
 
         $productModel->increment('views');
-        $relatedProducts = $store->activeProducts()
-            ->where('category_id', $productModel->category_id)
-            ->where('id', '!=', $productModel->id)
-            ->limit(4)->get();
+        
+        $catIds = $productModel->categories->pluck('id')->toArray();
+        if ($productModel->category_id && !in_array($productModel->category_id, $catIds)) {
+            $catIds[] = $productModel->category_id;
+        }
+
+        $relatedProducts = collect();
+        if (!empty($catIds)) {
+            $relatedProducts = $store->activeProducts()->with(['categories', 'category'])
+                ->where(function($sub) use ($catIds) {
+                    $sub->whereIn('category_id', $catIds)
+                        ->orWhereHas('categories', fn($sq) => $sq->whereIn('categories.id', $catIds));
+                })
+                ->where('id', '!=', $productModel->id)
+                ->limit(4)
+                ->get();
+        }
+
+        if ($relatedProducts->count() < 4) {
+            $needed = 4 - $relatedProducts->count();
+            $fillers = $store->activeProducts()
+                ->where('id', '!=', $productModel->id)
+                ->whereNotIn('id', $relatedProducts->pluck('id'))
+                ->limit($needed)
+                ->get();
+            $relatedProducts = $relatedProducts->concat($fillers);
+        }
             
         // Rename for view compatibility
         $product = $productModel;
@@ -254,17 +288,18 @@ class StoreController extends Controller
     public function gallery(string $slug)
     {
         $store       = $this->getStore($slug);
+        $categories  = $store->categories()->whereNull('parent_id')->get();
         $galleryItems = $store->galleryItems()->where('is_active', true)->paginate(24);
 
         if ($store->build_mode === 'custom_code') {
             $customView = "clientes_custom.{$store->slug}.gallery";
             if (\Illuminate\Support\Facades\View::exists($customView)) {
-                return view($customView, compact('store', 'galleryItems'));
+                return view($customView, compact('store', 'galleryItems', 'categories'));
             }
         }
 
         $template    = $store->template_name;
-        return view("templates.{$template}.gallery", compact('store', 'galleryItems'));
+        return view("templates.{$template}.gallery", compact('store', 'galleryItems', 'categories'));
     }
 
     public function getShippingCost(Request $request, string $slug)

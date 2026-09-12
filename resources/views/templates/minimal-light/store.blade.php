@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="{{ \App\Helpers\TranslationHelper::currentLang() }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -60,130 +60,8 @@
     </script>
     <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
-    <!-- Header -->
-    <header class="bg-[#FDF8EF] sticky top-0 z-50 border-b border-gray-200/50 shadow-sm" x-data="{ mobileMenuOpen: false, searchOpen: false }">
-        <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12 py-4 md:py-5">
-            <!-- Top Row -->
-            <div class="flex justify-between items-center">
-                
-                <!-- Left: Settings (Language/Currency) -->
-                <div class="flex-1 flex items-center">
-                    @if($store->is_multilanguage_enabled)
-                    <div class="relative" x-data="{ 
-                            langOpen: false, 
-                            currentLang: document.cookie.includes('googtrans=/es/en') ? 'EN' : 'ES',
-                            changeLanguage(lang) {
-                                if(lang === 'EN') {
-                                    document.cookie = 'googtrans=/es/en; path=/';
-                                    document.cookie = 'googtrans=/es/en; domain=' + window.location.hostname + '; path=/';
-                                } else {
-                                    document.cookie = 'googtrans=/es/es; path=/';
-                                    document.cookie = 'googtrans=/es/es; domain=' + window.location.hostname + '; path=/';
-                                    document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-                                    document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=' + window.location.hostname + '; path=/;';
-                                }
-                                window.location.reload();
-                            }
-                        }">
-                        <button @click="langOpen = !langOpen" @click.away="langOpen = false" class="flex items-center gap-1 text-[#1A1A1A] hover:text-[#C8A68B] text-xs font-semibold tracking-wider transition">
-                            <span x-text="currentLang"></span>
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </button>
-                        <div x-show="langOpen" style="display: none;" class="absolute left-0 mt-2 w-24 bg-white rounded-lg shadow-xl border border-gray-100 py-1 z-50">
-                            <button @click="changeLanguage('ES')" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-gray-50" :class="currentLang === 'ES' ? 'text-[#C8A68B]' : 'text-gray-700'">Español</button>
-                            <button @click="changeLanguage('EN')" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-gray-50" :class="currentLang === 'EN' ? 'text-[#C8A68B]' : 'text-gray-700'">English</button>
-                        </div>
-                    </div>
-                    @endif
-                </div>
-
-                <!-- Center: Logo -->
-                <div class="flex-shrink-0 flex items-center justify-center">
-                    <a href="{{ route('store.show', $store->slug) }}" class="pointer-events-auto">
-                        @if($store->logo_path)
-                            <img class="h-10 md:h-14 w-auto" src="{{ $store->logo_url }}" alt="{{ $store->name }}">
-                        @else
-                            <span class=" font-semibold text-2xl md:text-3xl tracking-wide text-[#1A1A1A]">{{ $store->name }}</span>
-                        @endif
-                    </a>
-                </div>
-
-                <!-- Right: Icons -->
-                <div class="flex-1 flex items-center justify-end space-x-4 md:space-x-5">
-                    <button @click="$dispatch('open-customer-modal')" class="text-[#1A1A1A] hover:text-[#C8A68B] transition hidden md:block" title="Mi Cuenta / Mis Pedidos">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                    </button>
-                    <button @click="searchOpen = true" class="text-[#1A1A1A] hover:text-[#C8A68B] transition">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    </button>
-                    <button onclick="document.getElementById('cartDrawer').style.display='flex'" class="text-[#1A1A1A] hover:text-[#C8A68B] transition relative">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-                        <span data-cart-count class="absolute -top-1.5 -right-2 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">0</span>
-                    </button>
-                    
-                    <button class="md:hidden text-[#1A1A1A]" @click="mobileMenuOpen = !mobileMenuOpen">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Bottom Row: Navigation (Desktop) -->
-            @php
-                $headerCategories = $categories->where('show_in_header', true)->take(5);
-                if ($headerCategories->isEmpty()) {
-                    $headerCategories = $categories->take(5);
-                }
-            @endphp
-            <nav class="hidden md:flex justify-center space-x-10 mt-6 pb-2">
-                <a href="{{ route('store.show', $store->slug) }}" class="text-[#1A1A1A] hover:text-[#C8A68B] font-medium text-sm transition">Home</a>
-                <a href="{{ route('store.catalog', $store->slug) }}" class="text-[#1A1A1A] hover:text-[#C8A68B] font-medium text-sm transition">Shop</a>
-                
-                @foreach($headerCategories as $cat)
-                    <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $cat->slug]) }}" class="text-[#1A1A1A] hover:text-[#C8A68B] font-medium text-sm transition">
-                        {{ $cat->name }}
-                    </a>
-                @endforeach
-                
-                <a href="{{ route('store.contact', $store->slug) }}" class="text-[#1A1A1A] hover:text-[#C8A68B] font-medium text-sm transition">Contact</a>
-            </nav>
-        </div>
-
-        <!-- Mobile Menu Dropdown -->
-        <div class="md:hidden" x-show="mobileMenuOpen" style="display: none;">
-            <div class="px-4 pt-2 pb-4 space-y-1 bg-white border-t border-gray-100 shadow-inner">
-                <button @click="$dispatch('open-customer-modal'); mobileMenuOpen = false" class="w-full text-left px-3 py-2 text-sm font-bold text-[#C8A68B] flex items-center gap-2 border-b border-gray-100 pb-2 mb-1">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                    Mi Cuenta / Pedidos Tribio
-                </button>
-                <a href="{{ route('store.show', $store->slug) }}" class="block px-3 py-2 text-sm font-medium text-gray-800">Home</a>
-                <a href="{{ route('store.catalog', $store->slug) }}" class="block px-3 py-2 text-sm font-medium text-gray-800">Shop</a>
-                @foreach($headerCategories as $cat)
-                    <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $cat->slug]) }}" class="block px-3 py-2 text-sm font-medium text-gray-800">{{ $cat->name }}</a>
-                @endforeach
-                <a href="{{ route('store.contact', $store->slug) }}" class="block px-3 py-2 text-sm font-medium text-gray-800">Contact</a>
-            </div>
-        </div>
-
-        <!-- Search Overlay -->
-        <div x-show="searchOpen" style="display: none;" 
-             x-transition:enter="transition ease-out duration-300"
-             x-transition:enter-start="opacity-0 -translate-y-4"
-             x-transition:enter-end="opacity-100 translate-y-0"
-             x-transition:leave="transition ease-in duration-200"
-             x-transition:leave-start="opacity-100 translate-y-0"
-             x-transition:leave-end="opacity-0 -translate-y-4"
-             class="absolute top-0 inset-x-0 bg-white border-b border-gray-100 shadow-2xl z-50 p-6 md:p-10">
-            <div class="max-w-4xl mx-auto relative">
-                <form action="{{ route('store.catalog', $store->slug) }}" method="GET" class="flex items-center">
-                    <svg class="w-6 h-6 text-gray-400 absolute left-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <input type="text" name="search" placeholder="Search for products, categories..." class="w-full pl-14 pr-12 py-4 md:py-5 text-lg md:text-2xl  text-[#1A1A1A] bg-gray-50 rounded-full border-none focus:ring-0 focus:outline-none placeholder-gray-300" autofocus>
-                </form>
-                <button @click="searchOpen = false" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-        </div>
-    </header>
+    <!-- Unified Header -->
+    @include('templates.minimal-light.header')
 
     <main class="flex-grow bg-[#FDF8EF]">
         <!-- Full-Width Professional Hero Banner -->
@@ -222,7 +100,7 @@
                         <div class="absolute inset-0 rounded-full border border-white/50 group-hover:scale-110 transition-transform duration-500"></div>
                         <!-- Inner Solid Circle -->
                         <div class="absolute inset-2 md:inset-3 rounded-full bg-[#1A1A1A] flex items-center justify-center shadow-2xl group-hover:bg-[#C8A68B] transition-colors duration-500">
-                            <span class="text-white text-xs md:text-sm tracking-widest uppercase font-semibold">Shop Now</span>
+                            <span class="text-white text-xs md:text-sm tracking-widest uppercase font-semibold">{{ \App\Helpers\TranslationHelper::trans('shop_now', 'Shop Now') }}</span>
                         </div>
                     </div>
                 </div>
@@ -258,12 +136,12 @@
                 <div class="flex flex-wrap justify-center gap-4 md:gap-8">
                     @php
                         $highlights = [
-                            ['title' => 'Nuevo', 'bg' => '#C8A68B', 'text' => 'white', 'icon' => 'New', 'query' => 'sort=newest'],
-                            ['title' => 'Outlet', 'bg' => '#EADBC8', 'text' => '#1A1A1A', 'icon' => '🏷️', 'query' => 'sale=1'],
-                            ['title' => 'Esenciales', 'bg' => '#F4EFE6', 'text' => '#1A1A1A', 'icon' => '✨', 'query' => 'q=esenciales'],
-                            ['title' => 'De regreso', 'bg' => '#E5DFD5', 'text' => '#1A1A1A', 'icon' => '🔄', 'query' => 'q=destacado'],
-                            ['title' => 'Deco', 'bg' => '#DFD3C3', 'text' => '#1A1A1A', 'icon' => '🪴', 'query' => 'category=deco'],
-                            ['title' => 'Por mayor', 'bg' => '#D0C4B4', 'text' => '#1A1A1A', 'icon' => '📦', 'query' => 'q=mayor'],
+                            ['title' => \App\Helpers\TranslationHelper::trans('new', 'Nuevo'), 'bg' => '#C8A68B', 'text' => 'white', 'icon' => 'New', 'query' => 'sort=newest'],
+                            ['title' => \App\Helpers\TranslationHelper::trans('outlet', 'Outlet'), 'bg' => '#EADBC8', 'text' => '#1A1A1A', 'icon' => '🏷️', 'query' => 'sale=1'],
+                            ['title' => \App\Helpers\TranslationHelper::trans('essentials', 'Esenciales'), 'bg' => '#F4EFE6', 'text' => '#1A1A1A', 'icon' => '✨', 'query' => 'q=esenciales'],
+                            ['title' => \App\Helpers\TranslationHelper::trans('back_in_stock', 'De regreso'), 'bg' => '#E5DFD5', 'text' => '#1A1A1A', 'icon' => '🔄', 'query' => 'q=destacado'],
+                            ['title' => \App\Helpers\TranslationHelper::trans('deco', 'Deco'), 'bg' => '#DFD3C3', 'text' => '#1A1A1A', 'icon' => '🪴', 'query' => 'category=deco'],
+                            ['title' => \App\Helpers\TranslationHelper::trans('wholesale', 'Por mayor'), 'bg' => '#D0C4B4', 'text' => '#1A1A1A', 'icon' => '📦', 'query' => 'q=mayor'],
                             ['title' => 'De S/5', 'bg' => '#2C2B2A', 'text' => 'white', 'icon' => 'S/ 5', 'query' => 'max_price=5'],
                             ['title' => 'De S/10', 'bg' => '#1A1A1A', 'text' => 'white', 'icon' => 'S/ 10', 'query' => 'max_price=10'],
                         ];
@@ -274,7 +152,7 @@
                            data-animate style="animation-delay: {{ $index * 50 }}ms;">
                             <div class="w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center text-base md:text-lg font-bold shadow-sm group-hover:shadow-md transition-all border border-stone-200/50 group-hover:border-[#C8A68B]" 
                                  style="background-color: {{ $h['bg'] }}; color: {{ $h['text'] === 'white' ? '#fff' : '#1A1A1A' }}">
-                                {{ $h['icon'] }}
+                                 {{ $h['icon'] }}
                             </div>
                             <span class="text-xs md:text-sm font-medium text-gray-700 group-hover:text-[#C8A68B] transition-colors">{{ $h['title'] }}</span>
                         </a>
@@ -293,7 +171,7 @@
         @if($featuredCats->isNotEmpty())
         <section class="py-12 bg-[#FDF8EF] border-t border-stone-200/40">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h2 class="text-xl font-bold text-[#1A1A1A] mb-6">Categorías destacadas</h2>
+                <h2 class="text-xl font-bold text-[#1A1A1A] mb-6">{{ \App\Helpers\TranslationHelper::trans('featured_categories', 'Categorías destacadas') }}</h2>
                 
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                     @foreach($featuredCats as $index => $cat)
@@ -308,7 +186,7 @@
                             
                             <!-- Image -->
                             @if($imgUrl)
-                                <img src="{{ $imgUrl }}" alt="{{ $cat->name }}" 
+                                <img src="{{ $imgUrl }}" alt="{{ $cat->getTranslatedName() }}" 
                                      class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out">
                             @else
                                 <!-- Pastel Gradient & Ambient Icon fallback -->
@@ -328,7 +206,7 @@
                                         {{ $cat->icon ?? '⭐' }}
                                     </span>
                                     <span class="text-white text-xs font-bold tracking-tight truncate drop-shadow-sm">
-                                        {{ $cat->name }}
+                                        {{ $cat->getTranslatedName() }}
                                     </span>
                                 </div>
                             </div>
@@ -343,7 +221,7 @@
         <section class="py-16 bg-[#FDF8EF]">
             <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12">
                 <div class="flex items-center mb-10" data-animate>
-                    <h2 class="text-3xl md:text-4xl  text-[#1A1A1A] italic tracking-wide">Best Selling</h2>
+                    <h2 class="text-3xl md:text-4xl text-[#1A1A1A] italic tracking-wide">{{ \App\Helpers\TranslationHelper::trans('best_selling', 'Best Selling') }}</h2>
                 </div>
                 
                 @if($allProducts->isEmpty())
@@ -439,7 +317,7 @@
     <!-- Main Footer -->
     <footer class="bg-white border-t border-stone-200/60 py-8 text-center mt-12">
         <p class="text-xs font-semibold text-gray-500 tracking-wider">
-            Impulsado por <span class="text-[#1A1A1A] font-bold">Tribio</span>
+            {{ \App\Helpers\TranslationHelper::isEn() ? 'Powered by' : 'Impulsado por' }} <span class="text-[#1A1A1A] font-bold">Tribio</span>
         </p>
     </footer>
 

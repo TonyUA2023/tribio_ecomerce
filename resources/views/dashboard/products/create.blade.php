@@ -232,20 +232,137 @@
             </div>
 
             {{-- Organización --}}
-            <div class="glass-card p-6">
+            <div class="glass-card p-6" x-data="{
+                search: '',
+                selected: @js(old('categories', old('category_id') ? [(int)old('category_id')] : [])),
+                primary: @js(old('category_id', null)),
+                categories: @js($categories->map(fn($c) => ['id' => $c->id, 'name' => $c->name, 'icon' => $c->icon ?: '📁'])),
+                get filteredCategories() {
+                    if (!this.search.trim()) return this.categories;
+                    const q = this.search.toLowerCase();
+                    return this.categories.filter(c => c.name.toLowerCase().includes(q));
+                },
+                toggle(id) {
+                    id = Number(id);
+                    const idx = this.selected.indexOf(id);
+                    if (idx > -1) {
+                        this.selected.splice(idx, 1);
+                        if (this.primary === id) {
+                            this.primary = this.selected.length > 0 ? this.selected[0] : null;
+                        }
+                    } else {
+                        this.selected.push(id);
+                        if (!this.primary) {
+                            this.primary = id;
+                        }
+                    }
+                },
+                isSelected(id) {
+                    return this.selected.includes(Number(id));
+                },
+                setPrimary(id) {
+                    id = Number(id);
+                    if (!this.isSelected(id)) {
+                        this.selected.push(id);
+                    }
+                    this.primary = id;
+                },
+                remove(id) {
+                    id = Number(id);
+                    this.selected = this.selected.filter(x => x !== id);
+                    if (this.primary === id) {
+                        this.primary = this.selected.length > 0 ? this.selected[0] : null;
+                    }
+                },
+                clearAll() {
+                    this.selected = [];
+                    this.primary = null;
+                }
+            }">
                 <h3 class="text-white font-bold mb-4 text-sm uppercase tracking-wider opacity-60">Organización</h3>
                 <div class="space-y-4">
+                    {{-- Categorías Relacionadas --}}
                     <div>
-                        <label class="input-label">Categoría</label>
-                        <select name="category_id" class="input-field">
-                            <option value="">Sin categoría</option>
-                            @foreach($categories as $cat)
-                            <option value="{{ $cat->id }}" {{ old('category_id') == $cat->id ? 'selected' : '' }}>
-                                {{ $cat->icon }} {{ $cat->name }}
-                            </option>
-                            @endforeach
-                        </select>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="input-label mb-0">Categorías relacionadas</label>
+                            <div class="flex items-center gap-2">
+                                <template x-if="selected.length > 0">
+                                    <button type="button" @click="clearAll" class="text-[11px] text-red-400 hover:underline">
+                                        Limpiar
+                                    </button>
+                                </template>
+                                <a href="{{ route('dashboard.categorias.create') }}" target="_blank" class="text-[11px] text-sky-400 hover:underline">
+                                    + Nueva categoría
+                                </a>
+                            </div>
+                        </div>
+                        <p class="text-[11px] text-white/50 mb-2.5">Selecciona una o más categorías. Marca la estrella ⭐ para definir la principal.</p>
+
+                        {{-- Chips de seleccionadas --}}
+                        <template x-if="selected.length > 0">
+                            <div class="flex flex-wrap gap-1.5 mb-3 p-2 rounded-xl bg-white/5 border border-white/10 max-h-28 overflow-y-auto">
+                                <template x-for="catId in selected" :key="catId">
+                                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                                        <span x-text="categories.find(c => c.id === catId)?.icon"></span>
+                                        <span x-text="categories.find(c => c.id === catId)?.name"></span>
+                                        <template x-if="primary === catId">
+                                            <span class="text-[10px] px-1 py-0.2 rounded bg-amber-500/30 text-amber-300 border border-amber-500/40" title="Categoría Principal">
+                                                ★ Principal
+                                            </span>
+                                        </template>
+                                        <template x-if="primary !== catId">
+                                            <button type="button" @click="setPrimary(catId)" class="text-white/40 hover:text-amber-300 text-[11px]" title="Marcar como Principal">
+                                                ☆
+                                            </button>
+                                        </template>
+                                        <button type="button" @click="remove(catId)" class="text-white/40 hover:text-red-400 text-xs font-bold leading-none ml-0.5">
+                                            ×
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+
+                        {{-- Input buscador de categorías --}}
+                        <div class="relative mb-2">
+                            <input type="text" x-model="search" placeholder="🔍 Buscar o filtrar categorías..." class="input-field text-xs py-1.5 pl-3 pr-8">
+                            <template x-if="search.length > 0">
+                                <button type="button" @click="search = ''" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white text-xs font-bold">✕</button>
+                            </template>
+                        </div>
+
+                        {{-- Lista de categorías con checkboxes --}}
+                        <div class="border border-white/10 rounded-xl p-2 max-h-48 overflow-y-auto space-y-1 bg-black/20">
+                            <template x-if="filteredCategories.length === 0">
+                                <p class="text-xs text-white/40 text-center py-3">No se encontraron categorías.</p>
+                            </template>
+                            <template x-for="cat in filteredCategories" :key="cat.id">
+                                <div class="flex items-center justify-between p-1.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+                                     :class="{'bg-sky-500/10 border border-sky-500/20': isSelected(cat.id)}">
+                                    <label class="flex items-center gap-2 flex-1 cursor-pointer select-none">
+                                        <input type="checkbox" :value="cat.id" :checked="isSelected(cat.id)" @change="toggle(cat.id)" class="accent-sky-500 w-4 h-4 rounded">
+                                        <span class="text-sm" x-text="cat.icon"></span>
+                                        <span class="text-xs text-white" x-text="cat.name"></span>
+                                    </label>
+                                    <template x-if="isSelected(cat.id)">
+                                        <button type="button" @click="setPrimary(cat.id)" 
+                                                class="text-xs px-2 py-0.5 rounded transition-all"
+                                                :class="primary === cat.id ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-white/30 hover:text-amber-300'">
+                                            <span x-text="primary === cat.id ? '★ Principal' : '☆ Hacer principal'"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+
+                        {{-- Inputs ocultos para envío de formulario --}}
+                        <template x-for="catId in selected" :key="'input-' + catId">
+                            <input type="hidden" name="categories[]" :value="catId">
+                        </template>
+                        <input type="hidden" name="category_id" :value="primary">
                     </div>
+
+                    {{-- Marca --}}
                     <div>
                         <label class="input-label">Marca</label>
                         <select name="brand_id" class="input-field">

@@ -19,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->encryptCookies(except: [
             'user_country',
+            'store_lang',
+            'googtrans',
         ]);
         $middleware->validateCsrfTokens(except: [
             '/plan/webhook',
