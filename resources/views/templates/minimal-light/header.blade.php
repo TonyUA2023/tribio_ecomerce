@@ -80,19 +80,60 @@
                 </div>
                 @endif
 
-                <!-- Currency -->
-                <div class="text-[11px] font-bold tracking-wider text-gray-500 uppercase px-2 py-1 rounded bg-stone-100/70 border border-stone-200/50">
-                    {{ request()->cookie('user_country') === 'US' ? 'USD ($)' : 'PEN (S/)' }}
+                <!-- Currency Selector -->
+                <div class="relative" x-data="{ 
+                        currOpen: false, 
+                        currentCurrency: '{{ \App\Helpers\CurrencyHelper::currentCurrency() }}',
+                        switchCurrency(curr) {
+                            const target = curr.toUpperCase();
+                            document.cookie = 'store_currency=' + target + '; path=/; max-age=31536000; SameSite=Lax';
+                            document.cookie = 'user_country=' + (target === 'USD' ? 'US' : 'PE') + '; path=/; max-age=31536000; SameSite=Lax';
+                            
+                            if (window.TribioCart && window.TribioCart.items && window.TribioCart.items.length > 0) {
+                                window.TribioCart.clear();
+                            }
+                            
+                            window.location.reload();
+                        }
+                    }">
+                    <button @click="currOpen = !currOpen" @click.away="currOpen = false" 
+                            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/70 hover:bg-white text-[#1A1A1A] hover:text-[#C8A68B] text-xs font-bold tracking-wider transition border border-stone-200/80 shadow-xs cursor-pointer"
+                            title="{{ $isEn ? 'Select currency' : 'Seleccionar moneda' }}">
+                        <span class="text-xs">🪙</span>
+                        <span x-text="currentCurrency === 'USD' ? 'USD ($)' : 'PEN (S/)'"></span>
+                        <svg class="w-3 h-3 text-gray-500 transition-transform duration-200" :class="currOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div x-show="currOpen" style="display: none;" 
+                         x-transition:enter="transition ease-out duration-150"
+                         x-transition:enter-start="opacity-0 scale-95"
+                         x-transition:enter-end="opacity-100 scale-100"
+                         class="absolute left-0 mt-2 w-36 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-50 overflow-hidden">
+                        <button type="button" @click="switchCurrency('PEN')" 
+                                class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-stone-50 flex items-center justify-between transition cursor-pointer" 
+                                :class="currentCurrency === 'PEN' ? 'text-[#C8A68B] font-bold bg-[#FDF8EF]/50' : 'text-gray-700'">
+                            <span>Soles (PEN)</span>
+                            <span x-show="currentCurrency === 'PEN'" class="text-[#C8A68B] text-xs font-bold">✓</span>
+                        </button>
+                        <button type="button" @click="switchCurrency('USD')" 
+                                class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-stone-50 flex items-center justify-between transition cursor-pointer" 
+                                :class="currentCurrency === 'USD' ? 'text-[#C8A68B] font-bold bg-[#FDF8EF]/50' : 'text-gray-700'">
+                            <span>Dólares (USD)</span>
+                            <span x-show="currentCurrency === 'USD'" class="text-[#C8A68B] text-xs font-bold">✓</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
             <!-- Center: Logo -->
             <div class="flex-shrink-0 flex items-center justify-center">
-                <a href="{{ route('store.show', $store->slug) }}" class="pointer-events-auto">
+                <a href="{{ route('store.show', $store->slug) }}" class="pointer-events-auto flex items-center gap-2.5 group">
                     @if($store->logo_path)
-                        <img class="h-10 md:h-13 w-auto object-contain" src="{{ $store->logo_url }}" alt="{{ $store->name }}">
+                        <img class="h-10 md:h-13 w-auto object-contain transition-transform duration-200 group-hover:scale-105" src="{{ $store->logo_url }}" alt="{{ $store->name }}">
                     @else
-                        <span class="font-semibold text-2xl md:text-3xl tracking-wide text-[#1A1A1A]">{{ $store->name }}</span>
+                        <div class="flex flex-col items-center">
+                            <span class="font-bold text-2xl md:text-4xl tracking-tight text-[#1A1A1A] group-hover:text-[#C8A68B] transition-colors font-brand leading-none" style="font-family: 'Fredoka', 'Quicksand', sans-serif;">{{ $store->name }}</span>
+                            <span class="text-[8px] md:text-[9px] tracking-[0.22em] text-[#C8A68B] uppercase font-bold mt-1 hidden sm:block">Tu vida, más fácil</span>
+                        </div>
                     @endif
                 </a>
             </div>
@@ -129,7 +170,7 @@
         </div>
 
         <!-- Bottom Row: Navigation (Desktop) -->
-        <nav class="hidden md:flex justify-center items-center space-x-8 mt-5 pb-1">
+        <nav class="hidden md:flex justify-center items-center space-x-8 mt-5 pb-1 font-brand">
             <a href="{{ route('store.show', $store->slug) }}" 
                class="font-medium text-sm transition {{ request()->routeIs('store.show') ? 'text-[#C8A68B] font-bold' : 'text-[#1A1A1A] hover:text-[#C8A68B]' }}">
                 {{ $isEn ? 'Home' : 'Inicio' }}
@@ -162,7 +203,7 @@
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0 -translate-y-2"
          x-transition:enter-end="opacity-100 translate-y-0">
-        <div class="px-5 pt-3 pb-5 space-y-2 bg-white border-t border-gray-100 shadow-xl">
+        <div class="px-5 pt-3 pb-5 space-y-2 bg-white border-t border-gray-100 shadow-xl font-brand">
             
             <!-- Tribio Account Button -->
             <button @click="$dispatch('open-customer-modal'); mobileMenuOpen = false" 
@@ -222,6 +263,23 @@
                     </div>
                 </div>
             @endif
+
+            <!-- Mobile Currency Switcher -->
+            <div class="border-t border-gray-100 pt-3 mt-2 flex items-center justify-between px-3">
+                <span class="text-xs font-medium text-gray-500">{{ $isEn ? 'Currency' : 'Moneda' }}</span>
+                <div class="inline-flex rounded-lg p-0.5 bg-stone-100 text-xs font-bold">
+                    <button type="button" 
+                            onclick="document.cookie='store_currency=PEN; path=/; max-age=31536000; SameSite=Lax'; document.cookie='user_country=PE; path=/; max-age=31536000; SameSite=Lax'; if(window.TribioCart && window.TribioCart.items && window.TribioCart.items.length > 0) window.TribioCart.clear(); window.location.reload();" 
+                            class="px-3 py-1 rounded-md transition cursor-pointer {{ !\App\Helpers\CurrencyHelper::isUsd() ? 'bg-white text-[#1A1A1A] shadow-xs' : 'text-gray-500' }}">
+                        PEN (S/)
+                    </button>
+                    <button type="button" 
+                            onclick="document.cookie='store_currency=USD; path=/; max-age=31536000; SameSite=Lax'; document.cookie='user_country=US; path=/; max-age=31536000; SameSite=Lax'; if(window.TribioCart && window.TribioCart.items && window.TribioCart.items.length > 0) window.TribioCart.clear(); window.location.reload();" 
+                            class="px-3 py-1 rounded-md transition cursor-pointer {{ \App\Helpers\CurrencyHelper::isUsd() ? 'bg-white text-[#1A1A1A] shadow-xs' : 'text-gray-500' }}">
+                        USD ($)
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 

@@ -267,11 +267,11 @@
                                     <h3 class="text-[#1A1A1A] font-semibold text-sm md:text-base mb-1 truncate">{{ $p->name }}</h3>
                                     <div class="flex items-center gap-2">
                                         <p class="text-[#C8A68B] font-bold text-sm md:text-base">
-                                             {{ request()->cookie('user_country') === 'US' ? '$' : 'S/' }} {{ number_format($p->resolvePrice(), 2) }}
+                                             {{ \App\Helpers\CurrencyHelper::symbol() }} {{ number_format($p->resolvePrice(), 2) }}
                                         </p>
                                         @if($p->resolveComparePrice() > $p->resolvePrice())
                                             <p class="text-gray-400 text-xs md:text-sm line-through">
-                                                {{ request()->cookie('user_country') === 'US' ? '$' : 'S/' }} {{ number_format($p->resolveComparePrice(), 2) }}
+                                                {{ \App\Helpers\CurrencyHelper::symbol() }} {{ number_format($p->resolveComparePrice(), 2) }}
                                             </p>
                                         @endif
                                     </div>

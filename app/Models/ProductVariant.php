@@ -54,7 +54,7 @@ class ProductVariant extends Model
 
     public function resolvePrice(): float
     {
-        $isUsd = request()->cookie('user_country') === 'US';
+        $isUsd = \App\Helpers\CurrencyHelper::isUsd();
         if ($isUsd && !empty($this->price_usd) && $this->price_usd > 0) {
             return (float) $this->price_usd;
         }
@@ -66,7 +66,7 @@ class ProductVariant extends Model
 
     public function resolveComparePrice(): float
     {
-        $isUsd = request()->cookie('user_country') === 'US';
+        $isUsd = \App\Helpers\CurrencyHelper::isUsd();
         if ($isUsd && !empty($this->compare_price_usd) && $this->compare_price_usd > 0) {
             return (float) $this->compare_price_usd;
         }

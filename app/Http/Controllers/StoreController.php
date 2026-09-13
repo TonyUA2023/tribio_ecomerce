@@ -37,14 +37,32 @@ class StoreController extends Controller
         $store = $this->getStore($slug);
         $store->increment('total_views');
 
-        $featuredProducts = $store->featuredProducts()->with(['categories', 'category'])->limit(8)->get();
+        $isUsd = \App\Helpers\CurrencyHelper::isUsd();
+
+        $featuredProducts = $store->featuredProducts()
+            ->when($isUsd, fn($q) => $q->where('price_usd', '>', 0))
+            ->with(['categories', 'category'])
+            ->limit(8)
+            ->get();
         // Cargar categorias principales con sus hijos, y 1 producto para la mega-imagen
         $categories       = $store->categories()->whereNull('parent_id')
-                                ->with(['children', 'products' => function($q) { $q->latest()->limit(1); }])
-                                ->withCount('activeProducts')->get();
+                                ->with([
+                                    'children', 
+                                    'products' => function($q) use ($isUsd) { 
+                                        $q->when($isUsd, fn($sq) => $sq->where('price_usd', '>', 0))->latest()->limit(1); 
+                                    }
+                                ])
+                                ->withCount([
+                                    'activeProducts' => function($q) use ($isUsd) {
+                                        $q->when($isUsd, fn($sq) => $sq->where('price_usd', '>', 0));
+                                    }
+                                ])
+                                ->get();
         
         $galleryItems     = $store->galleryItems()->where('is_active', true)->limit(12)->get();
-        $allProducts      = $store->activeProducts()->with(['categories', 'category'])
+        $allProducts      = $store->activeProducts()
+            ->when($isUsd, fn($q) => $q->where('price_usd', '>', 0))
+            ->with(['categories', 'category'])
             ->orderByDesc('is_featured')->orderBy('sort_order')->paginate(12);
 
         $isEditor = request()->query('editor') == 1 || request()->query('preview') == 1;
@@ -87,19 +105,39 @@ class StoreController extends Controller
         $store = $this->getStore($slug);
         $store->increment('total_views');
 
+        $isUsd = \App\Helpers\CurrencyHelper::isUsd();
+
         $categories = $store->categories()->whereNull('parent_id')
-                        ->with(['children', 'products' => function($q) { $q->latest()->limit(1); }])
-                        ->withCount('activeProducts')
+                        ->with([
+                            'children', 
+                            'products' => function($q) use ($isUsd) { 
+                                $q->when($isUsd, fn($sq) => $sq->where('price_usd', '>', 0))->latest()->limit(1); 
+                            }
+                        ])
+                        ->withCount([
+                            'activeProducts' => function($q) use ($isUsd) {
+                                $q->when($isUsd, fn($sq) => $sq->where('price_usd', '>', 0));
+                            }
+                        ])
                         ->orderBy('name')
                         ->get();
         $brands = $store->brands()
-                        ->withCount('products')
+                        ->withCount([
+                            'products' => function($q) use ($isUsd) {
+                                $q->where('is_active', true)->when($isUsd, fn($sq) => $sq->where('price_usd', '>', 0));
+                            }
+                        ])
                         ->orderBy('name')
                         ->get();
-        $featuredProducts = $store->featuredProducts()->limit(3)->get();
+        $featuredProducts = $store->featuredProducts()
+                        ->when($isUsd, fn($q) => $q->where('price_usd', '>', 0))
+                        ->limit(3)
+                        ->get();
 
         // Query para productos activos
-        $query = $store->activeProducts()->with(['categories', 'category', 'brand']);
+        $query = $store->activeProducts()
+                    ->when($isUsd, fn($q) => $q->where('price_usd', '>', 0))
+                    ->with(['categories', 'category', 'brand']);
 
         // Filtros
         if ($request->filled('q')) {
@@ -163,12 +201,11 @@ class StoreController extends Controller
         }
 
         // Precios límite para el slider y moneda
-        $isUsd = request()->cookie('user_country') === 'US';
         $priceColumn = $isUsd ? 'price_usd' : 'price';
-        $currencySymbol = $isUsd ? '$' : 'S/';
+        $currencySymbol = \App\Helpers\CurrencyHelper::symbol();
 
-        $minPricePossible = floor($store->activeProducts()->min($priceColumn) ?? 0);
-        $maxPricePossible = ceil($store->activeProducts()->max($priceColumn) ?? 100);
+        $minPricePossible = floor($store->activeProducts()->when($isUsd, fn($q) => $q->where('price_usd', '>', 0))->min($priceColumn) ?? 0);
+        $maxPricePossible = ceil($store->activeProducts()->when($isUsd, fn($q) => $q->where('price_usd', '>', 0))->max($priceColumn) ?? 100);
         if ($maxPricePossible <= $minPricePossible) {
             $maxPricePossible = $minPricePossible + 100;
         }
@@ -234,11 +271,17 @@ class StoreController extends Controller
     public function product(string $slug, string $product)
     {
         $store = $this->getStore($slug);
+        $isUsd = \App\Helpers\CurrencyHelper::isUsd();
         
         $productModel = Product::with(['categories', 'category'])
             ->where('slug', $product)
             ->where('store_id', $store->id)
             ->firstOrFail();
+
+        // Si la tienda se está navegando en USD y este producto NO tiene precio en USD, redirigir al catálogo
+        if ($isUsd && (!$productModel->price_usd || $productModel->price_usd <= 0)) {
+            return redirect()->route('store.catalog', $store->slug);
+        }
 
         $productModel->increment('views');
         
@@ -249,7 +292,9 @@ class StoreController extends Controller
 
         $relatedProducts = collect();
         if (!empty($catIds)) {
-            $relatedProducts = $store->activeProducts()->with(['categories', 'category'])
+            $relatedProducts = $store->activeProducts()
+                ->when($isUsd, fn($q) => $q->where('price_usd', '>', 0))
+                ->with(['categories', 'category'])
                 ->where(function($sub) use ($catIds) {
                     $sub->whereIn('category_id', $catIds)
                         ->orWhereHas('categories', fn($sq) => $sq->whereIn('categories.id', $catIds));
@@ -262,6 +307,7 @@ class StoreController extends Controller
         if ($relatedProducts->count() < 4) {
             $needed = 4 - $relatedProducts->count();
             $fillers = $store->activeProducts()
+                ->when($isUsd, fn($q) => $q->where('price_usd', '>', 0))
                 ->where('id', '!=', $productModel->id)
                 ->whereNotIn('id', $relatedProducts->pluck('id'))
                 ->limit($needed)
@@ -465,7 +511,7 @@ class StoreController extends Controller
         }
 
         $total = $subtotal + $shippingCost;
-        $currency = request()->cookie('user_country') === 'US' ? 'USD' : 'PEN';
+        $currency = \App\Helpers\CurrencyHelper::currentCurrency();
 
         // Gestión de cuenta de cliente universal Tribio
         $userId = Auth::check() ? Auth::id() : null;

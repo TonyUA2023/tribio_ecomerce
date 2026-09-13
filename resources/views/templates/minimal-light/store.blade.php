@@ -10,8 +10,10 @@
     @else
         <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     @endif
-    <!-- Fonts: Plus Jakarta Sans -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Fonts: Fredoka (Maetek Brand Font), Quicksand & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -23,6 +25,7 @@
             --text-light: #666666;
             
             --font-sans: 'Plus Jakarta Sans', sans-serif;
+            --font-brand: 'Fredoka', 'Quicksand', sans-serif;
         }
         body {
             background-color: var(--bg);
@@ -35,7 +38,7 @@
         }
         
         /* Custom Utilities */
-        . { font-family: var(--) !important; }
+        .font-brand { font-family: var(--font-brand) !important; }
         .hover-text-accent:hover { color: var(--accent); }
         .bg-accent { background-color: var(--accent); }
         .bg-secondary { background-color: var(--secondary); }
@@ -65,66 +68,83 @@
 
     <main class="flex-grow bg-[#FDF8EF]">
         <!-- Full-Width Professional Hero Banner -->
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
-            .font-script { font-family: 'Great Vibes', cursive; }
-        </style>
-        
         <section class="relative w-full h-[60vh] md:h-[80vh] min-h-[500px] overflow-hidden bg-[#FDF8EF]" x-data="{ currentSlide: 1, totalSlides: 3 }">
-            <!-- Background Images (Carousel) -->
+            <!-- Background Images (Curated Aesthetic Carousel) -->
             <div class="absolute inset-0 w-full h-full">
-                <!-- Slide 1 -->
-                <img x-show="currentSlide === 1" x-transition.opacity.duration.1000ms src="{{ $store->cover_path ? $store->cover_url : 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&q=80&w=1920' }}" alt="Hero Image 1" class="absolute inset-0 w-full h-full object-cover">
-                <!-- Slide 2 -->
-                <img x-show="currentSlide === 2" x-transition.opacity.duration.1000ms src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1920" alt="Hero Image 2" class="absolute inset-0 w-full h-full object-cover" style="display: none;">
-                <!-- Slide 3 -->
-                <img x-show="currentSlide === 3" x-transition.opacity.duration.1000ms src="https://images.unsplash.com/photo-1583847268964-b28e50b58b44?auto=format&fit=crop&q=80&w=1920" alt="Hero Image 3" class="absolute inset-0 w-full h-full object-cover" style="display: none;">
+                <!-- Slide 1 (Bright, warm Scandinavian living room with cozy textures, wood & natural plants) -->
+                <img x-show="currentSlide === 1" x-transition.opacity.duration.1000ms 
+                     src="{{ $store->cover_path ? $store->cover_url : 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&q=85&w=1920' }}" 
+                     alt="{{ $store->name }} Slide 1" 
+                     class="absolute inset-0 w-full h-full object-cover">
+                <!-- Slide 2 (Bright lifestyle kitchen & home organization with warm neutral tones) -->
+                <img x-show="currentSlide === 2" x-transition.opacity.duration.1000ms 
+                     src="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&q=85&w=1920" 
+                     alt="{{ $store->name }} Slide 2" 
+                     class="absolute inset-0 w-full h-full object-cover" style="display: none;">
+                <!-- Slide 3 (Cozy minimalist aesthetic home with sunlight & warm beige accents) -->
+                <img x-show="currentSlide === 3" x-transition.opacity.duration.1000ms 
+                     src="https://images.unsplash.com/photo-1616046229478-9901c5536a45?auto=format&fit=crop&q=85&w=1920" 
+                     alt="{{ $store->name }} Slide 3" 
+                     class="absolute inset-0 w-full h-full object-cover" style="display: none;">
                 
-                <!-- Subtle Dark Overlay for Text Readability -->
-                <div class="absolute inset-0 bg-black/30 md:bg-black/20"></div>
+                <!-- Warm Gradient Overlay for Premium Readability and Vibrant Color -->
+                <div class="absolute inset-0 bg-gradient-to-r from-[#1A1A1A]/75 via-[#1A1A1A]/45 to-black/25"></div>
             </div>
 
             <!-- Content Container -->
             <div class="relative z-10 w-full h-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12 flex flex-col justify-center">
                 <div class="max-w-2xl text-white md:ml-10" data-animate>
-                    <h1 class="text-5xl md:text-7xl font-script tracking-wide mb-2 text-white/90 drop-shadow-md">
+                    <!-- Brand Slogan Tag from Logo -->
+                    <div class="inline-flex items-center gap-2 mb-3.5 px-3.5 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white text-[11px] md:text-xs font-bold tracking-[0.25em] uppercase shadow-xs">
+                        <span>— TU VIDA, MÁS FÁCIL —</span>
+                    </div>
+
+                    <!-- Main Brand Name with Maetek Typography -->
+                    <h1 class="text-5xl sm:text-7xl md:text-8xl font-bold tracking-tight mb-3 text-white drop-shadow-lg font-brand leading-none">
                         {{ $store->name }}
                     </h1>
-                    <h2 class="text-3xl md:text-5xl font-medium mb-12 drop-shadow-md leading-tight">
-                        {{ $store->hero_title ?? 'Your Perfect Home Awaits' }}
+
+                    <!-- Hero Title with Maetek Typography -->
+                    <h2 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold mb-10 drop-shadow-md leading-snug text-white/95 max-w-xl font-brand">
+                        {{ $store->hero_title ?? 'Todo lo que necesitas para tu hogar y tu día a día' }}
                     </h2>
 
-                    <!-- Circular "Shop Now" Button -->
-                    <div class="relative inline-flex items-center justify-center w-32 h-32 md:w-40 md:h-40 group cursor-pointer" onclick="window.location='{{ route('store.catalog', $store->slug) }}'">
+                    <!-- Circular "Explorar" Button -->
+                    <div class="relative inline-flex items-center justify-center w-32 h-32 md:w-36 md:h-36 group cursor-pointer" onclick="window.location='{{ route('store.catalog', $store->slug) }}'">
                         <!-- Outer Thin Ring -->
-                        <div class="absolute inset-0 rounded-full border border-white/50 group-hover:scale-110 transition-transform duration-500"></div>
+                        <div class="absolute inset-0 rounded-full border-2 border-white/60 group-hover:scale-110 group-hover:border-[#C8A68B] transition-all duration-500"></div>
                         <!-- Inner Solid Circle -->
-                        <div class="absolute inset-2 md:inset-3 rounded-full bg-[#1A1A1A] flex items-center justify-center shadow-2xl group-hover:bg-[#C8A68B] transition-colors duration-500">
-                            <span class="text-white text-xs md:text-sm tracking-widest uppercase font-semibold">{{ \App\Helpers\TranslationHelper::trans('shop_now', 'Shop Now') }}</span>
+                        <div class="absolute inset-2 md:inset-2.5 rounded-full bg-[#1A1A1A] flex flex-col items-center justify-center shadow-2xl group-hover:bg-[#C8A68B] transition-colors duration-500">
+                            <span class="text-white text-xs md:text-sm tracking-wider uppercase font-bold font-brand">{{ \App\Helpers\TranslationHelper::trans('shop_now', 'Explorar') }}</span>
+                            <span class="text-white/70 text-xs mt-0.5 group-hover:text-white transition-colors">→</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Bottom Left Carousel Indicators -->
-            <div class="absolute bottom-8 left-4 sm:left-6 lg:left-12 md:ml-10 z-20 flex items-center gap-4 text-white/80 text-sm font-medium">
+            <div class="absolute bottom-8 left-4 sm:left-6 lg:left-12 md:ml-10 z-20 flex items-center gap-4 text-white/80 text-sm font-medium font-brand">
                 <span x-text="String(currentSlide).padStart(2, '0')">01</span>
                 <div class="flex items-center gap-2">
-                    <button @click="currentSlide = currentSlide > 1 ? currentSlide - 1 : totalSlides" class="hover:text-white transition-colors focus:outline-none">
+                    <button @click="currentSlide = currentSlide > 1 ? currentSlide - 1 : totalSlides" class="hover:text-white transition-colors focus:outline-none cursor-pointer">
                         <svg class="w-8 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M7 16l-4-4m0 0l4-4m-4 4h18"></path></svg>
                     </button>
                     <div class="w-8 h-[1px] bg-white/30"></div>
-                    <button @click="currentSlide = currentSlide < totalSlides ? currentSlide + 1 : 1" class="hover:text-white transition-colors focus:outline-none">
+                    <button @click="currentSlide = currentSlide < totalSlides ? currentSlide + 1 : 1" class="hover:text-white transition-colors focus:outline-none cursor-pointer">
                         <svg class="w-8 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                     </button>
                 </div>
                 <span x-text="String(totalSlides).padStart(2, '0')">03</span>
             </div>
             
-            <!-- Bottom Right Tagline (Optional) -->
+            <!-- Bottom Right Tagline -->
             @if($store->hero_subtitle)
-            <div class="absolute bottom-8 right-4 sm:right-6 lg:right-12 hidden md:block z-20 text-white/80 text-sm font-medium max-w-xs text-right">
+            <div class="absolute bottom-8 right-4 sm:right-6 lg:right-12 hidden md:block z-20 text-white/90 text-sm font-medium max-w-xs text-right font-brand">
                 {{ $store->hero_subtitle }}
+            </div>
+            @else
+            <div class="absolute bottom-8 right-4 sm:right-6 lg:right-12 hidden md:block z-20 text-white/90 text-sm font-medium max-w-xs text-right font-brand">
+                ✨ Tu vida, más fácil
             </div>
             @endif
         </section>
@@ -135,6 +155,7 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex flex-wrap justify-center gap-4 md:gap-8">
                     @php
+                        $isUsd = \App\Helpers\CurrencyHelper::isUsd();
                         $highlights = [
                             ['title' => \App\Helpers\TranslationHelper::trans('new', 'Nuevo'), 'bg' => '#C8A68B', 'text' => 'white', 'icon' => 'New', 'query' => 'sort=newest'],
                             ['title' => \App\Helpers\TranslationHelper::trans('outlet', 'Outlet'), 'bg' => '#EADBC8', 'text' => '#1A1A1A', 'icon' => '🏷️', 'query' => 'sale=1'],
@@ -142,8 +163,8 @@
                             ['title' => \App\Helpers\TranslationHelper::trans('back_in_stock', 'De regreso'), 'bg' => '#E5DFD5', 'text' => '#1A1A1A', 'icon' => '🔄', 'query' => 'q=destacado'],
                             ['title' => \App\Helpers\TranslationHelper::trans('deco', 'Deco'), 'bg' => '#DFD3C3', 'text' => '#1A1A1A', 'icon' => '🪴', 'query' => 'category=deco'],
                             ['title' => \App\Helpers\TranslationHelper::trans('wholesale', 'Por mayor'), 'bg' => '#D0C4B4', 'text' => '#1A1A1A', 'icon' => '📦', 'query' => 'q=mayor'],
-                            ['title' => 'De S/5', 'bg' => '#2C2B2A', 'text' => 'white', 'icon' => 'S/ 5', 'query' => 'max_price=5'],
-                            ['title' => 'De S/10', 'bg' => '#1A1A1A', 'text' => 'white', 'icon' => 'S/ 10', 'query' => 'max_price=10'],
+                            $isUsd ? ['title' => '$2 o menos', 'bg' => '#2C2B2A', 'text' => 'white', 'icon' => '$ 2', 'query' => 'max_price=2'] : ['title' => 'De S/5', 'bg' => '#2C2B2A', 'text' => 'white', 'icon' => 'S/ 5', 'query' => 'max_price=5'],
+                            $isUsd ? ['title' => '$5 o menos', 'bg' => '#1A1A1A', 'text' => 'white', 'icon' => '$ 5', 'query' => 'max_price=5'] : ['title' => 'De S/10', 'bg' => '#1A1A1A', 'text' => 'white', 'icon' => 'S/ 10', 'query' => 'max_price=10'],
                         ];
                     @endphp
                     @foreach($highlights as $index => $h)
@@ -171,7 +192,7 @@
         @if($featuredCats->isNotEmpty())
         <section class="py-12 bg-[#FDF8EF] border-t border-stone-200/40">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h2 class="text-xl font-bold text-[#1A1A1A] mb-6">{{ \App\Helpers\TranslationHelper::trans('featured_categories', 'Categorías destacadas') }}</h2>
+                <h2 class="text-xl md:text-2xl font-bold text-[#1A1A1A] mb-6 font-brand">{{ \App\Helpers\TranslationHelper::trans('featured_categories', 'Categorías destacadas') }}</h2>
                 
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                     @foreach($featuredCats as $index => $cat)
@@ -221,7 +242,7 @@
         <section class="py-16 bg-[#FDF8EF]">
             <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12">
                 <div class="flex items-center mb-10" data-animate>
-                    <h2 class="text-3xl md:text-4xl text-[#1A1A1A] italic tracking-wide">{{ \App\Helpers\TranslationHelper::trans('best_selling', 'Best Selling') }}</h2>
+                    <h2 class="text-3xl md:text-4xl text-[#1A1A1A] font-bold tracking-tight font-brand">{{ \App\Helpers\TranslationHelper::trans('best_selling', 'Best Selling') }}</h2>
                 </div>
                 
                 @if($allProducts->isEmpty())
@@ -334,7 +355,11 @@
     <div x-data="{
         showModal: true,
         selectCountry(countryCode) {
-            document.cookie = 'user_country=' + countryCode + '; path=/; max-age=31536000';
+            document.cookie = 'user_country=' + countryCode + '; path=/; max-age=31536000; SameSite=Lax';
+            document.cookie = 'store_currency=' + (countryCode === 'US' ? 'USD' : 'PEN') + '; path=/; max-age=31536000; SameSite=Lax';
+            if (window.TribioCart && window.TribioCart.items && window.TribioCart.items.length > 0) {
+                window.TribioCart.clear();
+            }
             this.showModal = false;
             window.location.reload();
         }

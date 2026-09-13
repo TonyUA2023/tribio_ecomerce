@@ -10,8 +10,10 @@
     @else
         <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     @endif
-    <!-- Fonts: Plus Jakarta Sans -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Fonts: Fredoka (Brand font), Quicksand & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -22,6 +24,7 @@
             --text-dark: #1A1A1A;
             --text-light: #666666;
             --font-sans: 'Plus Jakarta Sans', sans-serif;
+            --font-brand: 'Fredoka', 'Quicksand', sans-serif;
         }
         body {
             background-color: var(--bg);
@@ -32,6 +35,8 @@
             flex-direction: column;
             overflow-x: hidden;
         }
+        
+        .font-brand { font-family: var(--font-brand) !important; }
         
         /* Custom Utilities */
         . { font-family: var(--) !important; }

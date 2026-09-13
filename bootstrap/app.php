@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->encryptCookies(except: [
             'user_country',
+            'store_currency',
             'store_lang',
             'googtrans',
         ]);

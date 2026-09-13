@@ -105,7 +105,7 @@ class Product extends Model
 
     public function resolvePrice(): float
     {
-        if (request()->cookie('user_country') === 'US' && $this->price_usd > 0) {
+        if (\App\Helpers\CurrencyHelper::isUsd() && $this->price_usd > 0) {
             return (float) $this->price_usd;
         }
         return (float) $this->price;
@@ -113,7 +113,7 @@ class Product extends Model
 
     public function resolveComparePrice(): ?float
     {
-        if (request()->cookie('user_country') === 'US' && $this->compare_price_usd > 0) {
+        if (\App\Helpers\CurrencyHelper::isUsd() && $this->compare_price_usd > 0) {
             return (float) $this->compare_price_usd;
         }
         if ($this->compare_price > 0) {
@@ -124,7 +124,7 @@ class Product extends Model
 
     public function resolveCurrencySymbol(): string
     {
-        return request()->cookie('user_country') === 'US' ? '$' : 'S/';
+        return \App\Helpers\CurrencyHelper::symbol();
     }
 
     public function isInStock(): bool

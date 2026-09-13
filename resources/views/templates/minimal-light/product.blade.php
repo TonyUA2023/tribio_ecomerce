@@ -47,7 +47,7 @@
                 basePrice: {{ (float) ($product->resolvePrice() ?? 0) }},
                 baseComparePrice: {{ (float) ($product->resolveComparePrice() ?? 0) }},
                 baseStock: {{ (int) ($product->stock ?? 0) }},
-                currencySymbol: '{{ request()->cookie('user_country') === 'US' ? '$' : 'S/' }}',
+                currencySymbol: '{{ \App\Helpers\CurrencyHelper::symbol() }}',
                 options: {{ Js::from($product->variant_options ?? []) }},
                 variants: {{ Js::from($product->activeVariants->map(function($v) {
                     return [
@@ -194,11 +194,11 @@
                 <div class="bg-white p-5 sm:p-6 rounded-3xl border border-stone-200/80 shadow-xs mb-6">
                     <div class="flex items-baseline gap-3">
                         <span class="text-3xl sm:text-4xl font-black text-[#1A1A1A]" x-text="currencySymbol + ' ' + Number(currentPrice).toFixed(2)">
-                            {{ request()->cookie('user_country') === 'US' ? '$' : 'S/' }} {{ number_format($product->resolvePrice(), 2) }}
+                            {{ \App\Helpers\CurrencyHelper::symbol() }} {{ number_format($product->resolvePrice(), 2) }}
                         </span>
                         <template x-if="currentComparePrice > currentPrice">
                             <span class="text-lg sm:text-xl text-stone-400 line-through font-semibold" x-text="currencySymbol + ' ' + Number(currentComparePrice).toFixed(2)">
-                                {{ request()->cookie('user_country') === 'US' ? '$' : 'S/' }} {{ number_format($product->resolveComparePrice() ?? 0, 2) }}
+                                {{ \App\Helpers\CurrencyHelper::symbol() }} {{ number_format($product->resolveComparePrice() ?? 0, 2) }}
                             </span>
                         </template>
                         <template x-if="currentComparePrice > currentPrice">
@@ -534,11 +534,11 @@
                     <div class="px-1 pt-2 border-t border-stone-100 flex items-center justify-between">
                         <div>
                             <span class="text-[#1A1A1A] font-black text-base">
-                                {{ request()->cookie('user_country') === 'US' ? '$' : 'S/' }} {{ number_format($related->resolvePrice(), 2) }}
+                                {{ \App\Helpers\CurrencyHelper::symbol() }} {{ number_format($related->resolvePrice(), 2) }}
                             </span>
                             @if($related->resolveComparePrice() > $related->resolvePrice())
                                 <span class="text-[11px] text-stone-400 line-through block -mt-1">
-                                    {{ request()->cookie('user_country') === 'US' ? '$' : 'S/' }} {{ number_format($related->resolveComparePrice(), 2) }}
+                                    {{ \App\Helpers\CurrencyHelper::symbol() }} {{ number_format($related->resolveComparePrice(), 2) }}
                                 </span>
                             @endif
                         </div>

@@ -26,7 +26,12 @@ class Category extends Model
         }
 
         // Fallback al primer producto activo con imagen
-        $prod = $this->products()->whereNotNull('image_path')->first();
+        $isUsd = \App\Helpers\CurrencyHelper::isUsd();
+        $prod = $this->products()
+            ->where('products.is_active', true)
+            ->when($isUsd, fn($q) => $q->where('products.price_usd', '>', 0))
+            ->whereNotNull('products.image_path')
+            ->first();
         return $prod ? $prod->image_url : null;
     }
 
