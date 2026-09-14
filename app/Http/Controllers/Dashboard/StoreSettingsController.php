@@ -111,6 +111,8 @@ class StoreSettingsController extends Controller
                 $counter++;
             }
             $data['slug'] = $slug;
+        }
+
         if ($data['checkout_mode'] === 'card' && empty($data['payment_gateway'])) {
             $data['payment_gateway'] = 'mercado_pago';
         }
