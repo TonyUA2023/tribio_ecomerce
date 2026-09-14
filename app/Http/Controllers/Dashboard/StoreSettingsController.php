@@ -73,6 +73,10 @@ class StoreSettingsController extends Controller
             ],
             'is_express_shipping_enabled' => 'nullable|boolean',
             'express_shipping_cost'       => 'nullable|numeric|min:0',
+            'national_shipping_cost'      => 'nullable|numeric|min:0',
+            'enabled_countries'           => 'nullable|array',
+            'enabled_countries.*'         => 'string|in:PE,US,ES,MX,CO,EC,CL,AR',
+            'country_shipping_costs'      => 'nullable|array',
             'is_multilanguage_enabled'    => 'nullable|boolean',
             'hero_title'                  => 'nullable|string|max:100',
             'hero_subtitle'               => 'nullable|string|max:200',
@@ -94,11 +98,33 @@ class StoreSettingsController extends Controller
             'custom_domain',
             'checkout_mode', 'payment_gateway', 'gateway_public_key', 'gateway_private_key', 'gateway_access_token',
             'mp_access_token', 'mp_public_key', 'contact_email', 'contact_phone',
-            'express_shipping_cost',
+            'express_shipping_cost', 'national_shipping_cost',
             'hero_title', 'hero_subtitle', 'hero_badge'
         ]);
         $data['is_express_shipping_enabled'] = $request->has('is_express_shipping_enabled');
         $data['is_multilanguage_enabled']    = $request->has('is_multilanguage_enabled');
+
+        // Países habilitados
+        $enabledCountries = $request->input('enabled_countries', ['PE', 'US']);
+        if (!is_array($enabledCountries)) {
+            $enabledCountries = ['PE', 'US'];
+        }
+        if (!in_array('PE', $enabledCountries)) {
+            $enabledCountries[] = 'PE';
+        }
+        $data['enabled_countries'] = array_values(array_unique($enabledCountries));
+
+        // Costos de envío internacionales por país
+        $rawCountryCosts = $request->input('country_shipping_costs', []);
+        $cleanCountryCosts = [];
+        if (is_array($rawCountryCosts)) {
+            foreach ($rawCountryCosts as $cCode => $cost) {
+                if ($cost !== null && $cost !== '' && is_numeric($cost)) {
+                    $cleanCountryCosts[strtoupper($cCode)] = round((float) $cost, 2);
+                }
+            }
+        }
+        $data['country_shipping_costs'] = $cleanCountryCosts;
 
         if ($request->filled('slug')) {
             $data['slug'] = \Illuminate\Support\Str::slug($request->slug);

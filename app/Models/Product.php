@@ -13,6 +13,7 @@ class Product extends Model
     protected $fillable = [
         'store_id', 'category_id', 'brand_id', 'parent_id', 'name', 'slug', 'description', 'short_description', 'sku', 'origin_code',
         'price', 'compare_price', 'price_usd', 'compare_price_usd', 'cost_price',
+        'currency_prices', 'compare_currency_prices',
         'stock', 'track_stock', 'allow_backorder', 'low_stock_alert', 'unit',
         'image_path', 'gallery_images',
         'is_active', 'is_featured', 'is_new', 'is_digital',
@@ -26,6 +27,8 @@ class Product extends Model
         'gallery_images'  => 'array',
         'tags'            => 'array',
         'variant_options' => 'array',
+        'currency_prices' => 'array',
+        'compare_currency_prices' => 'array',
         'has_variants'    => 'boolean',
         'price'           => 'decimal:2',
         'compare_price'   => 'decimal:2',
@@ -103,22 +106,59 @@ class Product extends Model
         return null;
     }
 
-    public function resolvePrice(): float
+    public function resolvePrice(?string $currency = null): float
     {
-        if (\App\Helpers\CurrencyHelper::isUsd() && $this->price_usd > 0) {
+        $currency = $currency ? strtoupper(trim($currency)) : \App\Helpers\CurrencyHelper::currentCurrency();
+
+        if ($currency === 'PEN') {
+            return (float) $this->price;
+        }
+
+        // 1. Verificar precio personalizado en currency_prices
+        if (!empty($this->currency_prices) && is_array($this->currency_prices)) {
+            if (isset($this->currency_prices[$currency]) && is_numeric($this->currency_prices[$currency]) && (float)$this->currency_prices[$currency] > 0) {
+                return (float) $this->currency_prices[$currency];
+            }
+        }
+
+        // 2. Retrocompatibilidad para USD
+        if ($currency === 'USD' && (float)$this->price_usd > 0) {
             return (float) $this->price_usd;
         }
-        return (float) $this->price;
+
+        // 3. Conversión automática con API/tasa de cambio
+        if ((float)$this->price > 0) {
+            return app(\App\Services\ExchangeRateService::class)->convert((float)$this->price, 'PEN', $currency);
+        }
+
+        return 0.0;
     }
 
-    public function resolveComparePrice(): ?float
+    public function resolveComparePrice(?string $currency = null): ?float
     {
-        if (\App\Helpers\CurrencyHelper::isUsd() && $this->compare_price_usd > 0) {
+        $currency = $currency ? strtoupper(trim($currency)) : \App\Helpers\CurrencyHelper::currentCurrency();
+
+        if ($currency === 'PEN') {
+            return $this->compare_price > 0 ? (float)$this->compare_price : null;
+        }
+
+        // 1. Verificar precio comparativo personalizado
+        if (!empty($this->compare_currency_prices) && is_array($this->compare_currency_prices)) {
+            if (isset($this->compare_currency_prices[$currency]) && is_numeric($this->compare_currency_prices[$currency]) && (float)$this->compare_currency_prices[$currency] > 0) {
+                return (float) $this->compare_currency_prices[$currency];
+            }
+        }
+
+        // 2. Retrocompatibilidad para USD
+        if ($currency === 'USD' && (float)$this->compare_price_usd > 0) {
             return (float) $this->compare_price_usd;
         }
-        if ($this->compare_price > 0) {
-            return (float) $this->compare_price;
+
+        // 3. Conversión automática desde compare_price
+        if ((float)$this->compare_price > 0) {
+            return app(\App\Services\ExchangeRateService::class)->convert((float)$this->compare_price, 'PEN', $currency);
         }
+
         return null;
     }
 

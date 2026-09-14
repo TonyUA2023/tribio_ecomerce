@@ -119,6 +119,113 @@
                     @endif
                 </div>
             </div>
+
+            <!-- Mercados y Envíos por País -->
+            <div class="glass-card p-6" x-data="{
+                enabledCountries: {{ json_encode(old('enabled_countries', $store?->getEnabledCountriesList() ?? ['PE', 'US'])) }},
+                countryShipping: {{ json_encode(old('country_shipping_costs', $store?->country_shipping_costs ?? [])) }},
+                isCountryEnabled(code) {
+                    return this.enabledCountries.includes(code);
+                },
+                toggleCountry(code) {
+                    if (code === 'PE') return; // Perú siempre activo como base
+                    const idx = this.enabledCountries.indexOf(code);
+                    if (idx > -1) {
+                        this.enabledCountries.splice(idx, 1);
+                    } else {
+                        this.enabledCountries.push(code);
+                    }
+                }
+            }">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-white font-bold text-sm flex items-center gap-2">
+                        <span>🌎</span> Países de Venta y Tarifas de Envío
+                    </h3>
+                    <span class="text-[11px] px-2 py-0.5 rounded-full bg-tribio-purple/20 text-tribio-cyan border border-tribio-purple/30 font-bold">
+                        Multi-País Automático
+                    </span>
+                </div>
+                <p class="text-xs text-white/50 mb-5">
+                    Selecciona en qué países deseas vender. El sistema autocalculará los precios con el tipo de cambio y mostrará las monedas y tarifas de envío configuradas aquí.
+                </p>
+
+                <!-- Selección de Países -->
+                <label class="input-label mb-2">Países donde está disponible tu tienda</label>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                    @php
+                        $supported = \App\Helpers\CurrencyHelper::supportedCountries();
+                    @endphp
+                    @foreach($supported as $code => $country)
+                        <div @click="toggleCountry('{{ $code }}')"
+                             :class="isCountryEnabled('{{ $code }}') ? 'border-tribio-cyan/60 bg-tribio-cyan/10 ring-1 ring-tribio-cyan/30' : 'border-white/10 bg-white/5 opacity-60 hover:opacity-100'"
+                             class="p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between select-none relative group">
+                            <input type="checkbox" name="enabled_countries[]" value="{{ $code }}" :checked="isCountryEnabled('{{ $code }}')" class="hidden">
+                            <div class="flex items-center justify-between">
+                                <span class="text-2xl">{{ $country['flag'] }}</span>
+                                <span x-show="isCountryEnabled('{{ $code }}')" class="text-tribio-cyan text-xs font-bold">✓</span>
+                            </div>
+                            <div class="mt-2">
+                                <p class="text-xs font-bold text-white leading-tight">{{ $country['name'] }}</p>
+                                <p class="text-[10px] text-white/50 mt-0.5 font-mono">{{ $country['currency'] }} ({{ $country['symbol'] }})</p>
+                            </div>
+                            @if($code === 'PE')
+                                <span class="absolute -top-1.5 -right-1 text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.2 rounded-full">Base</span>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+
+                <!-- Tarifas de Envío Simplificadas -->
+                <div class="border-t border-white/10 pt-5 space-y-4">
+                    <h4 class="text-white font-bold text-xs flex items-center gap-1.5 uppercase tracking-wider text-tribio-cyan">
+                        <span>🚚</span> Tarifas de Envío
+                    </h4>
+
+                    {{-- Tarifa Única Perú --}}
+                    <div class="p-4 rounded-xl bg-white/3 border border-white/10">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="text-xs font-bold text-white flex items-center gap-2">
+                                <span>🇵🇪</span> Envío a todo el Perú (Tarifa Única Nacional)
+                            </label>
+                            <span class="text-[10px] text-white/40 font-mono">Soles (PEN)</span>
+                        </div>
+                        <p class="text-[11px] text-white/50 mb-3">Aplica a cualquier departamento de Perú sin tener que configurar uno por uno.</p>
+                        <div class="relative">
+                            <span class="absolute left-3.5 top-2.5 text-xs text-tribio-cyan font-bold">S/</span>
+                            <input type="number" step="0.01" min="0" name="national_shipping_cost" class="input-field pl-9 font-semibold" value="{{ old('national_shipping_cost', $store?->national_shipping_cost ?? '0.00') }}" placeholder="15.00">
+                        </div>
+                    </div>
+
+                    {{-- Tarifas Internacionales para Países Activos --}}
+                    <div>
+                        <label class="text-xs font-bold text-white block mb-2">Costos de Envío Internacional (por país habilitado):</label>
+                        <div class="space-y-3">
+                            @foreach($supported as $code => $country)
+                                @if($code !== 'PE')
+                                    <div x-show="isCountryEnabled('{{ $code }}')" class="p-3.5 rounded-xl bg-white/3 border border-white/10 flex items-center justify-between gap-4 transition-all">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-2xl">{{ $country['flag'] }}</span>
+                                            <div>
+                                                <span class="text-xs font-bold text-white">{{ $country['name'] }}</span>
+                                                <span class="text-[10px] text-white/40 block font-mono">Moneda: {{ $country['currency'] }} ({{ $country['symbol'] }})</span>
+                                            </div>
+                                        </div>
+                                        <div class="w-36 relative">
+                                            <span class="absolute left-3 top-2.5 text-xs text-tribio-cyan font-bold">{{ $country['symbol'] }}</span>
+                                            <input type="number" step="0.01" min="0" 
+                                                   name="country_shipping_costs[{{ $code }}]" 
+                                                   value="{{ old('country_shipping_costs.' . $code, $store?->country_shipping_costs[$code] ?? '') }}" 
+                                                   class="input-field py-1.5 pl-8 text-right font-semibold text-xs" 
+                                                   placeholder="0.00">
+                                        </div>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Envíos Express -->
             <div class="glass-card p-6" x-data="{
                 expressEnabled: {{ old('is_express_shipping_enabled', $store?->is_express_shipping_enabled) ? 'true' : 'false' }}

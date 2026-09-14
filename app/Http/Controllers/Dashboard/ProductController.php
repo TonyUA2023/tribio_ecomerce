@@ -69,6 +69,8 @@ class ProductController extends Controller
             'compare_price'     => 'nullable|numeric|min:0',
             'price_usd'         => 'nullable|numeric|min:0',
             'compare_price_usd' => 'nullable|numeric|min:0',
+            'currency_prices'   => 'nullable|array',
+            'compare_currency_prices' => 'nullable|array',
             'cost_price'        => 'nullable|numeric|min:0',
             'stock'             => 'required|integer|min:0',
             'track_stock'       => 'nullable|boolean',
@@ -82,6 +84,39 @@ class ProductController extends Controller
             'gallery.*'         => 'nullable|image|mimes:png,jpg,jpeg,webp|max:3072',
             'tags'              => 'nullable|string',
         ]);
+
+        // Procesar precios multi-moneda personalizados
+        $currencyPrices = $request->input('currency_prices', []);
+        $cleanCurrencyPrices = [];
+        if (is_array($currencyPrices)) {
+            foreach ($currencyPrices as $cur => $pVal) {
+                if ($pVal !== null && $pVal !== '' && is_numeric($pVal) && (float)$pVal > 0) {
+                    $cleanCurrencyPrices[strtoupper($cur)] = (float) $pVal;
+                }
+            }
+        }
+        $data['currency_prices'] = !empty($cleanCurrencyPrices) ? $cleanCurrencyPrices : null;
+
+        $compareCurrencyPrices = $request->input('compare_currency_prices', []);
+        $cleanComparePrices = [];
+        if (is_array($compareCurrencyPrices)) {
+            foreach ($compareCurrencyPrices as $cur => $pVal) {
+                if ($pVal !== null && $pVal !== '' && is_numeric($pVal) && (float)$pVal > 0) {
+                    $cleanComparePrices[strtoupper($cur)] = (float) $pVal;
+                }
+            }
+        }
+        $data['compare_currency_prices'] = !empty($cleanComparePrices) ? $cleanComparePrices : null;
+
+        // Mantener price_usd sincronizado para retrocompatibilidad
+        if (isset($cleanCurrencyPrices['USD'])) {
+            $data['price_usd'] = $cleanCurrencyPrices['USD'];
+        } elseif (empty($data['price_usd']) && !empty($data['price'])) {
+            $data['price_usd'] = app(\App\Services\ExchangeRateService::class)->convert((float)$data['price'], 'PEN', 'USD');
+        }
+        if (isset($cleanComparePrices['USD'])) {
+            $data['compare_price_usd'] = $cleanComparePrices['USD'];
+        }
 
         $data['store_id'] = $store->id;
         $data['slug']     = Str::slug($data['name']) . '-' . Str::random(4);
@@ -228,6 +263,8 @@ class ProductController extends Controller
             'compare_price'     => 'nullable|numeric|min:0',
             'price_usd'         => 'nullable|numeric|min:0',
             'compare_price_usd' => 'nullable|numeric|min:0',
+            'currency_prices'   => 'nullable|array',
+            'compare_currency_prices' => 'nullable|array',
             'cost_price'        => 'nullable|numeric|min:0',
             'stock'             => 'required|integer|min:0',
             'track_stock'       => 'nullable|boolean',
@@ -242,6 +279,39 @@ class ProductController extends Controller
             'remove_gallery'    => 'nullable|array',
             'tags'              => 'nullable|string',
         ]);
+
+        // Procesar precios multi-moneda personalizados
+        $currencyPrices = $request->input('currency_prices', []);
+        $cleanCurrencyPrices = [];
+        if (is_array($currencyPrices)) {
+            foreach ($currencyPrices as $cur => $pVal) {
+                if ($pVal !== null && $pVal !== '' && is_numeric($pVal) && (float)$pVal > 0) {
+                    $cleanCurrencyPrices[strtoupper($cur)] = (float) $pVal;
+                }
+            }
+        }
+        $data['currency_prices'] = !empty($cleanCurrencyPrices) ? $cleanCurrencyPrices : null;
+
+        $compareCurrencyPrices = $request->input('compare_currency_prices', []);
+        $cleanComparePrices = [];
+        if (is_array($compareCurrencyPrices)) {
+            foreach ($compareCurrencyPrices as $cur => $pVal) {
+                if ($pVal !== null && $pVal !== '' && is_numeric($pVal) && (float)$pVal > 0) {
+                    $cleanComparePrices[strtoupper($cur)] = (float) $pVal;
+                }
+            }
+        }
+        $data['compare_currency_prices'] = !empty($cleanComparePrices) ? $cleanComparePrices : null;
+
+        // Mantener price_usd sincronizado para retrocompatibilidad
+        if (isset($cleanCurrencyPrices['USD'])) {
+            $data['price_usd'] = $cleanCurrencyPrices['USD'];
+        } elseif (empty($data['price_usd']) && !empty($data['price'])) {
+            $data['price_usd'] = app(\App\Services\ExchangeRateService::class)->convert((float)$data['price'], 'PEN', 'USD');
+        }
+        if (isset($cleanComparePrices['USD'])) {
+            $data['compare_price_usd'] = $cleanComparePrices['USD'];
+        }
 
         $data['track_stock']   = $request->boolean('track_stock');
         $data['allow_backorder']= $request->boolean('allow_backorder');

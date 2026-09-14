@@ -6,6 +6,16 @@
     if ($headerCategories->isEmpty()) {
         $headerCategories = $categories->take(6);
     }
+    $headerCountries = $store->getEnabledCountriesWithDetails();
+    if (empty($headerCountries)) {
+        $headerCountries = [
+            'PE' => \App\Helpers\CurrencyHelper::getCountryInfo('PE'),
+            'US' => \App\Helpers\CurrencyHelper::getCountryInfo('US')
+        ];
+    }
+    $currentCountry = \App\Helpers\CurrencyHelper::currentCountry();
+    $currentCurrency = \App\Helpers\CurrencyHelper::currentCurrency();
+    $currentCountryInfo = $headerCountries[$currentCountry] ?? \App\Helpers\CurrencyHelper::getCountryInfo($currentCountry) ?? reset($headerCountries);
 @endphp
 
 <!-- Header Component -->
@@ -80,14 +90,14 @@
                 </div>
                 @endif
 
-                <!-- Currency Selector -->
+                <!-- Country & Currency Selector -->
                 <div class="relative" x-data="{ 
                         currOpen: false, 
-                        currentCurrency: '{{ \App\Helpers\CurrencyHelper::currentCurrency() }}',
-                        switchCurrency(curr) {
-                            const target = curr.toUpperCase();
-                            document.cookie = 'store_currency=' + target + '; path=/; max-age=31536000; SameSite=Lax';
-                            document.cookie = 'user_country=' + (target === 'USD' ? 'US' : 'PE') + '; path=/; max-age=31536000; SameSite=Lax';
+                        currentCountry: '{{ $currentCountry }}',
+                        currentCurrency: '{{ $currentCurrency }}',
+                        switchCountry(country, currency) {
+                            document.cookie = 'user_country=' + country + '; path=/; max-age=31536000; SameSite=Lax';
+                            document.cookie = 'store_currency=' + currency + '; path=/; max-age=31536000; SameSite=Lax';
                             
                             if (window.TribioCart && window.TribioCart.items && window.TribioCart.items.length > 0) {
                                 window.TribioCart.clear();
@@ -98,28 +108,30 @@
                     }">
                     <button @click="currOpen = !currOpen" @click.away="currOpen = false" 
                             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/70 hover:bg-white text-[#1A1A1A] hover:text-[#C8A68B] text-xs font-bold tracking-wider transition border border-stone-200/80 shadow-xs cursor-pointer"
-                            title="{{ $isEn ? 'Select currency' : 'Seleccionar moneda' }}">
-                        <span class="text-xs">🪙</span>
-                        <span x-text="currentCurrency === 'USD' ? 'USD ($)' : 'PEN (S/)'"></span>
+                            title="{{ $isEn ? 'Select country / currency' : 'Seleccionar país / moneda' }}">
+                        <span class="text-sm">{{ $currentCountryInfo['flag'] ?? '🌐' }}</span>
+                        <span>{{ $currentCurrency }} ({{ \App\Helpers\CurrencyHelper::symbol($currentCurrency) }})</span>
                         <svg class="w-3 h-3 text-gray-500 transition-transform duration-200" :class="currOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </button>
                     <div x-show="currOpen" style="display: none;" 
                          x-transition:enter="transition ease-out duration-150"
                          x-transition:enter-start="opacity-0 scale-95"
                          x-transition:enter-end="opacity-100 scale-100"
-                         class="absolute left-0 mt-2 w-36 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-50 overflow-hidden">
-                        <button type="button" @click="switchCurrency('PEN')" 
-                                class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-stone-50 flex items-center justify-between transition cursor-pointer" 
-                                :class="currentCurrency === 'PEN' ? 'text-[#C8A68B] font-bold bg-[#FDF8EF]/50' : 'text-gray-700'">
-                            <span>Soles (PEN)</span>
-                            <span x-show="currentCurrency === 'PEN'" class="text-[#C8A68B] text-xs font-bold">✓</span>
-                        </button>
-                        <button type="button" @click="switchCurrency('USD')" 
-                                class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-stone-50 flex items-center justify-between transition cursor-pointer" 
-                                :class="currentCurrency === 'USD' ? 'text-[#C8A68B] font-bold bg-[#FDF8EF]/50' : 'text-gray-700'">
-                            <span>Dólares (USD)</span>
-                            <span x-show="currentCurrency === 'USD'" class="text-[#C8A68B] text-xs font-bold">✓</span>
-                        </button>
+                         class="absolute left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-50 overflow-hidden">
+                        @foreach($headerCountries as $hCode => $hData)
+                            <button type="button" @click="switchCountry('{{ $hCode }}', '{{ $hData['currency'] }}')" 
+                                    class="w-full text-left px-3 py-2 text-xs font-semibold hover:bg-stone-50 flex items-center justify-between transition cursor-pointer" 
+                                    :class="currentCountry === '{{ $hCode }}' ? 'text-[#C8A68B] font-bold bg-[#FDF8EF]/50' : 'text-gray-700'">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-base">{{ $hData['flag'] }}</span>
+                                    <span>{{ $hData['name'] }}</span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-[10px] text-gray-400 font-mono">{{ $hData['currency'] }}</span>
+                                    <span x-show="currentCountry === '{{ $hCode }}'" class="text-[#C8A68B] text-xs font-bold">✓</span>
+                                </div>
+                            </button>
+                        @endforeach
                     </div>
                 </div>
             </div>
@@ -264,21 +276,17 @@
                 </div>
             @endif
 
-            <!-- Mobile Currency Switcher -->
+            <!-- Mobile Country & Currency Switcher -->
             <div class="border-t border-gray-100 pt-3 mt-2 flex items-center justify-between px-3">
-                <span class="text-xs font-medium text-gray-500">{{ $isEn ? 'Currency' : 'Moneda' }}</span>
-                <div class="inline-flex rounded-lg p-0.5 bg-stone-100 text-xs font-bold">
-                    <button type="button" 
-                            onclick="document.cookie='store_currency=PEN; path=/; max-age=31536000; SameSite=Lax'; document.cookie='user_country=PE; path=/; max-age=31536000; SameSite=Lax'; if(window.TribioCart && window.TribioCart.items && window.TribioCart.items.length > 0) window.TribioCart.clear(); window.location.reload();" 
-                            class="px-3 py-1 rounded-md transition cursor-pointer {{ !\App\Helpers\CurrencyHelper::isUsd() ? 'bg-white text-[#1A1A1A] shadow-xs' : 'text-gray-500' }}">
-                        PEN (S/)
-                    </button>
-                    <button type="button" 
-                            onclick="document.cookie='store_currency=USD; path=/; max-age=31536000; SameSite=Lax'; document.cookie='user_country=US; path=/; max-age=31536000; SameSite=Lax'; if(window.TribioCart && window.TribioCart.items && window.TribioCart.items.length > 0) window.TribioCart.clear(); window.location.reload();" 
-                            class="px-3 py-1 rounded-md transition cursor-pointer {{ \App\Helpers\CurrencyHelper::isUsd() ? 'bg-white text-[#1A1A1A] shadow-xs' : 'text-gray-500' }}">
-                        USD ($)
-                    </button>
-                </div>
+                <span class="text-xs font-medium text-gray-500">{{ $isEn ? 'Country / Currency' : 'País / Moneda' }}</span>
+                <select onchange="const [c, cur] = this.value.split(':'); document.cookie='user_country=' + c + '; path=/; max-age=31536000; SameSite=Lax'; document.cookie='store_currency=' + cur + '; path=/; max-age=31536000; SameSite=Lax'; if(window.TribioCart && window.TribioCart.items && window.TribioCart.items.length > 0) window.TribioCart.clear(); window.location.reload();"
+                        class="bg-stone-100 border border-stone-200 text-xs font-bold rounded-lg px-2.5 py-1 text-[#1A1A1A] outline-none cursor-pointer">
+                    @foreach($headerCountries as $hCode => $hData)
+                        <option value="{{ $hCode }}:{{ $hData['currency'] }}" {{ $currentCountry === $hCode ? 'selected' : '' }}>
+                            {{ $hData['flag'] }} {{ $hData['name'] }} ({{ $hData['currency'] }} {{ $hData['symbol'] }})
+                        </option>
+                    @endforeach
+                </select>
             </div>
         </div>
     </div>

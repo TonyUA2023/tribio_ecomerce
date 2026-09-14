@@ -52,28 +52,40 @@ class ProductVariant extends Model
         return $this->product?->image_url ?? asset('images/product-placeholder.png');
     }
 
-    public function resolvePrice(): float
+    public function resolvePrice(?string $currency = null): float
     {
-        $isUsd = \App\Helpers\CurrencyHelper::isUsd();
-        if ($isUsd && !empty($this->price_usd) && $this->price_usd > 0) {
+        $currency = $currency ? strtoupper(trim($currency)) : \App\Helpers\CurrencyHelper::currentCurrency();
+
+        if ($currency === 'USD' && !empty($this->price_usd) && $this->price_usd > 0) {
             return (float) $this->price_usd;
         }
+
         if (!empty($this->price) && $this->price > 0) {
-            return (float) $this->price;
+            if ($currency === 'PEN') {
+                return (float) $this->price;
+            }
+            return app(\App\Services\ExchangeRateService::class)->convert((float) $this->price, 'PEN', $currency);
         }
-        return (float) ($this->product?->resolvePrice() ?? 0);
+
+        return (float) ($this->product?->resolvePrice($currency) ?? 0);
     }
 
-    public function resolveComparePrice(): float
+    public function resolveComparePrice(?string $currency = null): float
     {
-        $isUsd = \App\Helpers\CurrencyHelper::isUsd();
-        if ($isUsd && !empty($this->compare_price_usd) && $this->compare_price_usd > 0) {
+        $currency = $currency ? strtoupper(trim($currency)) : \App\Helpers\CurrencyHelper::currentCurrency();
+
+        if ($currency === 'USD' && !empty($this->compare_price_usd) && $this->compare_price_usd > 0) {
             return (float) $this->compare_price_usd;
         }
+
         if (!empty($this->compare_price) && $this->compare_price > 0) {
-            return (float) $this->compare_price;
+            if ($currency === 'PEN') {
+                return (float) $this->compare_price;
+            }
+            return app(\App\Services\ExchangeRateService::class)->convert((float) $this->compare_price, 'PEN', $currency);
         }
-        return (float) ($this->product?->resolveComparePrice() ?? 0);
+
+        return (float) ($this->product?->resolveComparePrice($currency) ?? 0);
     }
 
     public function inStock(): bool

@@ -27,30 +27,190 @@
                 </div>
             </div>
 
-            {{-- Precios y Origen --}}
-            <div class="glass-card p-6">
-                <h3 class="text-white font-bold mb-4 text-sm uppercase tracking-wider opacity-60">Precios (PEN y USD)</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            {{-- Precios Multi-País y Origen --}}
+            @php
+                $exchangeRates = app(\App\Services\ExchangeRateService::class)->getRates();
+                $enabledCountries = $store->getEnabledCountriesWithDetails();
+                $currenciesMap = [];
+                foreach ($enabledCountries as $cCode => $cInfo) {
+                    $curr = $cInfo['currency'];
+                    if ($curr === 'PEN') continue;
+                    if (!isset($currenciesMap[$curr])) {
+                        $currenciesMap[$curr] = [
+                            'currency' => $curr,
+                            'symbol'   => $cInfo['symbol'],
+                            'decimals' => $cInfo['decimals'],
+                            'countries'=> [$cInfo['name']],
+                            'flags'    => [$cInfo['flag']],
+                        ];
+                    } else {
+                        $currenciesMap[$curr]['countries'][] = $cInfo['name'];
+                        $currenciesMap[$curr]['flags'][]     = $cInfo['flag'];
+                    }
+                }
+            @endphp
+            <div class="glass-card p-6" x-data="{
+                penPrice: '{{ old('price', '') }}',
+                comparePenPrice: '{{ old('compare_price', '') }}',
+                rates: {{ json_encode($exchangeRates) }},
+                currencies: {
+                    @foreach($currenciesMap as $cur => $meta)
+                        '{{ $cur }}': {
+                            manual: {{ old('currency_prices.' . $cur) ? 'true' : 'false' }},
+                            price: '{{ old('currency_prices.' . $cur, '') }}',
+                            compare: '{{ old('compare_currency_prices.' . $cur, '') }}'
+                        },
+                    @endforeach
+                },
+                calcRate(amount, cur) {
+                    if (!amount || isNaN(amount) || parseFloat(amount) <= 0) return '0.00';
+                    const rate = this.rates[cur] || 1;
+                    const val = parseFloat(amount) * rate;
+                    if (['COP', 'CLP', 'ARS'].includes(cur)) {
+                        return Math.round(val).toLocaleString('en-US');
+                    }
+                    return val.toFixed(2);
+                },
+                calcRaw(amount, cur) {
+                    if (!amount || isNaN(amount) || parseFloat(amount) <= 0) return '';
+                    const rate = this.rates[cur] || 1;
+                    const val = parseFloat(amount) * rate;
+                    if (['COP', 'CLP', 'ARS'].includes(cur)) {
+                        return Math.round(val);
+                    }
+                    return val.toFixed(2);
+                },
+                syncUsd() {
+                    const usdEl = document.getElementById('field_price_usd');
+                    if (usdEl && this.currencies['USD']) {
+                        usdEl.value = this.currencies['USD'].manual ? this.currencies['USD'].price : this.calcRaw(this.penPrice, 'USD');
+                    }
+                    const usdCompEl = document.getElementById('field_compare_price_usd');
+                    if (usdCompEl && this.currencies['USD']) {
+                        usdCompEl.value = this.currencies['USD'].manual ? this.currencies['USD'].compare : this.calcRaw(this.comparePenPrice, 'USD');
+                    }
+                }
+            }" x-init="$watch('penPrice', () => syncUsd()); $watch('comparePenPrice', () => syncUsd()); syncUsd();">
+                <div class="flex items-center justify-between mb-4">
                     <div>
-                        <label class="input-label font-bold text-tribio-cyan">Precio (S/.) *</label>
-                        <input type="number" name="price" class="input-field" value="{{ old('price') }}" step="0.01" min="0" required placeholder="0.00">
+                        <h3 class="text-white font-bold text-sm uppercase tracking-wider opacity-90 flex items-center gap-2">
+                            <span>💰</span> Precios y Tipo de Cambio Multi-País
+                        </h3>
+                        <p class="text-xs text-white/50 mt-0.5">Ingresa el precio base en Soles (PEN) y el sistema autocalculará las demás divisas con la API en vivo. Puedes personalizar cualquier moneda a mano.</p>
                     </div>
-                    <div>
-                        <label class="input-label text-tribio-cyan">Precio anterior (S/.)</label>
-                        <input type="number" name="compare_price" class="input-field" value="{{ old('compare_price') }}" step="0.01" min="0" placeholder="0.00">
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono hidden sm:inline-block">
+                        ⚡ API Activa (PEN Base)
+                    </span>
+                </div>
+
+                {{-- Precio Base en Soles --}}
+                <div class="p-4 rounded-xl bg-tribio-cyan/5 border border-tribio-cyan/20 mb-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold text-tribio-cyan flex items-center gap-1.5 uppercase tracking-wider">
+                            <span>🇵🇪</span> Moneda Base: Perú (Soles - PEN)
+                        </span>
+                        <span class="text-[10px] text-white/40">Referencia oficial para conversiones</span>
                     </div>
-                    
-                    <div>
-                        <label class="input-label font-bold text-green-400">Precio (USD $)</label>
-                        <input type="number" name="price_usd" class="input-field border-green-500/30 focus:border-green-500" value="{{ old('price_usd') }}" step="0.01" min="0" placeholder="0.00">
-                    </div>
-                    <div>
-                        <label class="input-label text-green-400">Precio anterior (USD $)</label>
-                        <input type="number" name="compare_price_usd" class="input-field border-green-500/30 focus:border-green-500" value="{{ old('compare_price_usd') }}" step="0.01" min="0" placeholder="0.00">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="input-label font-bold text-white">Precio de Venta (S/.) *</label>
+                            <div class="relative">
+                                <span class="absolute left-3.5 top-2.5 text-xs text-tribio-cyan font-bold">S/</span>
+                                <input type="number" name="price" x-model="penPrice" class="input-field pl-9 font-bold text-white text-base" value="{{ old('price') }}" step="0.01" min="0" required placeholder="0.00">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="input-label text-white/70">Precio Anterior / Antes (S/.)</label>
+                            <div class="relative">
+                                <span class="absolute left-3.5 top-2.5 text-xs text-white/40 font-bold">S/</span>
+                                <input type="number" name="compare_price" x-model="comparePenPrice" class="input-field pl-9 text-white/80" value="{{ old('compare_price') }}" step="0.01" min="0" placeholder="0.00">
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-                <div>
+
+                {{-- Precios en otras monedas de los países activos --}}
+                @if(!empty($currenciesMap))
+                    <div class="space-y-3 mb-5">
+                        <label class="input-label text-white/80 flex items-center justify-between">
+                            <span>Precios en Países Habilitados:</span>
+                            <span class="text-[10px] text-white/40 normal-case">Alterna entre 'Auto' o 'Personalizado'</span>
+                        </label>
+                        
+                        @foreach($currenciesMap as $cur => $meta)
+                            <div class="p-3.5 rounded-xl bg-white/3 border border-white/10 hover:border-white/20 transition-all">
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-2xl">{{ implode(' ', $meta['flags']) }}</span>
+                                        <div>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-xs font-bold text-white font-mono">{{ $cur }} ({{ $meta['symbol'] }})</span>
+                                                <span class="text-[10px] text-white/40">• {{ implode(', ', $meta['countries']) }}</span>
+                                            </div>
+                                            <div class="text-[11px] text-white/60 mt-0.5" x-show="!currencies['{{ $cur }}'].manual">
+                                                <span>T.C. sugerido: </span>
+                                                <strong class="text-emerald-400 font-mono">{{ $meta['symbol'] }} <span x-text="calcRate(penPrice, '{{ $cur }}')"></span></strong>
+                                                <template x-if="comparePenPrice > 0">
+                                                    <span class="text-white/40 line-through text-[10px] ml-1.5">{{ $meta['symbol'] }} <span x-text="calcRate(comparePenPrice, '{{ $cur }}')"></span></span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center gap-2">
+                                        {{-- Selector Auto vs Manual --}}
+                                        <div class="inline-flex rounded-lg p-0.5 bg-black/40 border border-white/10 text-[11px]">
+                                            <button type="button" @click="currencies['{{ $cur }}'].manual = false; currencies['{{ $cur }}'].price = ''; syncUsd();"
+                                                    :class="!currencies['{{ $cur }}'].manual ? 'bg-tribio-cyan text-black font-bold shadow-xs' : 'text-white/60 hover:text-white'"
+                                                    class="px-2.5 py-1 rounded-md transition cursor-pointer">
+                                                🔄 Auto (T.C.)
+                                            </button>
+                                            <button type="button" @click="currencies['{{ $cur }}'].manual = true; if(!currencies['{{ $cur }}'].price && penPrice) currencies['{{ $cur }}'].price = calcRaw(penPrice, '{{ $cur }}'); syncUsd();"
+                                                    :class="currencies['{{ $cur }}'].manual ? 'bg-amber-400 text-black font-bold shadow-xs' : 'text-white/60 hover:text-white'"
+                                                    class="px-2.5 py-1 rounded-md transition cursor-pointer">
+                                                ✍️ Personalizado
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Input Manual cuando está activado --}}
+                                <div x-show="currencies['{{ $cur }}'].manual" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-3 border-t border-white/5" style="display: none;">
+                                    <div>
+                                        <label class="text-[11px] text-amber-300 font-bold block mb-1">Precio fijado ({{ $cur }} {{ $meta['symbol'] }})</label>
+                                        <div class="relative">
+                                            <span class="absolute left-3 top-2 text-xs text-amber-300 font-bold">{{ $meta['symbol'] }}</span>
+                                            <input type="number" step="{{ $meta['decimals'] === 0 ? '1' : '0.01' }}" min="0"
+                                                   name="currency_prices[{{ $cur }}]"
+                                                   x-model="currencies['{{ $cur }}'].price"
+                                                   @input="syncUsd()"
+                                                   class="input-field py-1.5 pl-8 text-xs font-bold border-amber-500/40 focus:border-amber-400 text-white"
+                                                   placeholder="0.00">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="text-[11px] text-white/50 block mb-1">Precio anterior / tachado (opcional)</label>
+                                        <div class="relative">
+                                            <span class="absolute left-3 top-2 text-xs text-white/40 font-bold">{{ $meta['symbol'] }}</span>
+                                            <input type="number" step="{{ $meta['decimals'] === 0 ? '1' : '0.01' }}" min="0"
+                                                   name="compare_currency_prices[{{ $cur }}]"
+                                                   x-model="currencies['{{ $cur }}'].compare"
+                                                   @input="syncUsd()"
+                                                   class="input-field py-1.5 pl-8 text-xs text-white/70"
+                                                   placeholder="0.00">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
+                {{-- Hidden fields para mantener retrocompatibilidad con price_usd --}}
+                <input type="hidden" name="price_usd" id="field_price_usd" value="{{ old('price_usd') }}">
+                <input type="hidden" name="compare_price_usd" id="field_compare_price_usd" value="{{ old('compare_price_usd') }}">
+
+                <div class="border-t border-white/5 pt-4">
                     <label class="input-label">Código del producto origen</label>
                     <input type="text" name="origin_code" class="input-field" value="{{ old('origin_code') }}" placeholder="Ej: COD-ORI-99">
                 </div>

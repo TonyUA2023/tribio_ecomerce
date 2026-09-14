@@ -9,7 +9,7 @@
              phone: '', 
              address: '', 
              address_type: 'casa',
-             country: '{{ \App\Helpers\CurrencyHelper::isUsd() ? 'US' : 'PE' }}', 
+             country: '{{ \App\Helpers\CurrencyHelper::currentCountry() }}', 
              state: '', 
              city: '', 
              zipcode: '', 
@@ -33,12 +33,22 @@
          storeSlug: '{{ $store->slug }}',
          isExpressEnabled: {{ $store->is_express_shipping_enabled ? 'true' : 'false' }},
          expressCost: {{ $store->express_shipping_cost ?? 0 }},
+         currentCurrency: '{{ \App\Helpers\CurrencyHelper::currentCurrency() }}',
          currencySymbol: '{{ \App\Helpers\CurrencyHelper::symbol() }}',
          shippingCost: 0,
          hasMercadoPago: {{ ($store->checkout_mode === 'card' || $store->payment_gateway === 'mercado_pago' || !empty($store->mp_access_token) || !empty($store->gateway_access_token)) ? 'true' : 'false' }},
          paymentMethod: '{{ ($store->checkout_mode === 'card' || $store->payment_gateway === 'mercado_pago' || !empty($store->mp_access_token) || !empty($store->gateway_access_token)) ? 'mercadopago' : 'whatsapp' }}',
          hasActiveToken: {{ (!empty($store->mp_access_token) || !empty($store->gateway_access_token)) ? 'true' : 'false' }},
          cartItems: window.TribioCart ? window.TribioCart.items : [],
+         formatMoney(amount) {
+             const isInt = ['COP', 'CLP', 'ARS'].includes(this.currentCurrency);
+             const num = Number(amount || 0);
+             return this.currencySymbol + ' ' + (isInt ? Math.round(num).toLocaleString('en-US') : num.toFixed(2));
+         },
+         init() {
+             this.updateShipping();
+             this.checkCurrentCustomer();
+         },
          get cartTotal() { 
              let total = this.cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
              if (this.customer.express_shipping) total += this.expressCost;
@@ -271,7 +281,7 @@
                                     <p class="text-[11px] text-[#C8A68B] font-semibold mt-0.5" x-text="item.variant_title"></p>
                                 </template>
                                 <div class="flex justify-between items-center mt-2">
-                                    <p class="text-[#C8A68B] font-bold text-sm" x-text="currencySymbol + ' ' + (item.price * item.quantity).toFixed(2)"></p>
+                                    <p class="text-[#C8A68B] font-bold text-sm" x-text="formatMoney(item.price * item.quantity)"></p>
                                     <div class="flex items-center gap-2 text-gray-600 text-xs bg-white rounded-full border border-gray-200 p-1">
                                         <button @click="window.TribioCart.updateQuantity(item.cartKey || item.id, item.quantity - 1)" class="w-5 h-5 rounded-full hover:bg-gray-100 flex items-center justify-center font-bold">-</button>
                                         <span x-text="item.quantity" class="w-4 text-center font-medium"></span>
@@ -454,9 +464,19 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-500 mb-1">País *</label>
-                            <select name="country" autocomplete="country" x-model="customer.country" @change="updateShipping" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none transition">
-                                <option value="PE">🇵🇪 Perú</option>
-                                <option value="US">🇺🇸 Estados Unidos</option>
+                            <select name="country" autocomplete="country" x-model="customer.country" @change="updateShipping" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none transition cursor-pointer">
+                                @php
+                                    $cartCountries = $store->getEnabledCountriesWithDetails();
+                                    if (empty($cartCountries)) {
+                                        $cartCountries = [
+                                            'PE' => \App\Helpers\CurrencyHelper::getCountryInfo('PE'),
+                                            'US' => \App\Helpers\CurrencyHelper::getCountryInfo('US')
+                                        ];
+                                    }
+                                @endphp
+                                @foreach($cartCountries as $code => $c)
+                                    <option value="{{ $code }}">{{ $c['flag'] }} {{ $c['name'] }}</option>
+                                @endforeach
                             </select>
                         </div>
                         <div>
@@ -587,19 +607,19 @@
             <div class="p-5 border-t border-gray-100 bg-gray-50">
                 <div class="flex justify-between items-center mb-2 text-gray-600 text-sm">
                     <span>{{ \App\Helpers\TranslationHelper::trans('subtotal', 'Subtotal') }}:</span>
-                    <span x-text="currencySymbol + ' ' + (cartTotal - shippingCost - (customer.express_shipping ? expressCost : 0)).toFixed(2)"></span>
+                    <span x-text="formatMoney(cartTotal - shippingCost - (customer.express_shipping ? expressCost : 0))"></span>
                 </div>
                 
                 <template x-if="shippingCost > 0">
                     <div class="flex justify-between items-center mb-2 text-gray-600 text-sm">
                         <span>{{ \App\Helpers\TranslationHelper::trans('shipping', 'Envío') }}:</span>
-                        <span x-text="'+ ' + currencySymbol + ' ' + shippingCost.toFixed(2)"></span>
+                        <span x-text="'+ ' + formatMoney(shippingCost)"></span>
                     </div>
                 </template>
 
                 <div class="flex justify-between items-center mb-4 text-gray-800 border-t border-gray-200 pt-2 mt-2">
                     <span class="font-bold text-sm">{{ \App\Helpers\TranslationHelper::isEn() ? 'Total to pay:' : 'Total a pagar:' }}</span>
-                    <span class="font-black text-xl text-[#C8A68B]" x-text="currencySymbol + ' ' + cartTotal.toFixed(2)"></span>
+                    <span class="font-black text-xl text-[#C8A68B]" x-text="formatMoney(cartTotal)"></span>
                 </div>
                 
                 <template x-if="checkoutStep === 1">

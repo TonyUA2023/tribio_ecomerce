@@ -167,6 +167,13 @@ Route::prefix('tienda')->name('store.')->group(function () {
 
 // API para costos de envío
 Route::get('/api/shipping-cost/{slug}', [\App\Http\Controllers\StoreController::class, 'getShippingCost']);
+Route::get('/api/exchange-rates', function (\App\Services\ExchangeRateService $service) {
+    return response()->json([
+        'rates' => $service->getRates(),
+        'base' => 'PEN',
+        'updated_at' => now()->toIso8601String()
+    ]);
+});
 
 // ────────── PORTAL DEL CLIENTE / COMPRADOR UNIVERSAL ──────────
 Route::prefix('customer')->name('customer.')->group(function () {

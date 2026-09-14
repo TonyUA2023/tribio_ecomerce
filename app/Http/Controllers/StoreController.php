@@ -37,10 +37,8 @@ class StoreController extends Controller
         $store = $this->getStore($slug);
         $store->increment('total_views');
 
-        $isUsd = \App\Helpers\CurrencyHelper::isUsd();
-
         $featuredProducts = $store->featuredProducts()
-            ->when($isUsd, fn($q) => $q->where('price_usd', '>', 0))
+            ->where(fn($q) => $q->where('price', '>', 0)->orWhere('price_usd', '>', 0))
             ->with(['categories', 'category'])
             ->limit(8)
             ->get();
@@ -48,20 +46,20 @@ class StoreController extends Controller
         $categories       = $store->categories()->whereNull('parent_id')
                                 ->with([
                                     'children', 
-                                    'products' => function($q) use ($isUsd) { 
-                                        $q->when($isUsd, fn($sq) => $sq->where('price_usd', '>', 0))->latest()->limit(1); 
+                                    'products' => function($q) { 
+                                        $q->where(fn($sq) => $sq->where('price', '>', 0)->orWhere('price_usd', '>', 0))->latest()->limit(1); 
                                     }
                                 ])
                                 ->withCount([
-                                    'activeProducts' => function($q) use ($isUsd) {
-                                        $q->when($isUsd, fn($sq) => $sq->where('price_usd', '>', 0));
+                                    'activeProducts' => function($q) {
+                                        $q->where(fn($sq) => $sq->where('price', '>', 0)->orWhere('price_usd', '>', 0));
                                     }
                                 ])
                                 ->get();
         
         $galleryItems     = $store->galleryItems()->where('is_active', true)->limit(12)->get();
         $allProducts      = $store->activeProducts()
-            ->when($isUsd, fn($q) => $q->where('price_usd', '>', 0))
+            ->where(fn($q) => $q->where('price', '>', 0)->orWhere('price_usd', '>', 0))
             ->with(['categories', 'category'])
             ->orderByDesc('is_featured')->orderBy('sort_order')->paginate(12);
 
@@ -105,38 +103,36 @@ class StoreController extends Controller
         $store = $this->getStore($slug);
         $store->increment('total_views');
 
-        $isUsd = \App\Helpers\CurrencyHelper::isUsd();
-
         $categories = $store->categories()->whereNull('parent_id')
                         ->with([
                             'children', 
-                            'products' => function($q) use ($isUsd) { 
-                                $q->when($isUsd, fn($sq) => $sq->where('price_usd', '>', 0))->latest()->limit(1); 
+                            'products' => function($q) { 
+                                $q->where(fn($sq) => $sq->where('price', '>', 0)->orWhere('price_usd', '>', 0))->latest()->limit(1); 
                             }
                         ])
                         ->withCount([
-                            'activeProducts' => function($q) use ($isUsd) {
-                                $q->when($isUsd, fn($sq) => $sq->where('price_usd', '>', 0));
+                            'activeProducts' => function($q) {
+                                $q->where(fn($sq) => $sq->where('price', '>', 0)->orWhere('price_usd', '>', 0));
                             }
                         ])
                         ->orderBy('name')
                         ->get();
         $brands = $store->brands()
                         ->withCount([
-                            'products' => function($q) use ($isUsd) {
-                                $q->where('is_active', true)->when($isUsd, fn($sq) => $sq->where('price_usd', '>', 0));
+                            'products' => function($q) {
+                                $q->where('is_active', true)->where(fn($sq) => $sq->where('price', '>', 0)->orWhere('price_usd', '>', 0));
                             }
                         ])
                         ->orderBy('name')
                         ->get();
         $featuredProducts = $store->featuredProducts()
-                        ->when($isUsd, fn($q) => $q->where('price_usd', '>', 0))
+                        ->where(fn($q) => $q->where('price', '>', 0)->orWhere('price_usd', '>', 0))
                         ->limit(3)
                         ->get();
 
         // Query para productos activos
         $query = $store->activeProducts()
-                    ->when($isUsd, fn($q) => $q->where('price_usd', '>', 0))
+                    ->where(fn($q) => $q->where('price', '>', 0)->orWhere('price_usd', '>', 0))
                     ->with(['categories', 'category', 'brand']);
 
         // Filtros
@@ -348,38 +344,68 @@ class StoreController extends Controller
         return view("templates.{$template}.gallery", compact('store', 'galleryItems', 'categories'));
     }
 
-    public function getShippingCost(Request $request, string $slug)
+    public function resolveShippingCostForStore(Store $store, string $country = 'PE', ?string $state = null): float
     {
-        $store = $this->getStore($slug);
-        $country = $request->input('country', 'PE');
-        $state = $request->input('state');
+        $country = strtoupper(trim($country ?: 'PE'));
 
-        // Look for exact state match first
+        // 1. Envío Nacional Plano para Perú (Tarifa Única para todo el país)
+        if ($country === 'PE') {
+            if ($state) {
+                $rate = $store->shippingRates()->where('is_active', true)
+                              ->where('country_code', 'PE')
+                              ->where('state', $state)
+                              ->first();
+                if ($rate) {
+                    return (float) $rate->cost;
+                }
+            }
+            if ($store->national_shipping_cost !== null && (float) $store->national_shipping_cost >= 0) {
+                return (float) $store->national_shipping_cost;
+            }
+        }
+
+        // 2. Tarifa específica configurada por país en country_shipping_costs
+        $countryCosts = is_array($store->country_shipping_costs) ? $store->country_shipping_costs : json_decode($store->country_shipping_costs ?? '[]', true);
+        if (!empty($countryCosts) && isset($countryCosts[$country]) && is_numeric($countryCosts[$country])) {
+            return (float) $countryCosts[$country];
+        }
+
+        // 3. Consulta por departamento / estado en shipping_rates
         if ($state) {
             $rate = $store->shippingRates()->where('is_active', true)
                           ->where('country_code', $country)
                           ->where('state', $state)
                           ->first();
             if ($rate) {
-                return response()->json(['cost' => $rate->cost]);
+                return (float) $rate->cost;
             }
         }
 
-        // Look for country default
+        // 4. Consulta por país predeterminado en shipping_rates
         $rate = $store->shippingRates()->where('is_active', true)
                       ->where('country_code', $country)
                       ->whereNull('state')
                       ->first();
         if ($rate) {
-            return response()->json(['cost' => $rate->cost]);
+            return (float) $rate->cost;
         }
 
-        // Look for ALL (International default)
+        // 5. Fallback Internacional General (ALL)
         $rate = $store->shippingRates()->where('is_active', true)
                       ->where('country_code', 'ALL')
                       ->first();
         
-        return response()->json(['cost' => $rate ? $rate->cost : 0]);
+        return $rate ? (float) $rate->cost : 0.0;
+    }
+
+    public function getShippingCost(Request $request, string $slug)
+    {
+        $store = $this->getStore($slug);
+        $country = $request->input('country', 'PE');
+        $state = $request->input('state');
+
+        $cost = $this->resolveShippingCostForStore($store, $country, $state);
+        return response()->json(['cost' => $cost]);
     }
 
     public function checkout(Request $request, string $slug)
@@ -485,24 +511,9 @@ class StoreController extends Controller
         }
 
         // Calculate dynamic shipping cost
-        $shippingCost = 0;
         $country = $request->customer_country ?? 'PE';
-        $state = $request->customer_state;
-        
-        $rate = null;
-        if ($state) {
-            $rate = $store->shippingRates()->where('is_active', true)->where('country_code', $country)->where('state', $state)->first();
-        }
-        if (!$rate) {
-            $rate = $store->shippingRates()->where('is_active', true)->where('country_code', $country)->whereNull('state')->first();
-        }
-        if (!$rate) {
-            $rate = $store->shippingRates()->where('is_active', true)->where('country_code', 'ALL')->first();
-        }
-        
-        if ($rate) {
-            $shippingCost = $rate->cost;
-        }
+        $state   = $request->customer_state;
+        $shippingCost = $this->resolveShippingCostForStore($store, $country, $state);
 
         $isExpress = false;
         if ($request->boolean('express_shipping') && $store->is_express_shipping_enabled) {

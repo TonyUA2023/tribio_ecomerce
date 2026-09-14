@@ -352,11 +352,20 @@
 
     <!-- Modal de Selección de País (Se muestra si no hay cookie 'user_country') -->
     @if(!request()->hasCookie('user_country'))
+    @php
+        $modalCountries = $store->getEnabledCountriesWithDetails();
+        if (empty($modalCountries)) {
+            $modalCountries = [
+                'PE' => \App\Helpers\CurrencyHelper::getCountryInfo('PE'),
+                'US' => \App\Helpers\CurrencyHelper::getCountryInfo('US')
+            ];
+        }
+    @endphp
     <div x-data="{
         showModal: true,
-        selectCountry(countryCode) {
+        selectCountry(countryCode, currencyCode) {
             document.cookie = 'user_country=' + countryCode + '; path=/; max-age=31536000; SameSite=Lax';
-            document.cookie = 'store_currency=' + (countryCode === 'US' ? 'USD' : 'PEN') + '; path=/; max-age=31536000; SameSite=Lax';
+            document.cookie = 'store_currency=' + currencyCode + '; path=/; max-age=31536000; SameSite=Lax';
             if (window.TribioCart && window.TribioCart.items && window.TribioCart.items.length > 0) {
                 window.TribioCart.clear();
             }
@@ -364,19 +373,21 @@
             window.location.reload();
         }
     }" x-show="showModal" style="display:none;" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <div @click.away="showModal = true" class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center animate-fade-in-up">
-            <h2 class="text-2xl font-black text-gray-900 mb-2">¡Hola! 👋</h2>
-            <p class="text-gray-500 mb-6 text-sm">Antes de continuar, cuéntanos desde qué país nos estás visitando para mostrarte los precios y opciones correctas.</p>
+        <div @click.away="showModal = true" class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 sm:p-8 text-center animate-fade-in-up">
+            <h2 class="text-2xl font-black text-gray-900 mb-2 font-brand">¡Hola! 👋</h2>
+            <p class="text-gray-500 mb-6 text-xs sm:text-sm">Selecciona desde qué país nos estás visitando para mostrarte los precios y costos de envío en tu moneda local.</p>
             
-            <div class="grid grid-cols-2 gap-4">
-                <button @click="selectCountry('PE')" class="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-gray-100 hover:border-green-500 hover:bg-green-50 transition-all group">
-                    <span class="text-4xl group-hover:scale-110 transition-transform">🇵🇪</span>
-                    <span class="font-bold text-gray-700 group-hover:text-green-600">Perú</span>
-                </button>
-                <button @click="selectCountry('US')" class="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-gray-100 hover:border-green-500 hover:bg-green-50 transition-all group">
-                    <span class="text-4xl group-hover:scale-110 transition-transform">🇺🇸</span>
-                    <span class="font-bold text-gray-700 group-hover:text-green-600">Estados Unidos</span>
-                </button>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto p-1">
+                @foreach($modalCountries as $code => $c)
+                    <button type="button" @click="selectCountry('{{ $code }}', '{{ $c['currency'] }}')" 
+                            class="flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl border-2 border-stone-100 hover:border-[#C8A68B] hover:bg-[#FDF8EF]/50 transition-all group cursor-pointer">
+                        <span class="text-3xl group-hover:scale-110 transition-transform">{{ $c['flag'] }}</span>
+                        <div class="text-center">
+                            <span class="font-bold text-xs text-gray-800 group-hover:text-[#C8A68B] block leading-tight">{{ $c['name'] }}</span>
+                            <span class="text-[10px] text-gray-400 font-mono mt-0.5 block">{{ $c['currency'] }} ({{ $c['symbol'] }})</span>
+                        </div>
+                    </button>
+                @endforeach
             </div>
         </div>
     </div>

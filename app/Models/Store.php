@@ -24,13 +24,16 @@ class Store extends Model
         'checkout_mode', 'payment_gateway', 'gateway_public_key', 'gateway_private_key', 'gateway_access_token',
         'mp_access_token', 'mp_public_key', 'contact_email', 'contact_phone',
         'is_express_shipping_enabled', 'express_shipping_cost',
-        'is_multilanguage_enabled', 'hero_badge', 'hero_title', 'hero_subtitle'
+        'is_multilanguage_enabled', 'hero_badge', 'hero_title', 'hero_subtitle',
+        'enabled_countries', 'national_shipping_cost', 'country_shipping_costs'
     ];
 
     protected $casts = [
         'custom_css_vars'  => 'array',
         'published_layout' => 'array',
         'distributors'     => 'array',
+        'enabled_countries'=> 'array',
+        'country_shipping_costs' => 'array',
         'hero_carousel'    => 'boolean',
         'is_featured'      => 'boolean',
         'is_express_shipping_enabled' => 'boolean',
@@ -38,7 +41,30 @@ class Store extends Model
         'plan_expires_at'  => 'datetime',
         'total_revenue'    => 'decimal:2',
         'express_shipping_cost' => 'decimal:2',
+        'national_shipping_cost' => 'decimal:2',
     ];
+
+    public function getEnabledCountriesList(): array
+    {
+        $countries = $this->enabled_countries;
+        if (empty($countries) || !is_array($countries)) {
+            return ['PE', 'US'];
+        }
+        return array_values(array_unique($countries));
+    }
+
+    public function getEnabledCountriesWithDetails(): array
+    {
+        $enabled = $this->getEnabledCountriesList();
+        $all = \App\Helpers\CurrencyHelper::supportedCountries();
+        $result = [];
+        foreach ($enabled as $code) {
+            if (isset($all[$code])) {
+                $result[$code] = $all[$code];
+            }
+        }
+        return $result;
+    }
 
     // ─── Scopes ──────────────────────────────────────────────────
     public function scopeActive($query)
