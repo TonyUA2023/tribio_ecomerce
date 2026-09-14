@@ -290,12 +290,8 @@
         </div>
     </div>
     
-    <!-- Footer -->
-    <footer class="bg-[#FDF8EF] border-t border-gray-200/60 py-8 mt-20 text-center">
-        <p class="text-xs font-semibold text-gray-500 tracking-wider">
-            {{ \App\Helpers\TranslationHelper::isEn() ? 'Powered by' : 'Impulsado por' }} <span class="text-[#1A1A1A] font-bold">Tribio</span>
-        </p>
-    </footer>
+    <!-- Main Footer -->
+    @include('templates.minimal-light.footer')
 </div>
 
 <!-- Cart Drawer -->

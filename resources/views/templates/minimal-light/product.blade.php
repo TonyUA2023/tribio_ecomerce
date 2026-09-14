@@ -15,24 +15,59 @@
             @php
                 $allImages = $product->all_images;
             @endphp
-            <div class="space-y-4 lg:sticky lg:top-8" x-data="{ activeImage: @js($product->image_url) }">
-                <!-- Main Featured Image -->
+            <div class="space-y-4 lg:sticky lg:top-8" x-data="{ activeMedia: 'image', activeImage: @js($product->image_url), isMuted: true }">
+                <!-- Main Featured Image / Video -->
                 <div class="relative bg-white rounded-3xl overflow-hidden aspect-[4/5] shadow-sm border border-stone-200/80 group">
-                    <img :src="activeImage" alt="{{ $product->name }}" class="w-full h-full object-cover transition-all duration-500 group-hover:scale-105">
+                    <template x-if="activeMedia === 'image'">
+                        <img :src="activeImage" alt="{{ $product->name }}" class="w-full h-full object-cover transition-all duration-500 group-hover:scale-105">
+                    </template>
+
+                    @if($product->video_path)
+                    <template x-if="activeMedia === 'video'">
+                        <div class="relative w-full h-full bg-stone-950">
+                            <video x-ref="detailVideo" 
+                                   src="{{ $product->video_url }}" 
+                                   class="w-full h-full object-cover" 
+                                   autoplay 
+                                   loop 
+                                   playsinline 
+                                   preload="metadata" 
+                                   :muted="isMuted">
+                            </video>
+                            <button type="button" 
+                                    @click="isMuted = !isMuted; if($refs.detailVideo) $refs.detailVideo.muted = isMuted;"
+                                    class="absolute bottom-4 right-4 z-20 w-9 h-9 rounded-full bg-black/75 hover:bg-[#1A1A1A] text-white border border-white/20 flex items-center justify-center text-xs transition shadow-md cursor-pointer"
+                                    :title="isMuted ? 'Activar sonido' : 'Silenciar'">
+                                <span x-show="isMuted">🔇</span>
+                                <span x-show="!isMuted" style="display: none;">🔊</span>
+                            </button>
+                        </div>
+                    </template>
+                    @endif
+
                     @if($product->resolveComparePrice() > $product->resolvePrice())
-                        <div class="absolute top-5 left-5 bg-red-600 text-white text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-md">
+                        <div class="absolute top-5 left-5 bg-red-600 text-white text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-md z-10">
                             {{ \App\Helpers\TranslationHelper::trans('special_offer', 'Oferta Especial') }}
                         </div>
                     @endif
                 </div>
 
-                <!-- Secondary Image Thumbnails -->
-                @if(count($allImages) > 1)
+                <!-- Secondary Image Thumbnails + Video Option -->
+                @if(count($allImages) > 1 || $product->video_path)
                 <div class="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-thin">
+                    @if($product->video_path)
+                    <button type="button" @click="activeMedia = 'video'" 
+                            class="relative w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 border-2 transition-all cursor-pointer bg-stone-900 text-white flex flex-col items-center justify-center shadow-xs"
+                            :class="activeMedia === 'video' ? 'border-[#C8A68B] ring-2 ring-[#C8A68B]/30 scale-105' : 'border-stone-300 opacity-75 hover:opacity-100'">
+                        <span class="text-xl">🎬</span>
+                        <span class="text-[9px] font-black uppercase tracking-wider mt-0.5 text-[#C8A68B]">Video</span>
+                    </button>
+                    @endif
+
                     @foreach($allImages as $imgUrl)
-                    <button type="button" @click="activeImage = @js($imgUrl)" 
+                    <button type="button" @click="activeMedia = 'image'; activeImage = @js($imgUrl)" 
                             class="relative w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 border-2 transition-all cursor-pointer bg-white"
-                            :class="activeImage === @js($imgUrl) ? 'border-[#1A1A1A] shadow-md scale-105 ring-2 ring-[#1A1A1A]/20' : 'border-stone-200/80 opacity-70 hover:opacity-100'">
+                            :class="(activeMedia === 'image' && activeImage === @js($imgUrl)) ? 'border-[#1A1A1A] shadow-md scale-105 ring-2 ring-[#1A1A1A]/20' : 'border-stone-200/80 opacity-70 hover:opacity-100'">
                         <img src="{{ $imgUrl }}" class="w-full h-full object-cover">
                     </button>
                     @endforeach
@@ -553,12 +588,8 @@
     </div>
     @endif
 
-    <!-- Footer -->
-    <footer class="bg-[#FDF8EF] border-t border-stone-200/60 py-8 text-center mt-12">
-        <p class="text-xs font-semibold text-gray-500 tracking-wider">
-            {{ \App\Helpers\TranslationHelper::isEn() ? 'Powered by' : 'Impulsado por' }} <span class="text-[#1A1A1A] font-bold">Tribio</span>
-        </p>
-    </footer>
+    <!-- Main Footer -->
+    @include('templates.minimal-light.footer')
 </div>
 
 <!-- Cart Drawer -->

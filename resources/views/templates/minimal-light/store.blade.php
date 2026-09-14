@@ -150,6 +150,122 @@
         </section>
         <p class="text-center text-xs text-gray-400 py-2">*Válido para pedidos realizados hasta las 5:00 p.m. Aplica T&C.</p>
 
+        @if(isset($homeVideoProducts) && $homeVideoProducts->isNotEmpty())
+        <!-- Featured Products with Short Videos Section (1 Row, Max 3 Videos) -->
+        <section class="py-12 md:py-16 bg-[#FDF8EF] border-b border-stone-200/60 overflow-hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <!-- Section Header -->
+                <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 md:mb-10 gap-4">
+                    <div>
+                        <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-[#1A1A1A] text-[#C8A68B] text-[10px] sm:text-[11px] font-black tracking-[0.2em] uppercase shadow-2xs font-brand">
+                            <span>🎬 EN ACCIÓN</span>
+                        </div>
+                        <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-stone-900 font-brand tracking-tight">
+                            Descubre Nuestros Productos en Video
+                        </h2>
+                        <p class="text-xs sm:text-sm text-stone-600 mt-1.5 font-medium max-w-xl">
+                            Mira cómo funcionan, su calidad y acabados reales antes de comprar.
+                        </p>
+                    </div>
+
+                    <a href="{{ route('store.catalog', $store->slug) }}" 
+                       class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-stone-900 hover:text-[#C8A68B] transition-colors font-brand group self-start md:self-auto">
+                        <span>Ver catálogo completo</span>
+                        <span class="group-hover:translate-x-1 transition-transform">→</span>
+                    </a>
+                </div>
+
+                <!-- 3 Videos in a Single Row Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+                    @foreach($homeVideoProducts->take(3) as $vProduct)
+                    <div class="group relative flex flex-col bg-white rounded-3xl overflow-hidden border border-stone-200/90 shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1.5"
+                         x-data="{ isMuted: true, isPlaying: true }">
+                        
+                        <!-- Video Container (Vertical 4:5 format) -->
+                        <div class="relative aspect-[4/5] w-full overflow-hidden bg-stone-950">
+                            <video x-ref="videoPlayer"
+                                   src="{{ $vProduct->video_url }}"
+                                   class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                   autoplay
+                                   loop
+                                   playsinline
+                                   preload="metadata"
+                                   loading="lazy"
+                                   :muted="isMuted">
+                            </video>
+
+                            <!-- Gradient Overlay on Top and Bottom -->
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/30 pointer-events-none"></div>
+
+                            <!-- Top Badges -->
+                            <div class="absolute top-3.5 inset-x-3.5 flex items-center justify-between z-10">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-[10px] font-bold uppercase tracking-wider">
+                                    <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                                    <span>Video</span>
+                                </span>
+
+                                @if($vProduct->resolveComparePrice() > $vProduct->resolvePrice())
+                                    <span class="px-2.5 py-1 rounded-full bg-red-600 text-white text-[10px] font-black uppercase tracking-wider shadow-xs">
+                                        Oferta
+                                    </span>
+                                @endif
+                            </div>
+
+                            <!-- Sound Toggle Button -->
+                            <button type="button" 
+                                    @click="isMuted = !isMuted; if($refs.videoPlayer) $refs.videoPlayer.muted = isMuted;"
+                                    class="absolute bottom-3.5 right-3.5 z-20 w-9 h-9 rounded-full bg-black/70 hover:bg-[#1A1A1A] text-white border border-white/20 backdrop-blur-md flex items-center justify-center text-xs transition shadow-md cursor-pointer"
+                                    :title="isMuted ? 'Activar sonido' : 'Silenciar'">
+                                <span x-show="isMuted">🔇</span>
+                                <span x-show="!isMuted" style="display: none;">🔊</span>
+                            </button>
+                        </div>
+
+                        <!-- Product Info Footer -->
+                        <div class="p-5 flex flex-col justify-between flex-1 bg-white">
+                            <div>
+                                @if($vProduct->category)
+                                    <span class="text-[11px] font-extrabold uppercase tracking-wider text-[#C8A68B] block mb-1">
+                                        {{ $vProduct->category->getTranslatedName() }}
+                                    </span>
+                                @endif
+                                <h3 class="font-bold text-stone-900 text-base leading-snug line-clamp-2 group-hover:text-[#C8A68B] transition-colors font-brand">
+                                    <a href="{{ route('store.product', [$store->slug, $vProduct->slug]) }}">
+                                        {{ $vProduct->name }}
+                                    </a>
+                                </h3>
+                            </div>
+
+                            <div class="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between">
+                                <div>
+                                    <div class="flex items-baseline gap-2">
+                                        <span class="text-lg font-black text-stone-950 font-brand">
+                                            {{ \App\Helpers\CurrencyHelper::format($vProduct->resolvePrice()) }}
+                                        </span>
+                                        @if($vProduct->resolveComparePrice() > $vProduct->resolvePrice())
+                                            <span class="text-xs text-stone-400 line-through font-semibold">
+                                                {{ \App\Helpers\CurrencyHelper::format($vProduct->resolveComparePrice()) }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <span class="text-[10px] text-emerald-700 font-bold">✓ En Stock</span>
+                                </div>
+
+                                <a href="{{ route('store.product', [$store->slug, $vProduct->slug]) }}" 
+                                   class="px-3.5 py-2 rounded-xl bg-[#1A1A1A] hover:bg-[#C8A68B] text-white text-xs font-bold font-brand transition-colors shadow-xs flex items-center gap-1">
+                                    <span>Ver Producto</span>
+                                    <span>→</span>
+                                </a>
+                            </div>
+                        </div>
+
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+        @endif
+
         <!-- Highlights/Categories Row (Harmonized with brand palette) -->
         <section class="py-10 bg-[#FDF8EF] border-b border-stone-200/60">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -336,11 +452,7 @@
     </div>
 
     <!-- Main Footer -->
-    <footer class="bg-white border-t border-stone-200/60 py-8 text-center mt-12">
-        <p class="text-xs font-semibold text-gray-500 tracking-wider">
-            {{ \App\Helpers\TranslationHelper::isEn() ? 'Powered by' : 'Impulsado por' }} <span class="text-[#1A1A1A] font-bold">Tribio</span>
-        </p>
-    </footer>
+    @include('templates.minimal-light.footer')
 
     {{-- Cart Drawer --}}
     @include('templates.minimal-light.cart-drawer')
@@ -380,11 +492,15 @@
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto p-1">
                 @foreach($modalCountries as $code => $c)
                     <button type="button" @click="selectCountry('{{ $code }}', '{{ $c['currency'] }}')" 
-                            class="flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl border-2 border-stone-100 hover:border-[#C8A68B] hover:bg-[#FDF8EF]/50 transition-all group cursor-pointer">
-                        <span class="text-3xl group-hover:scale-110 transition-transform">{{ $c['flag'] }}</span>
+                            class="flex flex-col items-center justify-center gap-2.5 p-3.5 sm:p-4 rounded-xl border-2 border-stone-100 hover:border-[#C8A68B] hover:bg-[#FDF8EF]/50 transition-all group cursor-pointer shadow-xs hover:shadow-md bg-white">
+                        <div class="w-14 h-9 sm:w-16 sm:h-10 rounded-md overflow-hidden border border-stone-200/80 shadow-xs flex items-center justify-center bg-stone-100 group-hover:scale-105 transition-transform duration-200">
+                            <img src="{{ $c['flag_url'] ?? \App\Helpers\CurrencyHelper::flagUrl($code) }}" 
+                                 alt="{{ $c['name'] }}" 
+                                 class="w-full h-full object-cover">
+                        </div>
                         <div class="text-center">
                             <span class="font-bold text-xs text-gray-800 group-hover:text-[#C8A68B] block leading-tight">{{ $c['name'] }}</span>
-                            <span class="text-[10px] text-gray-400 font-mono mt-0.5 block">{{ $c['currency'] }} ({{ $c['symbol'] }})</span>
+                            <span class="text-[10px] text-gray-500 font-mono mt-0.5 block">{{ $c['currency'] }} ({{ $c['symbol'] }})</span>
                         </div>
                     </button>
                 @endforeach

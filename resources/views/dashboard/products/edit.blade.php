@@ -43,10 +43,12 @@
                             'decimals' => $cInfo['decimals'],
                             'countries'=> [$cInfo['name']],
                             'flags'    => [$cInfo['flag']],
+                            'codes'    => [$cCode],
                         ];
                     } else {
                         $currenciesMap[$curr]['countries'][] = $cInfo['name'];
                         $currenciesMap[$curr]['flags'][]     = $cInfo['flag'];
+                        $currenciesMap[$curr]['codes'][]     = $cCode;
                     }
                 }
             @endphp
@@ -68,23 +70,22 @@
                         },
                     @endforeach
                 },
-                calcRate(amount, cur) {
-                    if (!amount || isNaN(amount) || parseFloat(amount) <= 0) return '0.00';
-                    const rate = this.rates[cur] || 1;
-                    const val = parseFloat(amount) * rate;
-                    if (['COP', 'CLP', 'ARS'].includes(cur)) {
-                        return Math.round(val).toLocaleString('en-US');
-                    }
-                    return val.toFixed(2);
-                },
                 calcRaw(amount, cur) {
-                    if (!amount || isNaN(amount) || parseFloat(amount) <= 0) return '';
+                    const val = parseFloat(amount);
+                    if (isNaN(val) || val <= 0) return '';
                     const rate = this.rates[cur] || 1;
-                    const val = parseFloat(amount) * rate;
-                    if (['COP', 'CLP', 'ARS'].includes(cur)) {
-                        return Math.round(val);
-                    }
-                    return val.toFixed(2);
+                    const res = val * rate;
+                    const decimals = (cur === 'COP' || cur === 'CLP' || cur === 'ARS') ? 0 : 2;
+                    return res.toFixed(decimals);
+                },
+                calcRate(amount, cur) {
+                    const raw = this.calcRaw(amount, cur);
+                    if (!raw) return '0.00';
+                    const num = parseFloat(raw);
+                    return num.toLocaleString('en-US', {
+                        minimumFractionDigits: (cur === 'COP' || cur === 'CLP' || cur === 'ARS') ? 0 : 2,
+                        maximumFractionDigits: (cur === 'COP' || cur === 'CLP' || cur === 'ARS') ? 0 : 2
+                    });
                 },
                 syncUsd() {
                     const usdEl = document.getElementById('field_price_usd');
@@ -97,39 +98,49 @@
                     }
                 }
             }" x-init="$watch('penPrice', () => syncUsd()); $watch('comparePenPrice', () => syncUsd()); syncUsd();">
-                <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-200">
                     <div>
-                        <h3 class="text-white font-bold text-sm uppercase tracking-wider opacity-90 flex items-center gap-2">
+                        <h3 class="text-slate-900 font-extrabold text-sm uppercase tracking-wider flex items-center gap-2">
                             <span>💰</span> Precios y Tipo de Cambio Multi-País
                         </h3>
-                        <p class="text-xs text-white/50 mt-0.5">Ingresa el precio base en Soles (PEN) y el sistema autocalculará las demás divisas con la API en vivo. Puedes personalizar cualquier moneda a mano.</p>
+                        <p class="text-xs text-slate-500 mt-0.5">Ingresa el precio base en Soles (PEN) y el sistema autocalculará las demás divisas con la API en vivo. Puedes personalizar cualquier moneda a mano.</p>
                     </div>
-                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono hidden sm:inline-block">
-                        ⚡ API Activa (PEN Base)
+                    <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold font-mono hidden sm:inline-flex items-center gap-1 shadow-2xs">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> API Activa (PEN Base)
                     </span>
                 </div>
 
                 {{-- Precio Base en Soles --}}
-                <div class="p-4 rounded-xl bg-tribio-cyan/5 border border-tribio-cyan/20 mb-5">
+                <div class="p-4 rounded-xl bg-sky-50/60 border-2 border-sky-300 mb-5 shadow-2xs">
                     <div class="flex items-center justify-between mb-3">
-                        <span class="text-xs font-bold text-tribio-cyan flex items-center gap-1.5 uppercase tracking-wider">
-                            <span>🇵🇪</span> Moneda Base: Perú (Soles - PEN)
+                        <span class="text-xs font-black text-sky-950 flex items-center gap-1.5 uppercase tracking-wider">
+                            <span class="text-base">🇵🇪</span> Moneda Base: Perú (Soles - PEN)
                         </span>
-                        <span class="text-[10px] text-white/40">Referencia oficial para conversiones</span>
+                        <span class="text-xs font-semibold text-sky-900/70">Referencia oficial para conversiones</span>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="input-label font-bold text-white">Precio de Venta (S/.) *</label>
+                            <label class="text-xs font-bold text-slate-900 block mb-1.5">Precio de Venta (S/.) *</label>
                             <div class="relative">
-                                <span class="absolute left-3.5 top-2.5 text-xs text-tribio-cyan font-bold">S/</span>
-                                <input type="number" name="price" x-model="penPrice" class="input-field pl-9 font-bold text-white text-base" value="{{ old('price', $product->price) }}" step="0.01" min="0" required placeholder="0.00">
+                                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                    <span class="text-xs text-sky-800 font-black select-none">S/</span>
+                                </div>
+                                <input type="number" name="price" x-model="penPrice" 
+                                       class="w-full rounded-xl bg-white border-2 border-sky-300 focus:border-sky-600 focus:ring-3 focus:ring-sky-500/20 py-2.5 text-right font-black text-slate-900 text-base outline-none transition shadow-2xs" 
+                                       style="padding-left: 2.75rem !important; padding-right: 0.875rem !important;" 
+                                       value="{{ old('price', $product->price) }}" step="0.01" min="0" required placeholder="0.00">
                             </div>
                         </div>
                         <div>
-                            <label class="input-label text-white/70">Precio Anterior / Antes (S/.)</label>
+                            <label class="text-xs font-semibold text-slate-700 block mb-1.5">Precio Anterior / Antes (S/.)</label>
                             <div class="relative">
-                                <span class="absolute left-3.5 top-2.5 text-xs text-white/40 font-bold">S/</span>
-                                <input type="number" name="compare_price" x-model="comparePenPrice" class="input-field pl-9 text-white/80" value="{{ old('compare_price', $product->compare_price) }}" step="0.01" min="0" placeholder="0.00">
+                                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                    <span class="text-xs text-slate-400 font-bold select-none">S/</span>
+                                </div>
+                                <input type="number" name="compare_price" x-model="comparePenPrice" 
+                                       class="w-full rounded-xl bg-white border-2 border-slate-300 focus:border-slate-500 focus:ring-3 focus:ring-slate-400/20 py-2.5 text-right font-bold text-slate-700 text-base outline-none transition shadow-2xs" 
+                                       style="padding-left: 2.75rem !important; padding-right: 0.875rem !important;" 
+                                       value="{{ old('compare_price', $product->compare_price) }}" step="0.01" min="0" placeholder="0.00">
                             </div>
                         </div>
                     </div>
@@ -137,74 +148,116 @@
 
                 {{-- Precios en otras monedas de los países activos --}}
                 @if(!empty($currenciesMap))
-                    <div class="space-y-3 mb-5">
-                        <label class="input-label text-white/80 flex items-center justify-between">
-                            <span>Precios en Países Habilitados:</span>
-                            <span class="text-[10px] text-white/40 normal-case">Alterna entre 'Auto' o 'Personalizado'</span>
-                        </label>
+                    <div class="space-y-3.5 mb-5">
+                        <div class="flex items-center justify-between pb-1">
+                            <label class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                                <span>🌍</span> Precios en Países Habilitados:
+                            </label>
+                            <span class="text-xs text-slate-600 font-medium">Alterna entre 'Auto (T.C.)' o 'Personalizado'</span>
+                        </div>
                         
                         @foreach($currenciesMap as $cur => $meta)
-                            <div class="p-3.5 rounded-xl bg-white/3 border border-white/10 hover:border-white/20 transition-all">
+                            <div class="p-4 rounded-xl transition-all duration-200"
+                                 :class="currencies['{{ $cur }}'].manual 
+                                         ? 'bg-amber-50/70 border-2 border-amber-400 shadow-xs' 
+                                         : 'bg-white border-2 border-slate-200 hover:border-slate-300 shadow-2xs'">
                                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                     <div class="flex items-center gap-3">
-                                        <span class="text-2xl">{{ implode(' ', $meta['flags']) }}</span>
+                                        {{-- Country Code Badges --}}
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            @foreach($meta['codes'] as $idx => $cCode)
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-300 text-xs font-extrabold text-slate-900 shadow-2xs">
+                                                    <span class="text-sm leading-none">{{ $meta['flags'][$idx] ?? '' }}</span>
+                                                    <span class="font-mono">{{ $cCode }}</span>
+                                                </span>
+                                            @endforeach
+                                        </div>
                                         <div>
-                                            <div class="flex items-center gap-2">
-                                                <span class="text-xs font-bold text-white font-mono">{{ $cur }} ({{ $meta['symbol'] }})</span>
-                                                <span class="text-[10px] text-white/40">• {{ implode(', ', $meta['countries']) }}</span>
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <span class="text-sm font-black text-slate-950 font-mono tracking-tight">{{ $cur }}</span>
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-sky-100 text-sky-900 border border-sky-300">
+                                                    {{ $meta['symbol'] }}
+                                                </span>
+                                                <span class="text-xs font-medium text-slate-600">• {{ implode(', ', $meta['countries']) }}</span>
                                             </div>
-                                            <div class="text-[11px] text-white/60 mt-0.5" x-show="!currencies['{{ $cur }}'].manual">
-                                                <span>T.C. sugerido: </span>
-                                                <strong class="text-emerald-400 font-mono">{{ $meta['symbol'] }} <span x-text="calcRate(penPrice, '{{ $cur }}')"></span></strong>
+                                            <div class="text-xs text-slate-700 mt-1 flex items-center gap-1.5" x-show="!currencies['{{ $cur }}'].manual">
+                                                <span class="font-semibold text-slate-600">T.C. sugerido:</span>
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-100 border border-emerald-300 text-emerald-900 font-extrabold font-mono text-xs shadow-2xs">
+                                                    {{ $meta['symbol'] }} <span x-text="calcRate(penPrice, '{{ $cur }}')"></span>
+                                                </span>
                                                 <template x-if="comparePenPrice > 0">
-                                                    <span class="text-white/40 line-through text-[10px] ml-1.5">{{ $meta['symbol'] }} <span x-text="calcRate(comparePenPrice, '{{ $cur }}')"></span></span>
+                                                    <span class="text-slate-400 line-through text-xs font-mono ml-1 font-semibold">
+                                                        {{ $meta['symbol'] }} <span x-text="calcRate(comparePenPrice, '{{ $cur }}')"></span>
+                                                    </span>
                                                 </template>
+                                            </div>
+                                            <div class="text-xs text-amber-950 mt-1 flex items-center gap-1.5" x-show="currencies['{{ $cur }}'].manual" style="display: none;">
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-amber-200 text-amber-950 text-xs font-bold border border-amber-300 shadow-2xs">
+                                                    <span>✍️</span> Precio manual activo (anula tipo de cambio automático)
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div class="flex items-center gap-2">
+                                    <div class="flex items-center gap-2 flex-shrink-0">
                                         {{-- Selector Auto vs Manual --}}
-                                        <div class="inline-flex rounded-lg p-0.5 bg-black/40 border border-white/10 text-[11px]">
+                                        <div class="inline-flex rounded-xl p-1 bg-slate-100 border-2 border-slate-200 text-xs font-semibold shadow-inner">
                                             <button type="button" @click="currencies['{{ $cur }}'].manual = false; currencies['{{ $cur }}'].price = ''; syncUsd();"
-                                                    :class="!currencies['{{ $cur }}'].manual ? 'bg-tribio-cyan text-black font-bold shadow-xs' : 'text-white/60 hover:text-white'"
-                                                    class="px-2.5 py-1 rounded-md transition cursor-pointer">
-                                                🔄 Auto (T.C.)
+                                                    :class="!currencies['{{ $cur }}'].manual 
+                                                            ? 'bg-sky-600 text-white font-bold shadow-xs' 
+                                                            : 'text-slate-600 hover:text-slate-900 font-semibold'"
+                                                    class="px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5">
+                                                <span>🔄</span> Auto (T.C.)
                                             </button>
                                             <button type="button" @click="currencies['{{ $cur }}'].manual = true; if(!currencies['{{ $cur }}'].price && penPrice) currencies['{{ $cur }}'].price = calcRaw(penPrice, '{{ $cur }}'); syncUsd();"
-                                                    :class="currencies['{{ $cur }}'].manual ? 'bg-amber-400 text-black font-bold shadow-xs' : 'text-white/60 hover:text-white'"
-                                                    class="px-2.5 py-1 rounded-md transition cursor-pointer">
-                                                ✍️ Personalizado
+                                                    :class="currencies['{{ $cur }}'].manual 
+                                                            ? 'bg-amber-500 text-slate-950 font-black shadow-xs' 
+                                                            : 'text-slate-600 hover:text-slate-900 font-semibold'"
+                                                    class="px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5">
+                                                <span>✍️</span> Personalizado
                                             </button>
                                         </div>
                                     </div>
                                 </div>
 
                                 {{-- Input Manual cuando está activado --}}
-                                <div x-show="currencies['{{ $cur }}'].manual" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-3 border-t border-white/5" style="display: none;">
+                                <div x-show="currencies['{{ $cur }}'].manual" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3.5 pt-3.5 border-t-2 border-amber-200" style="display: none;">
                                     <div>
-                                        <label class="text-[11px] text-amber-300 font-bold block mb-1">Precio fijado ({{ $cur }} {{ $meta['symbol'] }})</label>
+                                        <label class="text-xs font-bold text-slate-900 block mb-1.5 flex items-center gap-1.5">
+                                            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                                            <span>Precio fijado en {{ $cur }} ({{ $meta['symbol'] }}) *</span>
+                                        </label>
                                         <div class="relative">
-                                            <span class="absolute left-3 top-2 text-xs text-amber-300 font-bold">{{ $meta['symbol'] }}</span>
+                                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                                <span class="text-xs text-slate-900 font-black select-none">{{ $meta['symbol'] }}</span>
+                                            </div>
                                             <input type="number" step="{{ $meta['decimals'] === 0 ? '1' : '0.01' }}" min="0"
                                                    name="currency_prices[{{ $cur }}]"
                                                    x-model="currencies['{{ $cur }}'].price"
                                                    @input="syncUsd()"
-                                                   class="input-field py-1.5 pl-8 text-xs font-bold border-amber-500/40 focus:border-amber-400 text-white"
+                                                   class="w-full rounded-xl bg-white border-2 border-amber-400 focus:border-amber-500 focus:ring-3 focus:ring-amber-400/25 py-2 text-right font-black text-slate-950 text-sm outline-none transition shadow-2xs"
+                                                   style="padding-left: 2.5rem !important; padding-right: 0.875rem !important;"
                                                    placeholder="0.00">
                                         </div>
+                                        <p class="text-[11px] text-amber-950 font-semibold mt-1">Este será el precio exacto cobrado a clientes de {{ implode(', ', $meta['countries']) }}.</p>
                                     </div>
                                     <div>
-                                        <label class="text-[11px] text-white/50 block mb-1">Precio anterior / tachado (opcional)</label>
+                                        <label class="text-xs font-bold text-slate-700 block mb-1.5">
+                                            Precio anterior / tachado (opcional)
+                                        </label>
                                         <div class="relative">
-                                            <span class="absolute left-3 top-2 text-xs text-white/40 font-bold">{{ $meta['symbol'] }}</span>
+                                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                                <span class="text-xs text-slate-500 font-bold select-none">{{ $meta['symbol'] }}</span>
+                                            </div>
                                             <input type="number" step="{{ $meta['decimals'] === 0 ? '1' : '0.01' }}" min="0"
                                                    name="compare_currency_prices[{{ $cur }}]"
                                                    x-model="currencies['{{ $cur }}'].compare"
                                                    @input="syncUsd()"
-                                                   class="input-field py-1.5 pl-8 text-xs text-white/70"
+                                                   class="w-full rounded-xl bg-white border-2 border-slate-300 focus:border-slate-500 focus:ring-3 focus:ring-slate-400/20 py-2 text-right font-bold text-slate-800 text-sm outline-none transition shadow-2xs"
+                                                   style="padding-left: 2.5rem !important; padding-right: 0.875rem !important;"
                                                    placeholder="0.00">
                                         </div>
+                                        <p class="text-[11px] text-slate-500 font-medium mt-1">Muestra una rebaja tachada si es mayor al precio de venta.</p>
                                     </div>
                                 </div>
                             </div>
@@ -624,6 +677,150 @@
                         <input type="file" name="gallery[]" multiple accept="image/*" class="input-field py-2">
                         <p class="text-[11px] text-slate-400 mt-1">Puedes seleccionar varias fotos a la vez (PNG, JPG, WEBP).</p>
                     </div>
+                </div>
+            </div>
+
+            {{-- Video Corto del Producto (Máx 4 MB) --}}
+            <div class="glass-card p-6 space-y-5" x-data="{
+                hasVideo: {{ $product->video_path ? 'true' : 'false' }},
+                removeVideo: false,
+                videoPreview: null,
+                showOnHome: {{ $product->show_video_on_home ? 'true' : 'false' }},
+                replaceId: '',
+                currentHomeSlots: {{ Js::from($homeVideoProducts->map(fn($p) => [
+                    'id' => $p->id,
+                    'name' => $p->name,
+                    'image' => $p->image_url,
+                    'price' => $p->price
+                ])) }},
+                get isHomeSlotsFull() {
+                    return this.currentHomeSlots.length >= 3;
+                },
+                handleVideoSelect(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        if (file.size > 4 * 1024 * 1024) {
+                            alert('⚠️ El video supera el límite de 4 MB permitido. Por favor comprímelo o elige otro archivo más corto.');
+                            e.target.value = '';
+                            this.videoPreview = null;
+                            return;
+                        }
+                        this.videoPreview = URL.createObjectURL(file);
+                        this.removeVideo = false;
+                        this.hasVideo = true;
+                    }
+                }
+            }">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-white font-bold text-sm uppercase tracking-wider opacity-60 flex items-center gap-2">
+                            <span>🎬 Video Corto del Producto</span>
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Demostración en video vertical o cuadrado (máx. 4 MB).</p>
+                    </div>
+                    <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        Máx 4 MB
+                    </span>
+                </div>
+
+                {{-- Video Actual o Preview --}}
+                <template x-if="videoPreview">
+                    <div class="space-y-2">
+                        <p class="input-label mb-1 text-xs text-emerald-400 font-bold flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span>Nuevo video seleccionado para subir:</span>
+                        </p>
+                        <div class="relative rounded-2xl overflow-hidden bg-black border border-white/10 aspect-[4/5] max-w-[200px] shadow-md">
+                            <video :src="videoPreview" class="w-full h-full object-cover" autoplay loop muted playsinline></video>
+                        </div>
+                    </div>
+                </template>
+
+                @if($product->video_path)
+                <div x-show="!videoPreview && !removeVideo" class="space-y-2">
+                    <p class="input-label mb-1 text-xs">Video actual guardado:</p>
+                    <div class="relative rounded-2xl overflow-hidden bg-black border border-white/10 aspect-[4/5] max-w-[200px] shadow-md group">
+                        <video src="{{ $product->video_url }}" class="w-full h-full object-cover" autoplay loop muted playsinline></video>
+                        <button type="button" @click="removeVideo = true; hasVideo = false; showOnHome = false;" 
+                                class="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-red-600/90 hover:bg-red-600 text-white text-xs font-bold shadow-md transition-all cursor-pointer">
+                            🗑️ Eliminar
+                        </button>
+                    </div>
+                </div>
+                @endif
+
+                <template x-if="removeVideo">
+                    <div class="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-300 flex items-center justify-between">
+                        <span>Se eliminará el video actual al guardar.</span>
+                        <button type="button" @click="removeVideo = false; hasVideo = true;" class="underline font-bold text-white hover:text-red-200">
+                            Deshacer
+                        </button>
+                    </div>
+                </template>
+                <input type="hidden" name="remove_video" :value="removeVideo ? '1' : '0'">
+
+                {{-- Input para subir video --}}
+                <div>
+                    <label class="input-label" x-text="hasVideo ? 'Reemplazar video actual' : 'Subir video (MP4 o WebM)'"></label>
+                    <input type="file" name="video" accept="video/mp4,video/webm" @change="handleVideoSelect($event)" class="input-field py-2 text-xs">
+                    <p class="text-[11px] text-slate-400 mt-1">Formato recomendado: MP4 vertical (9:16 o 4:5), 5 a 15 segundos.</p>
+                </div>
+
+                {{-- Configuración de Destacado en el Home (Máximo 3 videos) --}}
+                <div class="pt-4 border-t border-white/10 space-y-3" x-show="hasVideo || videoPreview">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-bold text-white block">Mostrar en el Home (Portada)</span>
+                            <span class="text-[11px] text-slate-400">Aparecerá en la sección de 3 videos después del Hero.</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="show_video_on_home" value="1" x-model="showOnHome" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#C8A68B]"></div>
+                        </label>
+                    </div>
+
+                    {{-- Reemplazo Intuitivo si los 3 cupos están ocupados --}}
+                    <div x-show="showOnHome && isHomeSlotsFull && !{{ $product->show_video_on_home ? 'true' : 'false' }}" 
+                         class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-3" style="display: none;">
+                        <div class="flex items-center gap-2 text-amber-300 text-xs font-bold">
+                            <span>⚠️</span>
+                            <span>Los 3 cupos de video del Home ya están ocupados</span>
+                        </div>
+                        <p class="text-[11px] text-slate-300 leading-snug">
+                            Para mostrar este producto, selecciona a cuál de los 3 productos actuales deseas reemplazar:
+                        </p>
+
+                        <div class="space-y-2">
+                            <template x-for="slot in currentHomeSlots" :key="slot.id">
+                                <label class="flex items-center justify-between p-2.5 rounded-xl border transition cursor-pointer"
+                                       :class="replaceId == slot.id ? 'bg-amber-500/20 border-amber-400 text-white ring-1 ring-amber-400' : 'bg-black/30 border-white/10 hover:border-white/30 text-slate-300'">
+                                    <div class="flex items-center gap-2.5">
+                                        <input type="radio" name="replace_home_video_id" :value="slot.id" x-model="replaceId" class="accent-amber-400 w-4 h-4">
+                                        <img :src="slot.image" class="w-10 h-10 rounded-lg object-cover bg-slate-800 border border-white/10">
+                                        <div>
+                                            <p class="text-xs font-bold line-clamp-1" x-text="slot.name"></p>
+                                            <p class="text-[10px] text-slate-400" x-text="'S/. ' + slot.price"></p>
+                                        </div>
+                                    </div>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-md"
+                                          :class="replaceId == slot.id ? 'bg-amber-400 text-stone-950' : 'bg-white/10 text-slate-400'">
+                                        Reemplazar
+                                    </span>
+                                </label>
+                            </template>
+                        </div>
+                        <p class="text-[10px] text-amber-300/80">
+                            * El producto que elijas dejará de mostrarse en el Home y este nuevo tomará su lugar.
+                        </p>
+                    </div>
+
+                    {{-- Indicador de cupo disponible --}}
+                    <template x-if="showOnHome && !isHomeSlotsFull">
+                        <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-300 flex items-center gap-2">
+                            <span>✓</span>
+                            <span>Cupo disponible en el Home (<span x-text="currentHomeSlots.length"></span> de 3 ocupados).</span>
+                        </div>
+                    </template>
                 </div>
             </div>
         </div>

@@ -81,11 +81,35 @@ class StoreController extends Controller
             $sections = $query->get();
         }
 
+        // Videos destacados para la portada (después del Hero)
+        // 1. Primero los seleccionados manualmente con show_video_on_home = true (máximo 3)
+        $homeVideoProducts = $store->activeProducts()
+            ->whereNotNull('video_path')
+            ->where('show_video_on_home', true)
+            ->where(fn($q) => $q->where('price', '>', 0)->orWhere('price_usd', '>', 0))
+            ->with(['categories', 'category'])
+            ->limit(3)
+            ->get();
+
+        // 2. Si hay menos de 3 fijados, completar aleatoriamente con otros productos con video
+        if ($homeVideoProducts->count() < 3) {
+            $needed = 3 - $homeVideoProducts->count();
+            $additional = $store->activeProducts()
+                ->whereNotNull('video_path')
+                ->whereNotIn('id', $homeVideoProducts->pluck('id'))
+                ->where(fn($q) => $q->where('price', '>', 0)->orWhere('price_usd', '>', 0))
+                ->with(['categories', 'category'])
+                ->inRandomOrder()
+                ->limit($needed)
+                ->get();
+            $homeVideoProducts = $homeVideoProducts->concat($additional);
+        }
+
         // Si está en modo de código a medida, buscar la vista del cliente
         if ($store->build_mode === 'custom_code') {
             $customView = "clientes_custom.{$store->slug}.index";
             if (\Illuminate\Support\Facades\View::exists($customView)) {
-                return view($customView, compact('store', 'featuredProducts', 'categories', 'galleryItems', 'allProducts'));
+                return view($customView, compact('store', 'featuredProducts', 'categories', 'galleryItems', 'allProducts', 'homeVideoProducts'));
             }
             abort(404, 'La vista personalizada para esta tienda aún no ha sido creada.');
         }
@@ -94,7 +118,7 @@ class StoreController extends Controller
         $template = $store->template_name;
 
         return view("templates.{$template}.store", compact(
-            'store', 'featuredProducts', 'categories', 'galleryItems', 'allProducts', 'sections'
+            'store', 'featuredProducts', 'categories', 'galleryItems', 'allProducts', 'sections', 'homeVideoProducts'
         ));
     }
 

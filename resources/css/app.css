@@ -203,6 +203,14 @@ body {
     box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
 }
 
+.input-with-prefix {
+    padding-left: 2.75rem !important;
+}
+
+.input-with-prefix-sm {
+    padding-left: 2.25rem !important;
+}
+
 .input-label {
     display: block;
     font-size: 0.85rem;

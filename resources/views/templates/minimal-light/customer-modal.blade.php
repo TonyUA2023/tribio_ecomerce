@@ -14,10 +14,11 @@
         errorMessage: '',
         successMessage: '',
         loginData: { email: '', password: '' },
-        registerData: { name: '', email: '', phone: '', password: '', address: '', city: '', state: '', type: 'casa' },
+        registerData: { name: '', email: '', phone: '', password: '', address: '', city: '', state: '', country: '{{ \App\Helpers\CurrencyHelper::currentCountry() }}', type: 'casa' },
         trackData: { order_number: '', email: '' },
         showAddressForm: false,
-        newAddress: { id: null, type: 'casa', address: '', city: '', state: '', country: 'PE', zipcode: '', reference: '', phone: '', is_default: false },
+        newAddress: { id: null, type: 'casa', address: '', city: '', state: '', country: '{{ \App\Helpers\CurrencyHelper::currentCountry() }}', zipcode: '', reference: '', phone: '', is_default: false },
+        fromCheckout: false,
 
         init() {
             this.checkSession();
@@ -28,13 +29,38 @@
                 } else if (!this.isLoggedIn) {
                     this.activeTab = 'login';
                 }
+                if (e.detail && e.detail.email) {
+                    this.loginData.email = e.detail.email;
+                    this.registerData.email = e.detail.email;
+                }
+                if (e.detail && e.detail.name) {
+                    this.registerData.name = e.detail.name;
+                }
+                if (e.detail && e.detail.phone) {
+                    this.registerData.phone = e.detail.phone;
+                }
+                if (e.detail && e.detail.address) {
+                    this.registerData.address = e.detail.address;
+                }
+                if (e.detail && e.detail.city) {
+                    this.registerData.city = e.detail.city;
+                }
+                if (e.detail && e.detail.state) {
+                    this.registerData.state = e.detail.state;
+                }
+                if (e.detail && e.detail.country) {
+                    this.registerData.country = e.detail.country;
+                }
+                if (e.detail && e.detail.fromCheckout) {
+                    this.fromCheckout = true;
+                }
                 if (this.isLoggedIn) {
                     this.loadOrders();
                     this.loadAddresses();
                 }
             });
-            window.openCustomerModal = (tab = null) => {
-                window.dispatchEvent(new CustomEvent('open-customer-modal', { detail: { tab } }));
+            window.openCustomerModal = (tab = null, extra = {}) => {
+                window.dispatchEvent(new CustomEvent('open-customer-modal', { detail: { tab, ...extra } }));
             };
         },
 
@@ -78,6 +104,14 @@
                     this.successMessage = data.message;
                     window.dispatchEvent(new CustomEvent('customer-authenticated', { detail: data }));
                     this.loadOrders();
+                    if (this.fromCheckout) {
+                        setTimeout(() => {
+                            this.isOpen = false;
+                            this.fromCheckout = false;
+                            const d = document.getElementById('cartDrawer');
+                            if (d) d.style.display = 'flex';
+                        }, 750);
+                    }
                 } else {
                     this.errorMessage = data.message || 'Error al iniciar sesión.';
                 }
@@ -107,6 +141,14 @@
                     this.successMessage = data.message;
                     window.dispatchEvent(new CustomEvent('customer-authenticated', { detail: data }));
                     this.loadOrders();
+                    if (this.fromCheckout) {
+                        setTimeout(() => {
+                            this.isOpen = false;
+                            this.fromCheckout = false;
+                            const d = document.getElementById('cartDrawer');
+                            if (d) d.style.display = 'flex';
+                        }, 750);
+                    }
                 } else {
                     let msg = data.message || 'Error en el registro.';
                     if (data.errors) {

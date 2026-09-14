@@ -55,6 +55,25 @@
              total += this.shippingCost;
              return total;
          },
+         openTribioPass(tab = 'register') {
+              const extra = {
+                  email: this.customer.email || '',
+                  name: this.customer.name || '',
+                  phone: this.customer.phone || '',
+                  address: this.customer.address || '',
+                  city: this.customer.city || '',
+                  state: this.customer.state || '',
+                  country: this.customer.country || '{{ \App\Helpers\CurrencyHelper::currentCountry() }}',
+                  fromCheckout: true
+              };
+              if (window.openCustomerModal) {
+                  window.openCustomerModal(tab, extra);
+              } else {
+                  window.dispatchEvent(new CustomEvent('open-customer-modal', {
+                      detail: { tab: tab, ...extra }
+                  }));
+              }
+          },
          toggleInlineLogin() {
              this.showInlineLogin = !this.showInlineLogin;
              if (this.showInlineLogin && !this.loginEmail && this.customer.email) {
@@ -163,7 +182,8 @@
              this.customer.state = addr.state || '';
              this.customer.zipcode = addr.zipcode || '';
              this.customer.address_type = addr.type || 'casa';
-             if (addr.country) this.customer.country = addr.country;
+             // El país siempre permanece bloqueado a la navegación activa de la tienda
+             this.customer.country = '{{ \App\Helpers\CurrencyHelper::currentCountry() }}';
              this.updateShipping();
          },
          selectNewAddress() {
@@ -173,6 +193,7 @@
              this.customer.state = '';
              this.customer.zipcode = '';
              this.customer.address_type = 'casa';
+             this.customer.country = '{{ \App\Helpers\CurrencyHelper::currentCountry() }}';
              this.updateShipping();
          },
          onEmailInput() {
@@ -201,10 +222,15 @@
             }, 450);
         },
          init() {
+             this.customer.country = '{{ \App\Helpers\CurrencyHelper::currentCountry() }}';
              this.updateShipping();
              this.checkCurrentCustomer();
          },
          submitOrder() {
+             if (!this.customerLoggedIn) {
+                 this.openTribioPass('register');
+                 return;
+             }
              if(!this.customer.name || !this.customer.phone || !this.customer.email) {
                  alert('Por favor completa los campos obligatorios (Nombre, Teléfono y Correo).');
                  return;
@@ -248,14 +274,20 @@
                 <div class="space-y-4">
                     {{-- Notice in Step 1 --}}
                     <template x-if="!customerLoggedIn">
-                        <div class="p-2.5 bg-amber-50/80 border border-amber-200/80 rounded-xl flex items-center justify-between text-xs text-stone-800">
+                        <div class="p-3 bg-amber-50/90 border border-amber-200 rounded-xl flex items-center justify-between text-xs text-stone-800">
                             <div class="flex items-center gap-2">
-                                <span>🔑</span>
-                                <span>¿Tienes cuenta Tribio Pass?</span>
+                                <span class="text-base">🔑</span>
+                                <span class="font-bold">Tribio Pass requerido para comprar</span>
                             </div>
-                            <button type="button" @click="checkoutStep = 2; showInlineLogin = true" class="font-black underline text-stone-900 hover:text-[#C8A68B] cursor-pointer">
-                                Iniciar sesión
-                            </button>
+                            <div class="flex items-center gap-1.5 font-bold">
+                                <button type="button" @click="openTribioPass('login')" class="underline text-stone-900 hover:text-[#C8A68B] cursor-pointer">
+                                    Ingresar
+                                </button>
+                                <span>/</span>
+                                <button type="button" @click="openTribioPass('register')" class="underline text-stone-900 hover:text-[#C8A68B] cursor-pointer">
+                                    Registrarse
+                                </button>
+                            </div>
                         </div>
                     </template>
                     <template x-if="customerLoggedIn">
@@ -297,51 +329,33 @@
             <template x-if="cartItems.length > 0 && checkoutStep === 2">
                 <div class="space-y-4 text-gray-700">
                     
-                    {{-- Banner 1: Invitación a Iniciar Sesión si no está autenticado --}}
+                    {{-- Banner 1: Tribio Pass Obligatorio si no está autenticado --}}
                     <template x-if="!customerLoggedIn">
-                        <div class="p-4 bg-amber-50/80 border border-amber-200/90 rounded-2xl shadow-xs">
-                            <div class="flex items-center justify-between gap-3">
-                                <div class="flex items-center gap-2.5">
-                                    <div class="w-8 h-8 rounded-xl bg-[#1A1A1A] text-white flex items-center justify-center text-sm shadow-xs flex-shrink-0">
-                                        🔑
+                        <div class="p-4 bg-gradient-to-br from-amber-50 via-orange-50/40 to-amber-50 border-2 border-amber-300/90 rounded-2xl shadow-xs">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-[#1A1A1A] text-white flex items-center justify-center text-lg shadow-xs flex-shrink-0">
+                                    🔑
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <p class="text-xs font-black text-stone-900 uppercase tracking-wider">Tribio Pass Obligatorio</p>
+                                        <span class="text-[10px] bg-amber-200/90 text-amber-900 font-extrabold px-2 py-0.5 rounded-full">Requerido</span>
                                     </div>
-                                    <div>
-                                        <p class="text-xs font-black text-stone-900 leading-tight">¿Tienes cuenta Tribio Pass?</p>
-                                        <p class="text-[11px] text-stone-600 mt-0.5">Ingresa tu correo y contraseña para cargar tus datos y direcciones automáticamente.</p>
+                                    <p class="text-[11px] text-stone-600 mt-1 leading-snug">
+                                        Para proceder al pago de tu pedido, debes iniciar sesión o crear tu cuenta gratuita en <strong>Tribio Pass</strong>.
+                                    </p>
+                                    <div class="mt-3 flex flex-wrap gap-2">
+                                        <button type="button" @click="openTribioPass('register')"
+                                                class="flex-1 min-w-[140px] py-2.5 px-3.5 rounded-xl bg-[#1A1A1A] hover:bg-[#C8A68B] text-white text-xs font-black transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer">
+                                            <span>✨</span>
+                                            <span>Crear Cuenta Tribio Pass</span>
+                                        </button>
+                                        <button type="button" @click="openTribioPass('login')"
+                                                class="flex-1 min-w-[120px] py-2.5 px-3 rounded-xl bg-white hover:bg-stone-100 text-stone-900 border border-stone-300 text-xs font-black transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer">
+                                            <span>🔑 Iniciar Sesión</span>
+                                        </button>
                                     </div>
                                 </div>
-                                <button type="button" @click="toggleInlineLogin()"
-                                        class="px-3 py-1.5 rounded-xl font-black text-xs transition cursor-pointer shadow-xs whitespace-nowrap"
-                                        :class="showInlineLogin ? 'bg-stone-200 text-stone-800' : 'bg-[#1A1A1A] text-white hover:bg-stone-800'">
-                                    <span x-text="showInlineLogin ? 'Cerrar' : 'Iniciar Sesión'"></span>
-                                </button>
-                            </div>
-
-                            {{-- Formulario inline de acceso rápido sin salir del carrito --}}
-                            <div x-show="showInlineLogin" x-transition class="mt-3.5 pt-3.5 border-t border-amber-200/90 space-y-2.5">
-                                <div>
-                                    <label class="block text-[11px] font-bold text-stone-700 mb-1">Correo Electrónico</label>
-                                    <input type="email" x-model="loginEmail" placeholder="tu@correo.com" autocomplete="email"
-                                           class="w-full bg-white border border-stone-300 rounded-xl px-3 py-2 text-xs focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none">
-                                </div>
-                                <div>
-                                    <label class="block text-[11px] font-bold text-stone-700 mb-1">Contraseña</label>
-                                    <input type="password" x-model="loginPassword" placeholder="Tu contraseña" autocomplete="current-password" @keydown.enter="quickLogin()"
-                                           class="w-full bg-white border border-stone-300 rounded-xl px-3 py-2 text-xs focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none">
-                                </div>
-
-                                <template x-if="loginError">
-                                    <div class="p-2 bg-rose-100 border border-rose-200 rounded-lg text-rose-800 text-[11px] font-bold flex items-center gap-1.5">
-                                        <span>⚠️</span>
-                                        <span x-text="loginError"></span>
-                                    </div>
-                                </template>
-
-                                <button type="button" @click="quickLogin()" :disabled="loggingIn"
-                                        class="w-full py-2.5 px-4 bg-[#1A1A1A] hover:bg-stone-800 disabled:bg-stone-400 text-white text-xs font-black rounded-xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer">
-                                    <span x-show="loggingIn">Verificando cuenta...</span>
-                                    <span x-show="!loggingIn">Ingresar y Cargar Mis Datos →</span>
-                                </button>
                             </div>
                         </div>
                     </template>
@@ -438,20 +452,25 @@
                             <template x-if="emailCheckStatus === 'exists' && !customerLoggedIn">
                                 <div class="mt-1.5 p-2 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-900 flex items-center justify-between">
                                     <span>👋 Ya tienes cuenta Tribio Pass.</span>
-                                    <button type="button" @click="toggleInlineLogin()" class="font-bold underline text-amber-950 hover:text-black">Ingresar contraseña</button>
+                                    <button type="button" @click="openTribioPass('login')" class="font-bold underline text-amber-950 hover:text-black cursor-pointer">Iniciar sesión</button>
                                 </div>
                             </template>
 
                             <template x-if="emailCheckStatus === 'admin_exists' && !customerLoggedIn">
                                 <div class="mt-1.5 p-2 bg-blue-50 border border-blue-200 rounded-lg text-[11px] text-blue-900">
-                                    <span>🏪 Correo de administrador. Puedes comprar como invitado o usar otro correo de cliente.</span>
+                                    <span>🏪 Correo de administrador. Usa una cuenta de cliente Tribio Pass para pagar.</span>
                                 </div>
                             </template>
 
                             <template x-if="emailCheckStatus === 'new' && !customerLoggedIn">
-                                <div class="mt-1.5 flex items-center gap-1.5 text-[11px] font-bold text-emerald-700">
-                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                    <span>✨ Cliente nuevo no registrado</span>
+                                <div class="mt-1.5 flex items-center justify-between text-[11px]">
+                                    <span class="font-bold text-emerald-700 flex items-center gap-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                        <span>✨ Cliente nuevo</span>
+                                    </span>
+                                    <button type="button" @click="openTribioPass('register')" class="text-[10px] font-bold text-[#C8A68B] hover:underline cursor-pointer">
+                                        Crear Tribio Pass →
+                                    </button>
                                 </div>
                             </template>
                         </div>
@@ -463,25 +482,38 @@
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1">País *</label>
-                            <select name="country" autocomplete="country" x-model="customer.country" @change="updateShipping" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none transition cursor-pointer">
-                                @php
-                                    $cartCountries = $store->getEnabledCountriesWithDetails();
-                                    if (empty($cartCountries)) {
-                                        $cartCountries = [
-                                            'PE' => \App\Helpers\CurrencyHelper::getCountryInfo('PE'),
-                                            'US' => \App\Helpers\CurrencyHelper::getCountryInfo('US')
-                                        ];
-                                    }
-                                @endphp
-                                @foreach($cartCountries as $code => $c)
-                                    <option value="{{ $code }}">{{ $c['flag'] }} {{ $c['name'] }}</option>
-                                @endforeach
-                            </select>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="block text-xs font-bold text-gray-700">País de Envío *</label>
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/80">
+                                    <svg class="w-2.5 h-2.5 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                    Fijado
+                                </span>
+                            </div>
+                            @php
+                                $checkoutCountryCode = \App\Helpers\CurrencyHelper::currentCountry();
+                                $checkoutCountryData = \App\Helpers\CurrencyHelper::getCountryInfo($checkoutCountryCode);
+                            @endphp
+                            <div class="w-full bg-stone-100/90 border border-stone-300 rounded-lg px-3 py-2 text-sm flex items-center justify-between select-none" title="País autoseleccionado y bloqueado según tu moneda">
+                                <div class="flex items-center gap-2 overflow-hidden">
+                                    <div class="w-6 h-4 rounded-xs overflow-hidden border border-stone-300 shadow-2xs flex-shrink-0 bg-white">
+                                        <img src="{{ $checkoutCountryData['flag_url'] ?? \App\Helpers\CurrencyHelper::flagUrl($checkoutCountryCode) }}" 
+                                             alt="{{ $checkoutCountryData['name'] ?? $checkoutCountryCode }}" 
+                                             class="w-full h-full object-cover">
+                                    </div>
+                                    <span class="font-bold text-gray-900 text-xs truncate">{{ $checkoutCountryData['name'] ?? $checkoutCountryCode }}</span>
+                                </div>
+                                <span class="text-[10px] text-gray-600 font-mono flex-shrink-0 bg-white px-1.5 py-0.5 rounded border border-stone-200 font-bold">
+                                    {{ $checkoutCountryData['currency'] ?? '' }}
+                                </span>
+                            </div>
+                            <input type="hidden" name="country" :value="customer.country" value="{{ $checkoutCountryCode }}">
+                            <p class="text-[10px] text-gray-400 mt-1 leading-tight">
+                                🔒 Autoseleccionado según tu moneda y tienda.
+                            </p>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1">Estado / Departamento</label>
-                            <input type="text" name="address-level1" autocomplete="address-level1" x-model="customer.state" @blur="updateShipping" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none transition">
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Estado / Departamento</label>
+                            <input type="text" name="address-level1" autocomplete="address-level1" x-model="customer.state" @blur="updateShipping" placeholder="Ej: Lima, CDMX, BsAs..." class="w-full bg-white border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none transition">
                         </div>
                     </div>
 
@@ -514,21 +546,36 @@
                         </div>
                     </div>
 
-                    {{-- Option: Crear cuenta para futuras compras --}}
+                    {{-- Bloque Obligatorio: Crear Cuenta o Iniciar Sesión en Tribio Pass --}}
                     <template x-if="!customerLoggedIn">
-                        <div class="p-3 bg-stone-50 rounded-xl border border-stone-200 mt-2">
-                            <label class="flex items-start gap-2.5 cursor-pointer">
-                                <input type="checkbox" x-model="customer.create_account" class="mt-0.5 accent-[#1A1A1A] w-4 h-4 rounded">
-                                <div class="flex-1">
-                                    <p class="font-bold text-xs text-gray-900">Crear cuenta para futuras compras</p>
-                                    <p class="text-[11px] text-gray-500 mt-0.5">Guarda tus direcciones y rastrea tus pedidos en todas las tiendas Tribio con una sola cuenta.</p>
+                        <div class="p-4 bg-gradient-to-br from-[#1A1A1A] via-stone-900 to-[#1A1A1A] text-white rounded-2xl shadow-md mt-3 border border-stone-700/70 relative overflow-hidden">
+                            <div class="absolute -right-3 -bottom-3 opacity-10 pointer-events-none text-7xl select-none">
+                                🔑
+                            </div>
+                            <div class="relative z-10 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-6 h-6 rounded-full bg-[#C8A68B]/20 text-[#C8A68B] flex items-center justify-center text-xs font-black">✓</span>
+                                        <span class="text-xs font-black uppercase tracking-wider text-[#C8A68B]">Tribio Pass Requerido</span>
+                                    </div>
+                                    <span class="text-[10px] bg-amber-400 text-stone-950 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Obligatorio</span>
                                 </div>
-                            </label>
-                            
-                            <div x-show="customer.create_account" class="mt-2.5 pt-2.5 border-t border-stone-200/80">
-                                <label class="block text-[11px] font-bold text-gray-600 mb-1">Crea tu contraseña *</label>
-                                <input type="password" name="new_password" autocomplete="new-password" x-model="customer.password" placeholder="Mínimo 6 caracteres" minlength="6"
-                                       class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs focus:border-[#C8A68B] outline-none">
+                                <p class="text-xs text-stone-300 leading-snug">
+                                    Para proceder al pago debes contar con tu cuenta universal <strong>Tribio Pass</strong>. Si no tienes cuenta, créala en segundos.
+                                </p>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+                                    <button type="button" @click="openTribioPass('register')"
+                                            class="w-full py-2.5 px-3 bg-[#C8A68B] hover:bg-[#b08e73] text-stone-950 font-black rounded-xl text-xs transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
+                                        <span>✨ Crear Cuenta</span>
+                                    </button>
+                                    <button type="button" @click="openTribioPass('login')"
+                                            class="w-full py-2.5 px-3 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                        <span>🔑 Iniciar Sesión</span>
+                                    </button>
+                                </div>
+                                <p class="text-[10px] text-stone-400 text-center">
+                                    🔒 Válido para todas las tiendas y marcas de la red Tribio.
+                                </p>
                             </div>
                         </div>
                     </template>
@@ -633,9 +680,16 @@
                         <button @click="checkoutStep = 1" class="px-4 py-3 bg-white border border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition">
                             ←
                         </button>
-                        <button id="btnSubmitOrder" @click="submitOrder" class="flex-1 py-3 bg-[#1A1A1A] hover:bg-[#C8A68B] rounded-xl font-bold text-white transition-colors shadow-md text-center flex items-center justify-center gap-2">
-                            <span x-text="paymentMethod === 'mercadopago' ? '{{ \App\Helpers\TranslationHelper::isEn() ? '💳 Pay with Card' : '💳 Pagar con Tarjeta' }}' : '{{ \App\Helpers\TranslationHelper::isEn() ? 'Confirm Order' : 'Confirmar Pedido' }}'"></span>
-                        </button>
+                        <template x-if="!customerLoggedIn">
+                            <button type="button" @click="openTribioPass('register')" class="flex-1 py-3 bg-[#1A1A1A] hover:bg-[#C8A68B] rounded-xl font-black text-white transition-all shadow-md text-center flex items-center justify-center gap-2 cursor-pointer">
+                                <span>🔑 Inicia Sesión o Crea Cuenta para Pagar</span>
+                            </button>
+                        </template>
+                        <template x-if="customerLoggedIn">
+                            <button id="btnSubmitOrder" @click="submitOrder" class="flex-1 py-3 bg-[#1A1A1A] hover:bg-[#C8A68B] rounded-xl font-bold text-white transition-colors shadow-md text-center flex items-center justify-center gap-2">
+                                <span x-text="paymentMethod === 'mercadopago' ? '{{ \App\Helpers\TranslationHelper::isEn() ? '💳 Pay with Card' : '💳 Pagar con Tarjeta' }}' : '{{ \App\Helpers\TranslationHelper::isEn() ? 'Confirm Order' : 'Confirmar Pedido' }}'"></span>
+                            </button>
+                        </template>
                     </div>
                 </template>
             </div>

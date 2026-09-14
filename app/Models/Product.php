@@ -15,7 +15,7 @@ class Product extends Model
         'price', 'compare_price', 'price_usd', 'compare_price_usd', 'cost_price',
         'currency_prices', 'compare_currency_prices',
         'stock', 'track_stock', 'allow_backorder', 'low_stock_alert', 'unit',
-        'image_path', 'gallery_images',
+        'image_path', 'gallery_images', 'video_path', 'show_video_on_home',
         'is_active', 'is_featured', 'is_new', 'is_digital',
         'has_variants', 'variant_options',
         'is_composite', 'composite_type', 'is_sold', 'sold_at',
@@ -24,13 +24,14 @@ class Product extends Model
     ];
 
     protected $casts = [
-        'gallery_images'  => 'array',
-        'tags'            => 'array',
-        'variant_options' => 'array',
-        'currency_prices' => 'array',
+        'gallery_images'      => 'array',
+        'tags'                => 'array',
+        'variant_options'     => 'array',
+        'currency_prices'     => 'array',
         'compare_currency_prices' => 'array',
-        'has_variants'    => 'boolean',
-        'price'           => 'decimal:2',
+        'has_variants'        => 'boolean',
+        'show_video_on_home'  => 'boolean',
+        'price'               => 'decimal:2',
         'compare_price'   => 'decimal:2',
         'price_usd'       => 'decimal:2',
         'compare_price_usd' => 'decimal:2',
@@ -66,12 +67,24 @@ class Product extends Model
         });
     }
 
+    public function scopeWithVideo($query)
+    {
+        return $query->whereNotNull('video_path');
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────
     public function getImageUrlAttribute(): string
     {
         return $this->image_path
             ? asset('storage/' . $this->image_path)
             : asset('images/default-product.jpg');
+    }
+
+    public function getVideoUrlAttribute(): ?string
+    {
+        return $this->video_path
+            ? asset('storage/' . $this->video_path)
+            : null;
     }
 
     public function getGalleryUrlsAttribute(): array

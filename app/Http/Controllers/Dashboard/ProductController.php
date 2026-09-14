@@ -39,8 +39,12 @@ class ProductController extends Controller
             ->paginate(20);
 
         $categories = $store->categories;
+        $homeVideoProducts = $store->products()
+            ->whereNotNull('video_path')
+            ->where('show_video_on_home', true)
+            ->get();
 
-        return view('dashboard.products.index', compact('store', 'products', 'categories'));
+        return view('dashboard.products.index', compact('store', 'products', 'categories', 'homeVideoProducts'));
     }
 
     public function create()
@@ -48,7 +52,12 @@ class ProductController extends Controller
         $store      = $this->getStore();
         $categories = $store->categories;
         $brands     = $store->brands;
-        return view('dashboard.products.create', compact('store', 'categories', 'brands'));
+        $homeVideoProducts = $store->products()
+            ->whereNotNull('video_path')
+            ->where('show_video_on_home', true)
+            ->get();
+
+        return view('dashboard.products.create', compact('store', 'categories', 'brands', 'homeVideoProducts'));
     }
 
     public function store(Request $request)
@@ -82,7 +91,13 @@ class ProductController extends Controller
             'is_new'            => 'nullable|boolean',
             'image'             => 'nullable|image|mimes:png,jpg,jpeg,webp|max:3072',
             'gallery.*'         => 'nullable|image|mimes:png,jpg,jpeg,webp|max:3072',
+            'video'             => 'nullable|file|mimes:mp4,webm|max:4096',
+            'show_video_on_home'=> 'nullable|boolean',
+            'replace_home_video_id' => 'nullable|integer|exists:products,id',
             'tags'              => 'nullable|string',
+        ], [
+            'video.max'   => 'El video del producto no debe superar los 4 MB.',
+            'video.mimes' => 'El formato del video debe ser MP4 o WebM.',
         ]);
 
         // Procesar precios multi-moneda personalizados
@@ -153,6 +168,32 @@ class ProductController extends Controller
                 $galleryPaths[] = $img->store("stores/{$store->id}/gallery-products", 'public');
             }
             $data['gallery_images'] = $galleryPaths;
+        }
+
+        // Gestión de Video Corto (Máx 4 MB)
+        if ($request->hasFile('video')) {
+            $data['video_path'] = $request->file('video')->store("stores/{$store->id}/videos", 'public');
+        }
+
+        $showOnHome = $request->boolean('show_video_on_home') && !empty($data['video_path']);
+        $data['show_video_on_home'] = $showOnHome;
+
+        if ($showOnHome) {
+            $replaceId = $request->input('replace_home_video_id');
+            if ($replaceId) {
+                $store->products()->where('id', $replaceId)->update(['show_video_on_home' => false]);
+            }
+
+            $currentActiveCount = $store->products()->where('show_video_on_home', true)->count();
+            if ($currentActiveCount >= 3) {
+                $oldest = $store->products()
+                    ->where('show_video_on_home', true)
+                    ->orderBy('updated_at', 'asc')
+                    ->first();
+                if ($oldest) {
+                    $oldest->update(['show_video_on_home' => false]);
+                }
+            }
         }
 
         // Resolución de categorías múltiples y principal
@@ -241,7 +282,13 @@ class ProductController extends Controller
         $brands     = $store->brands;
         $product->load(['variants', 'categories']);
 
-        return view('dashboard.products.edit', compact('store', 'product', 'categories', 'brands'));
+        $homeVideoProducts = $store->products()
+            ->where('id', '!=', $product->id)
+            ->whereNotNull('video_path')
+            ->where('show_video_on_home', true)
+            ->get();
+
+        return view('dashboard.products.edit', compact('store', 'product', 'categories', 'brands', 'homeVideoProducts'));
     }
 
     public function update(Request $request, Product $product)
@@ -277,7 +324,14 @@ class ProductController extends Controller
             'image'             => 'nullable|image|mimes:png,jpg,jpeg,webp|max:3072',
             'gallery.*'         => 'nullable|image|mimes:png,jpg,jpeg,webp|max:3072',
             'remove_gallery'    => 'nullable|array',
+            'video'             => 'nullable|file|mimes:mp4,webm|max:4096',
+            'show_video_on_home'=> 'nullable|boolean',
+            'replace_home_video_id' => 'nullable|integer|exists:products,id',
+            'remove_video'      => 'nullable|boolean',
             'tags'              => 'nullable|string',
+        ], [
+            'video.max'   => 'El video del producto no debe superar los 4 MB.',
+            'video.mimes' => 'El formato del video debe ser MP4 o WebM.',
         ]);
 
         // Procesar precios multi-moneda personalizados
@@ -371,6 +425,43 @@ class ProductController extends Controller
 
         $data['gallery_images'] = array_values($currentGallery);
 
+        // Gestión de Video Corto (Máx 4 MB)
+        if ($request->hasFile('video')) {
+            if ($product->video_path) Storage::disk('public')->delete($product->video_path);
+            $data['video_path'] = $request->file('video')->store("stores/{$store->id}/videos", 'public');
+        } elseif ($request->boolean('remove_video')) {
+            if ($product->video_path) Storage::disk('public')->delete($product->video_path);
+            $data['video_path'] = null;
+            $data['show_video_on_home'] = false;
+        }
+
+        $hasVideo = !empty($data['video_path']) || (!empty($product->video_path) && !$request->boolean('remove_video'));
+        $showOnHome = $request->boolean('show_video_on_home') && $hasVideo;
+        $data['show_video_on_home'] = $showOnHome;
+
+        if ($showOnHome) {
+            $replaceId = $request->input('replace_home_video_id');
+            if ($replaceId) {
+                $store->products()->where('id', $replaceId)->where('id', '!=', $product->id)->update(['show_video_on_home' => false]);
+            }
+
+            $currentActiveCount = $store->products()
+                ->where('show_video_on_home', true)
+                ->where('id', '!=', $product->id)
+                ->count();
+
+            if ($currentActiveCount >= 3) {
+                $oldest = $store->products()
+                    ->where('show_video_on_home', true)
+                    ->where('id', '!=', $product->id)
+                    ->orderBy('updated_at', 'asc')
+                    ->first();
+                if ($oldest) {
+                    $oldest->update(['show_video_on_home' => false]);
+                }
+            }
+        }
+
         // Resolución de categorías múltiples y principal
         $categoryIds = $request->input('categories', []);
         if (is_string($categoryIds)) {
@@ -447,6 +538,7 @@ class ProductController extends Controller
         abort_if($product->store_id !== $store->id, 403);
 
         if ($product->image_path) Storage::disk('public')->delete($product->image_path);
+        if ($product->video_path) Storage::disk('public')->delete($product->video_path);
         if (!empty($product->gallery_images) && is_array($product->gallery_images)) {
             foreach ($product->gallery_images as $img) {
                 Storage::disk('public')->delete($img);
@@ -455,5 +547,39 @@ class ProductController extends Controller
         $product->delete();
 
         return back()->with('success', 'Producto eliminado.');
+    }
+
+    public function toggleHomeVideo(Request $request, Product $product)
+    {
+        $store = $this->getStore();
+        abort_if($product->store_id !== $store->id, 403);
+
+        if (!$product->video_path) {
+            return back()->with('error', 'El producto no tiene un video subido.');
+        }
+
+        if ($product->show_video_on_home) {
+            $product->update(['show_video_on_home' => false]);
+            return back()->with('success', "Se quitó '{$product->name}' de los videos del Home.");
+        }
+
+        $activeCount = $store->products()
+            ->where('show_video_on_home', true)
+            ->where('id', '!=', $product->id)
+            ->count();
+
+        if ($activeCount >= 3) {
+            $oldest = $store->products()
+                ->where('show_video_on_home', true)
+                ->where('id', '!=', $product->id)
+                ->orderBy('updated_at', 'asc')
+                ->first();
+            if ($oldest) {
+                $oldest->update(['show_video_on_home' => false]);
+            }
+        }
+
+        $product->update(['show_video_on_home' => true]);
+        return back()->with('success', "Se asignó '{$product->name}' a los videos destacados del Home.");
     }
 }

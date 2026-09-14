@@ -20,14 +20,14 @@
 
 <!-- Header Component -->
 <header class="bg-[#FDF8EF] sticky top-0 z-50 border-b border-gray-200/50 shadow-sm" x-data="{ mobileMenuOpen: false, searchOpen: false }">
-    <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12 py-4 md:py-5">
+    <div class="max-w-screen-2xl mx-auto px-3 sm:px-6 lg:px-12 py-3 sm:py-4 md:py-5">
         <!-- Top Row -->
         <div class="flex justify-between items-center">
             
             <!-- Left: Settings (Language & Currency) -->
-            <div class="flex-1 flex items-center space-x-3">
+            <div class="flex-1 flex items-center gap-1 sm:gap-2.5 min-w-0">
                 @if($store->is_multilanguage_enabled)
-                <div class="relative" x-data="{ 
+                <div class="relative shrink-0" x-data="{ 
                         langOpen: false, 
                         currentLang: '{{ strtoupper($currentLang) }}',
                         switchLanguage(lang) {
@@ -64,10 +64,10 @@
                         }
                     }">
                     <button @click="langOpen = !langOpen" @click.away="langOpen = false" 
-                            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/70 hover:bg-white text-[#1A1A1A] hover:text-[#C8A68B] text-xs font-bold tracking-wider transition border border-stone-200/80 shadow-xs">
+                            class="flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-full bg-white/80 hover:bg-white text-[#1A1A1A] hover:text-[#C8A68B] text-[11px] sm:text-xs font-bold tracking-wider transition border border-stone-200/80 shadow-2xs whitespace-nowrap cursor-pointer">
                         <span class="text-xs">🌐</span>
                         <span x-text="currentLang"></span>
-                        <svg class="w-3 h-3 text-gray-500 transition-transform duration-200" :class="langOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <svg class="w-2.5 h-2.5 text-gray-500 transition-transform duration-200" :class="langOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </button>
                     <div x-show="langOpen" style="display: none;" 
                          x-transition:enter="transition ease-out duration-150"
@@ -91,7 +91,7 @@
                 @endif
 
                 <!-- Country & Currency Selector -->
-                <div class="relative" x-data="{ 
+                <div class="relative shrink-0" x-data="{ 
                         currOpen: false, 
                         currentCountry: '{{ $currentCountry }}',
                         currentCurrency: '{{ $currentCurrency }}',
@@ -107,23 +107,27 @@
                         }
                     }">
                     <button @click="currOpen = !currOpen" @click.away="currOpen = false" 
-                            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/70 hover:bg-white text-[#1A1A1A] hover:text-[#C8A68B] text-xs font-bold tracking-wider transition border border-stone-200/80 shadow-xs cursor-pointer"
+                            class="flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-full bg-white/80 hover:bg-white text-[#1A1A1A] hover:text-[#C8A68B] text-[11px] sm:text-xs font-bold tracking-wider transition border border-stone-200/80 shadow-2xs cursor-pointer whitespace-nowrap flex-nowrap shrink-0"
                             title="{{ $isEn ? 'Select country / currency' : 'Seleccionar país / moneda' }}">
-                        <span class="text-sm">{{ $currentCountryInfo['flag'] ?? '🌐' }}</span>
-                        <span>{{ $currentCurrency }} ({{ \App\Helpers\CurrencyHelper::symbol($currentCurrency) }})</span>
-                        <svg class="w-3 h-3 text-gray-500 transition-transform duration-200" :class="currOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <img src="{{ $currentCountryInfo['flag_url'] ?? \App\Helpers\CurrencyHelper::flagUrl($currentCountry) }}" 
+                             alt="{{ $currentCountryInfo['name'] ?? '' }}" 
+                             class="w-4 h-3 object-cover rounded-xs border border-gray-300 shadow-2xs inline-block flex-shrink-0" />
+                        <span class="whitespace-nowrap">{{ $currentCurrency }}<span class="hidden sm:inline"> ({{ \App\Helpers\CurrencyHelper::symbol($currentCurrency) }})</span></span>
+                        <svg class="w-2.5 h-2.5 text-gray-500 transition-transform duration-200 flex-shrink-0" :class="currOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </button>
                     <div x-show="currOpen" style="display: none;" 
                          x-transition:enter="transition ease-out duration-150"
                          x-transition:enter-start="opacity-0 scale-95"
                          x-transition:enter-end="opacity-100 scale-100"
-                         class="absolute left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-50 overflow-hidden">
+                         class="absolute left-0 mt-2 w-52 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-50 overflow-hidden">
                         @foreach($headerCountries as $hCode => $hData)
                             <button type="button" @click="switchCountry('{{ $hCode }}', '{{ $hData['currency'] }}')" 
                                     class="w-full text-left px-3 py-2 text-xs font-semibold hover:bg-stone-50 flex items-center justify-between transition cursor-pointer" 
                                     :class="currentCountry === '{{ $hCode }}' ? 'text-[#C8A68B] font-bold bg-[#FDF8EF]/50' : 'text-gray-700'">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-base">{{ $hData['flag'] }}</span>
+                                    <img src="{{ $hData['flag_url'] ?? \App\Helpers\CurrencyHelper::flagUrl($hCode) }}" 
+                                         alt="{{ $hData['name'] }}" 
+                                         class="w-4 h-3 object-cover rounded-xs border border-stone-200 shadow-2xs inline-block flex-shrink-0" />
                                     <span>{{ $hData['name'] }}</span>
                                 </div>
                                 <div class="flex items-center gap-1.5">
@@ -137,13 +141,13 @@
             </div>
 
             <!-- Center: Logo -->
-            <div class="flex-shrink-0 flex items-center justify-center">
-                <a href="{{ route('store.show', $store->slug) }}" class="pointer-events-auto flex items-center gap-2.5 group">
+            <div class="flex-shrink-0 flex items-center justify-center px-1 sm:px-4">
+                <a href="{{ route('store.show', $store->slug) }}" class="pointer-events-auto flex items-center gap-2 group">
                     @if($store->logo_path)
-                        <img class="h-10 md:h-13 w-auto object-contain transition-transform duration-200 group-hover:scale-105" src="{{ $store->logo_url }}" alt="{{ $store->name }}">
+                        <img class="h-8 sm:h-10 md:h-13 w-auto object-contain transition-transform duration-200 group-hover:scale-105" src="{{ $store->logo_url }}" alt="{{ $store->name }}">
                     @else
                         <div class="flex flex-col items-center">
-                            <span class="font-bold text-2xl md:text-4xl tracking-tight text-[#1A1A1A] group-hover:text-[#C8A68B] transition-colors font-brand leading-none" style="font-family: 'Fredoka', 'Quicksand', sans-serif;">{{ $store->name }}</span>
+                            <span class="font-bold text-xl sm:text-2xl md:text-4xl tracking-tight text-[#1A1A1A] group-hover:text-[#C8A68B] transition-colors font-brand leading-none" style="font-family: 'Fredoka', 'Quicksand', sans-serif;">{{ $store->name }}</span>
                             <span class="text-[8px] md:text-[9px] tracking-[0.22em] text-[#C8A68B] uppercase font-bold mt-1 hidden sm:block">Tu vida, más fácil</span>
                         </div>
                     @endif
@@ -151,31 +155,31 @@
             </div>
 
             <!-- Right: Icons -->
-            <div class="flex-1 flex items-center justify-end space-x-3 md:space-x-5">
-                <!-- Tribio Pass / Customer Portal -->
+            <div class="flex-1 flex items-center justify-end space-x-2 sm:space-x-3 md:space-x-5">
+                <!-- Tribio Pass / Customer Portal (Desktop only) -->
                 <button @click="$dispatch('open-customer-modal')" 
                         class="text-[#1A1A1A] hover:text-[#C8A68B] p-2 rounded-full hover:bg-white/60 transition hidden md:flex items-center gap-1.5" 
                         title="{{ $isEn ? 'My Account / My Orders' : 'Mi Cuenta / Mis Pedidos' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                 </button>
 
-                <!-- Search -->
+                <!-- Search (Desktop only; on mobile it is in the toggle menu) -->
                 <button @click="searchOpen = true" 
-                        class="text-[#1A1A1A] hover:text-[#C8A68B] p-2 rounded-full hover:bg-white/60 transition"
+                        class="text-[#1A1A1A] hover:text-[#C8A68B] p-2 rounded-full hover:bg-white/60 transition hidden md:flex items-center justify-center" 
                         title="{{ $isEn ? 'Search' : 'Buscar' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </button>
 
                 <!-- Cart Drawer Trigger -->
                 <button onclick="document.getElementById('cartDrawer').style.display='flex'" 
-                        class="text-[#1A1A1A] hover:text-[#C8A68B] p-2 rounded-full hover:bg-white/60 transition relative"
+                        class="text-[#1A1A1A] hover:text-[#C8A68B] p-2 rounded-full hover:bg-white/60 transition relative" 
                         title="{{ $isEn ? 'Cart' : 'Carrito' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                     <span data-cart-count class="absolute -top-0.5 -right-0.5 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-xs">0</span>
                 </button>
                 
-                <!-- Mobile Hamburger -->
-                <button class="md:hidden text-[#1A1A1A] p-2 rounded-lg hover:bg-white/60" @click="mobileMenuOpen = !mobileMenuOpen">
+                <!-- Mobile Hamburger Toggle -->
+                <button class="md:hidden text-[#1A1A1A] p-2 rounded-lg hover:bg-white/60 transition" @click="mobileMenuOpen = !mobileMenuOpen" title="Menú">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                 </button>
             </div>
@@ -215,8 +219,18 @@
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0 -translate-y-2"
          x-transition:enter-end="opacity-100 translate-y-0">
-        <div class="px-5 pt-3 pb-5 space-y-2 bg-white border-t border-gray-100 shadow-xl font-brand">
+        <div class="px-5 pt-3 pb-5 space-y-2.5 bg-white border-t border-gray-100 shadow-xl font-brand">
             
+            <!-- Mobile Search Bar (Moved into Toggle Menu per user request) -->
+            <form action="{{ route('store.catalog', $store->slug) }}" method="GET" class="relative pb-1">
+                <input type="text" name="search" 
+                       placeholder="{{ $isEn ? 'Search products, brands...' : 'Buscar productos, marcas...' }}" 
+                       class="w-full pl-10 pr-4 py-2.5 bg-[#FDF8EF] border border-stone-200/80 rounded-xl text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] transition shadow-2xs">
+                <button type="submit" class="absolute left-3 top-2.5 text-gray-400 hover:text-[#C8A68B]" title="Buscar">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </button>
+            </form>
+
             <!-- Tribio Account Button -->
             <button @click="$dispatch('open-customer-modal'); mobileMenuOpen = false" 
                     class="w-full text-left px-3.5 py-2.5 rounded-xl bg-[#FDF8EF] text-sm font-bold text-[#1A1A1A] hover:text-[#C8A68B] flex items-center justify-between border border-stone-200/60 mb-2">

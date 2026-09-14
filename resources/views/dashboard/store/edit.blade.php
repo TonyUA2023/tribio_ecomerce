@@ -182,17 +182,26 @@
                     </h4>
 
                     {{-- Tarifa Única Perú --}}
-                    <div class="p-4 rounded-xl bg-white/3 border border-white/10">
-                        <div class="flex items-center justify-between mb-1">
-                            <label class="text-xs font-bold text-white flex items-center gap-2">
-                                <span>🇵🇪</span> Envío a todo el Perú (Tarifa Única Nacional)
-                            </label>
-                            <span class="text-[10px] text-white/40 font-mono">Soles (PEN)</span>
+                    <div class="p-4 rounded-xl bg-white/3 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <div class="flex items-center gap-2.5 mb-1">
+                                <span class="text-2xl">🇵🇪</span>
+                                <div>
+                                    <span class="text-xs font-bold text-white block">Envío a todo el Perú (Tarifa Única Nacional)</span>
+                                    <span class="text-[10px] text-white/40 block font-mono">Moneda: Soles (PEN - S/)</span>
+                                </div>
+                            </div>
+                            <p class="text-[11px] text-white/50">Aplica a cualquier departamento de Perú sin tener que configurar uno por uno.</p>
                         </div>
-                        <p class="text-[11px] text-white/50 mb-3">Aplica a cualquier departamento de Perú sin tener que configurar uno por uno.</p>
-                        <div class="relative">
-                            <span class="absolute left-3.5 top-2.5 text-xs text-tribio-cyan font-bold">S/</span>
-                            <input type="number" step="0.01" min="0" name="national_shipping_cost" class="input-field pl-9 font-semibold" value="{{ old('national_shipping_cost', $store?->national_shipping_cost ?? '0.00') }}" placeholder="15.00">
+                        <div class="w-full sm:w-44 flex-shrink-0 relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                <span class="text-xs text-tribio-cyan font-bold select-none">S/</span>
+                            </div>
+                            <input type="number" step="0.01" min="0" name="national_shipping_cost" 
+                                   class="input-field py-2 text-right font-semibold text-sm" 
+                                   style="padding-left: 2.75rem !important; padding-right: 0.875rem !important;"
+                                   value="{{ old('national_shipping_cost', $store?->national_shipping_cost ?? '0.00') }}" 
+                                   placeholder="15.00">
                         </div>
                     </div>
 
@@ -210,12 +219,15 @@
                                                 <span class="text-[10px] text-white/40 block font-mono">Moneda: {{ $country['currency'] }} ({{ $country['symbol'] }})</span>
                                             </div>
                                         </div>
-                                        <div class="w-36 relative">
-                                            <span class="absolute left-3 top-2.5 text-xs text-tribio-cyan font-bold">{{ $country['symbol'] }}</span>
+                                        <div class="w-36 relative flex-shrink-0">
+                                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <span class="text-xs text-tribio-cyan font-bold select-none">{{ $country['symbol'] }}</span>
+                                            </div>
                                             <input type="number" step="0.01" min="0" 
                                                    name="country_shipping_costs[{{ $code }}]" 
                                                    value="{{ old('country_shipping_costs.' . $code, $store?->country_shipping_costs[$code] ?? '') }}" 
-                                                   class="input-field py-1.5 pl-8 text-right font-semibold text-xs" 
+                                                   class="input-field py-1.5 text-right font-semibold text-xs" 
+                                                   style="padding-left: 2rem !important; padding-right: 0.75rem !important;"
                                                    placeholder="0.00">
                                         </div>
                                     </div>

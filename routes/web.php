@@ -76,6 +76,7 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
 
     // Productos CRUD
     Route::resource('productos', ProductController::class)->parameters(['productos' => 'product']);
+    Route::post('/productos/{product}/toggle-home-video', [ProductController::class, 'toggleHomeVideo'])->name('productos.toggle-home-video');
 
     // Categorías
     Route::resource('categorias', CategoryController::class)->parameters(['categorias' => 'category']);

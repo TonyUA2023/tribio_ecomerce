@@ -16,6 +16,7 @@ class CurrencyHelper
                 'currency' => 'PEN',
                 'symbol'   => 'S/',
                 'flag'     => '🇵🇪',
+                'flag_url' => '/images/flags/pe.svg',
                 'decimals' => 2,
             ],
             'US' => [
@@ -24,6 +25,7 @@ class CurrencyHelper
                 'currency' => 'USD',
                 'symbol'   => '$',
                 'flag'     => '🇺🇸',
+                'flag_url' => '/images/flags/us.svg',
                 'decimals' => 2,
             ],
             'ES' => [
@@ -32,6 +34,7 @@ class CurrencyHelper
                 'currency' => 'EUR',
                 'symbol'   => '€',
                 'flag'     => '🇪🇸',
+                'flag_url' => '/images/flags/es.svg',
                 'decimals' => 2,
             ],
             'MX' => [
@@ -40,6 +43,7 @@ class CurrencyHelper
                 'currency' => 'MXN',
                 'symbol'   => '$',
                 'flag'     => '🇲🇽',
+                'flag_url' => '/images/flags/mx.svg',
                 'decimals' => 2,
             ],
             'CO' => [
@@ -48,6 +52,7 @@ class CurrencyHelper
                 'currency' => 'COP',
                 'symbol'   => '$',
                 'flag'     => '🇨🇴',
+                'flag_url' => '/images/flags/co.svg',
                 'decimals' => 0,
             ],
             'EC' => [
@@ -56,6 +61,7 @@ class CurrencyHelper
                 'currency' => 'USD',
                 'symbol'   => '$',
                 'flag'     => '🇪🇨',
+                'flag_url' => '/images/flags/ec.svg',
                 'decimals' => 2,
             ],
             'CL' => [
@@ -64,6 +70,7 @@ class CurrencyHelper
                 'currency' => 'CLP',
                 'symbol'   => '$',
                 'flag'     => '🇨🇱',
+                'flag_url' => '/images/flags/cl.svg',
                 'decimals' => 0,
             ],
             'AR' => [
@@ -72,6 +79,7 @@ class CurrencyHelper
                 'currency' => 'ARS',
                 'symbol'   => '$',
                 'flag'     => '🇦🇷',
+                'flag_url' => '/images/flags/ar.svg',
                 'decimals' => 0,
             ],
         ];
@@ -196,5 +204,17 @@ class CurrencyHelper
         $currency = $curr ? strtoupper(trim($curr)) : static::currentCurrency();
         $decimals = in_array($currency, ['COP', 'CLP', 'ARS']) ? 0 : 2;
         return number_format($amount, $decimals, '.', ',');
+    }
+
+    /**
+     * Retorna la URL de la bandera oficial en SVG para el país.
+     */
+    public static function flagUrl(?string $countryCode): string
+    {
+        $code = strtolower(trim((string) $countryCode));
+        if (empty($code)) {
+            $code = 'pe';
+        }
+        return asset("images/flags/{$code}.svg");
     }
 }
