@@ -6,7 +6,7 @@
     $waUrl = !empty($phoneClean) ? "https://wa.me/{$phoneClean}?text=" . urlencode($isEn ? "Hello, I would like more information" : "Hola, deseo más información sobre los productos de {$store->name}") : '#';
 @endphp
 
-<footer class="bg-[#141414] text-gray-300 font-sans border-t border-stone-800 selection:bg-[#C8A68B] selection:text-white"
+<footer class="bg-[#1E1D1B] text-stone-300 font-sans border-t border-stone-800 selection:bg-[#C8A68B] selection:text-white"
         x-data="{
             reclamacionesOpen: false,
             faqOpen: false,
@@ -56,17 +56,17 @@
         }">
 
     {{-- ── 1. PRE-FOOTER / NEWSLETTER VIP CLUB ── --}}
-    <div class="border-b border-white/10 bg-gradient-to-r from-[#1c1c1c] via-[#171717] to-[#1c1c1c]">
+    <div class="border-b border-white/10 bg-[#262421]">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
             <div class="flex flex-col lg:flex-row items-center justify-between gap-6">
                 <div class="text-center lg:text-left max-w-xl">
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C8A68B]/20 text-[#E0C3AB] text-xs font-bold uppercase tracking-wider mb-2 border border-[#C8A68B]/30">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C8A68B]/20 text-[#E0C3AB] text-xs font-bold uppercase tracking-wider mb-2 border border-[#C8A68B]/30 font-brand">
                         <span>✨</span> {{ $isEn ? 'Join the Club' : 'Club Exclusivo' }}
                     </span>
-                    <h3 class="text-xl sm:text-2xl font-bold text-white tracking-tight font-brand" style="font-family: 'Fredoka', 'Quicksand', sans-serif;">
+                    <h3 class="text-xl sm:text-2xl font-bold text-white tracking-tight font-brand">
                         {{ $isEn ? 'Get 10% off your first purchase' : 'Recibe 10% de descuento en tu primera compra' }}
                     </h3>
-                    <p class="text-xs sm:text-sm text-gray-400 mt-1">
+                    <p class="text-xs sm:text-sm text-stone-400 mt-1">
                         {{ $isEn ? 'Subscribe to receive secret flash sales, product launches and member gifts.' : 'Suscríbete para enterarte antes de lanzamientos, ofertas relámpago y regalos exclusivos.' }}
                     </p>
                 </div>
@@ -76,20 +76,20 @@
                     <div x-show="!newsletterSent">
                         <form @submit.prevent="submitNewsletter()" class="flex flex-col sm:flex-row gap-2">
                             <div class="relative flex-1">
-                                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                                 </span>
                                 <input type="email" x-model="newsletterEmail" required
                                        placeholder="{{ $isEn ? 'Enter your email address...' : 'Ingresa tu correo electrónico...' }}"
-                                       class="w-full bg-white/10 border border-white/20 text-white placeholder-gray-400 text-xs sm:text-sm rounded-xl py-3 pl-10 pr-4 outline-none focus:border-[#C8A68B] focus:ring-2 focus:ring-[#C8A68B]/30 transition">
+                                       class="w-full bg-white/10 border border-white/20 text-white placeholder-stone-400 text-xs sm:text-sm rounded-xl py-3 pl-10 pr-4 outline-none focus:border-[#C8A68B] focus:ring-2 focus:ring-[#C8A68B]/30 transition">
                             </div>
                             <button type="submit"
-                                    class="px-6 py-3 bg-[#C8A68B] hover:bg-[#b89578] text-[#141414] font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer">
+                                    class="px-6 py-3 bg-[#C8A68B] hover:bg-[#B89578] text-[#1E1D1B] font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer font-brand">
                                 <span>{{ $isEn ? 'Subscribe' : '¡Suscribirme!' }}</span>
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                             </button>
                         </form>
-                        <p class="text-[11px] text-gray-500 mt-1.5 text-center sm:text-left flex items-center justify-center sm:justify-start gap-1">
+                        <p class="text-[11px] text-stone-400 mt-1.5 text-center sm:text-left flex items-center justify-center sm:justify-start gap-1">
                             <span>🔒</span> {{ $isEn ? 'We respect your privacy. No spam ever.' : 'Respetamos tu privacidad. Cero spam garantizado.' }}
                         </p>
                     </div>
@@ -98,7 +98,7 @@
                          class="p-3.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2.5">
                         <span class="text-xl">🎉</span>
                         <div>
-                            <p class="font-bold text-sm text-white">{{ $isEn ? 'Welcome to the Club!' : '¡Bienvenido a la comunidad!' }}</p>
+                            <p class="font-bold text-sm text-white font-brand">{{ $isEn ? 'Welcome to the Club!' : '¡Bienvenido a la comunidad!' }}</p>
                             <p class="text-[11px] text-emerald-300">{{ $isEn ? 'Check your inbox for your 10% welcome coupon.' : 'Revisa tu bandeja de entrada para canjear tu cupón de bienvenida.' }}</p>
                         </div>
                     </div>
@@ -117,13 +117,18 @@
                     @if($store->logo_path)
                         <img src="{{ $store->logo_url }}" alt="{{ $store->name }}" class="h-10 w-auto object-contain">
                     @else
-                        <span class="font-bold text-2xl md:text-3xl tracking-tight text-white font-brand" style="font-family: 'Fredoka', 'Quicksand', sans-serif;">
-                            {{ $store->name }}
-                        </span>
+                        <div class="flex flex-col">
+                            <span class="font-bold text-2xl md:text-3xl tracking-tight text-white font-brand">
+                                {{ $store->name }}
+                            </span>
+                            <svg class="w-16 h-2 mt-0.5 text-[#C8A68B]" viewBox="0 0 100 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 3C30 11 70 11 96 3" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+                            </svg>
+                        </div>
                     @endif
                 </div>
 
-                <p class="text-xs sm:text-sm text-gray-400 leading-relaxed pr-4">
+                <p class="text-xs sm:text-sm text-stone-400 leading-relaxed pr-4">
                     {{ $store->description ?: ($store->tagline ?: ($isEn ? 'Innovative and high-quality products crafted to make your everyday life easier, with certified nationwide and international delivery.' : 'Productos innovadores y de alta calidad diseñados para hacer tu vida más fácil. Envíos garantizados a todo el país y al extranjero.')) }}
                 </p>
 
