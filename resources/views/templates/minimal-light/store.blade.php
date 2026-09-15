@@ -151,115 +151,126 @@
         <p class="text-center text-xs text-gray-400 py-2">*Válido para pedidos realizados hasta las 5:00 p.m. Aplica T&C.</p>
 
         @if(isset($homeVideoProducts) && $homeVideoProducts->isNotEmpty())
-        <!-- Featured Products with Short Videos Section (1 Row, Max 3 Videos) -->
-        <section class="py-12 md:py-16 bg-[#FDF8EF] border-b border-stone-200/60 overflow-hidden">
+        <!-- Featured Products with Short Videos Section (Minimalist, Single Row Info) -->
+        <section class="py-10 md:py-14 bg-[#FDF8EF] border-b border-stone-200/60 overflow-hidden">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- Section Header -->
-                <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 md:mb-10 gap-4">
+                <div class="flex flex-col sm:flex-row sm:items-end justify-between mb-6 md:mb-8 gap-3">
                     <div>
-                        <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-[#1A1A1A] text-[#C8A68B] text-[10px] sm:text-[11px] font-black tracking-[0.2em] uppercase shadow-2xs font-brand">
-                            <span>🎬 EN ACCIÓN</span>
-                        </div>
-                        <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-stone-900 font-brand tracking-tight">
-                            Descubre Nuestros Productos en Video
+                        <h2 class="text-xl sm:text-2xl md:text-3xl font-bold text-stone-900 font-brand tracking-tight">
+                            Productos en Video
                         </h2>
-                        <p class="text-xs sm:text-sm text-stone-600 mt-1.5 font-medium max-w-xl">
-                            Mira cómo funcionan, su calidad y acabados reales antes de comprar.
+                        <p class="text-xs sm:text-sm text-stone-500 mt-1 font-medium max-w-xl">
+                            Detalles y acabados reales de nuestros productos destacados.
                         </p>
                     </div>
 
                     <a href="{{ route('store.catalog', $store->slug) }}" 
-                       class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-stone-900 hover:text-[#C8A68B] transition-colors font-brand group self-start md:self-auto">
-                        <span>Ver catálogo completo</span>
-                        <span class="group-hover:translate-x-1 transition-transform">→</span>
+                       class="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-stone-700 hover:text-[#C8A68B] transition-colors font-brand group self-start sm:self-auto">
+                        <span>Ver todo el catálogo</span>
+                        <span class="group-hover:translate-x-0.5 transition-transform">→</span>
                     </a>
                 </div>
 
-                <!-- 3 Videos in a Single Row Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+                <!-- 3 Videos in a Single Row Grid (Minimalist Cards for All Screen Sizes) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
                     @foreach($homeVideoProducts->take(3) as $vProduct)
-                    <div class="group relative flex flex-col bg-white rounded-3xl overflow-hidden border border-stone-200/90 shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1.5"
-                         x-data="{ isMuted: true, isPlaying: true }">
+                    <a href="{{ route('store.product', [$store->slug, $vProduct->slug]) }}" 
+                       class="group block bg-white rounded-2xl md:rounded-3xl p-2.5 sm:p-3 border border-stone-200/80 shadow-xs hover:shadow-md hover:border-stone-300 transition-all duration-300">
                         
-                        <!-- Video Container (Vertical 4:5 format) -->
-                        <div class="relative aspect-[4/5] w-full overflow-hidden bg-stone-950">
+                        <!-- Video Container (Compact aspect-[4/5] format) -->
+                        <div class="relative aspect-[4/5] w-full rounded-xl md:rounded-2xl overflow-hidden bg-stone-950"
+                             x-data="{
+                                 isMuted: true,
+                                 playVideo() {
+                                     const vid = this.$refs.videoPlayer;
+                                     if (vid) {
+                                         vid.muted = true;
+                                         vid.defaultMuted = true;
+                                         const p = vid.play();
+                                         if (p !== undefined) {
+                                             p.catch(() => {});
+                                         }
+                                     }
+                                 },
+                                 toggleMute(e) {
+                                     e.preventDefault();
+                                     e.stopPropagation();
+                                     this.isMuted = !this.isMuted;
+                                     if (this.$refs.videoPlayer) {
+                                         this.$refs.videoPlayer.muted = this.isMuted;
+                                     }
+                                 }
+                             }"
+                             x-init="
+                                 $nextTick(() => { playVideo(); });
+                                 if ('IntersectionObserver' in window) {
+                                     const observer = new IntersectionObserver((entries) => {
+                                         entries.forEach(entry => {
+                                             if (entry.isIntersecting) {
+                                                 playVideo();
+                                             }
+                                         });
+                                     }, { threshold: 0.15 });
+                                     observer.observe($el);
+                                 }
+                             ">
+                            
                             <video x-ref="videoPlayer"
                                    src="{{ $vProduct->video_url }}"
-                                   class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                   class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                    autoplay
                                    loop
+                                   muted
                                    playsinline
-                                   preload="metadata"
-                                   loading="lazy"
-                                   :muted="isMuted">
+                                   webkit-playsinline
+                                   preload="auto">
                             </video>
 
-                            <!-- Gradient Overlay on Top and Bottom -->
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/30 pointer-events-none"></div>
+                            @if($vProduct->resolveComparePrice() > $vProduct->resolvePrice())
+                                <div class="absolute top-2.5 left-2.5 bg-red-600 text-white text-[9px] sm:text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider shadow-xs">
+                                    Oferta
+                                </div>
+                            @endif
 
-                            <!-- Top Badges -->
-                            <div class="absolute top-3.5 inset-x-3.5 flex items-center justify-between z-10">
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-[10px] font-bold uppercase tracking-wider">
-                                    <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                                    <span>Video</span>
-                                </span>
-
-                                @if($vProduct->resolveComparePrice() > $vProduct->resolvePrice())
-                                    <span class="px-2.5 py-1 rounded-full bg-red-600 text-white text-[10px] font-black uppercase tracking-wider shadow-xs">
-                                        Oferta
-                                    </span>
-                                @endif
-                            </div>
-
-                            <!-- Sound Toggle Button -->
+                            <!-- Subtle Sound Toggle (Does not navigate) -->
                             <button type="button" 
-                                    @click="isMuted = !isMuted; if($refs.videoPlayer) $refs.videoPlayer.muted = isMuted;"
-                                    class="absolute bottom-3.5 right-3.5 z-20 w-9 h-9 rounded-full bg-black/70 hover:bg-[#1A1A1A] text-white border border-white/20 backdrop-blur-md flex items-center justify-center text-xs transition shadow-md cursor-pointer"
+                                    @click="toggleMute($event)"
+                                    class="absolute bottom-2.5 right-2.5 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center text-[11px] sm:text-xs transition shadow-xs cursor-pointer backdrop-blur-xs"
                                     :title="isMuted ? 'Activar sonido' : 'Silenciar'">
                                 <span x-show="isMuted">🔇</span>
                                 <span x-show="!isMuted" style="display: none;">🔊</span>
                             </button>
                         </div>
 
-                        <!-- Product Info Footer -->
-                        <div class="p-5 flex flex-col justify-between flex-1 bg-white">
-                            <div>
-                                @if($vProduct->category)
-                                    <span class="text-[11px] font-extrabold uppercase tracking-wider text-[#C8A68B] block mb-1">
-                                        {{ $vProduct->category->getTranslatedName() }}
+                        <!-- Minimalist Single Row Info: Name + Price + Action -->
+                        <div class="pt-2.5 pb-1 px-1 flex items-center justify-between gap-2.5">
+                            <!-- Product Name -->
+                            <h3 class="font-bold text-stone-900 text-xs sm:text-sm truncate flex-1 group-hover:text-[#C8A68B] transition-colors font-brand" title="{{ $vProduct->name }}">
+                                {{ $vProduct->name }}
+                            </h3>
+
+                            <!-- Price and Action in the same single row -->
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                <div class="text-right flex items-baseline gap-1.5">
+                                    <span class="text-xs sm:text-sm font-black text-stone-950 font-brand">
+                                        {{ \App\Helpers\CurrencyHelper::format($vProduct->resolvePrice()) }}
                                     </span>
-                                @endif
-                                <h3 class="font-bold text-stone-900 text-base leading-snug line-clamp-2 group-hover:text-[#C8A68B] transition-colors font-brand">
-                                    <a href="{{ route('store.product', [$store->slug, $vProduct->slug]) }}">
-                                        {{ $vProduct->name }}
-                                    </a>
-                                </h3>
-                            </div>
-
-                            <div class="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between">
-                                <div>
-                                    <div class="flex items-baseline gap-2">
-                                        <span class="text-lg font-black text-stone-950 font-brand">
-                                            {{ \App\Helpers\CurrencyHelper::format($vProduct->resolvePrice()) }}
+                                    @if($vProduct->resolveComparePrice() > $vProduct->resolvePrice())
+                                        <span class="text-[10px] text-stone-400 line-through hidden xs:inline">
+                                            {{ \App\Helpers\CurrencyHelper::format($vProduct->resolveComparePrice()) }}
                                         </span>
-                                        @if($vProduct->resolveComparePrice() > $vProduct->resolvePrice())
-                                            <span class="text-xs text-stone-400 line-through font-semibold">
-                                                {{ \App\Helpers\CurrencyHelper::format($vProduct->resolveComparePrice()) }}
-                                            </span>
-                                        @endif
-                                    </div>
-                                    <span class="text-[10px] text-emerald-700 font-bold">✓ En Stock</span>
+                                    @endif
                                 </div>
-
-                                <a href="{{ route('store.product', [$store->slug, $vProduct->slug]) }}" 
-                                   class="px-3.5 py-2 rounded-xl bg-[#1A1A1A] hover:bg-[#C8A68B] text-white text-xs font-bold font-brand transition-colors shadow-xs flex items-center gap-1">
-                                    <span>Ver Producto</span>
-                                    <span>→</span>
-                                </a>
+                                
+                                <span class="inline-flex items-center text-[11px] sm:text-xs font-bold text-[#C8A68B] group-hover:text-stone-900 transition-colors">
+                                    <span>Ver</span>
+                                    <span class="ml-0.5 group-hover:translate-x-0.5 transition-transform">→</span>
+                                </span>
                             </div>
                         </div>
 
-                    </div>
+                    </a>
                     @endforeach
                 </div>
             </div>
