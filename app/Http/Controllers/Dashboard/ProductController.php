@@ -64,6 +64,24 @@ class ProductController extends Controller
     {
         $store = $this->getStore();
 
+        // Verificación de errores a nivel de servidor PHP en la subida de video
+        if (isset($_FILES['video']) && !empty($_FILES['video']['name'])) {
+            $err = $_FILES['video']['error'];
+            if ($err !== UPLOAD_ERR_OK && $err !== UPLOAD_ERR_NO_FILE) {
+                $maxServer = ini_get('upload_max_filesize') ?: '2M';
+                $errorMsgs = [
+                    UPLOAD_ERR_INI_SIZE   => "El archivo de video supera el límite de subida del servidor PHP (upload_max_filesize = {$maxServer}). Aumenta este valor en php.ini a al menos 10M o comprime tu video a menos de 4 MB.",
+                    UPLOAD_ERR_FORM_SIZE  => "El archivo de video supera el tamaño máximo permitido por el formulario.",
+                    UPLOAD_ERR_PARTIAL    => "La subida del video se interrumpió y quedó incompleta. Por favor inténtalo de nuevo.",
+                    UPLOAD_ERR_NO_TMP_DIR => "Error del servidor: Falta la carpeta temporal de PHP (upload_tmp_dir).",
+                    UPLOAD_ERR_CANT_WRITE => "Error del servidor: No se pudo escribir el archivo temporal en el disco.",
+                    UPLOAD_ERR_EXTENSION  => "Una extensión de PHP detuvo la subida del video.",
+                ];
+                $errorMsg = $errorMsgs[$err] ?? "Error al subir el video al servidor (código {$err}).";
+                return back()->withInput()->withErrors(['video' => $errorMsg]);
+            }
+        }
+
         $data = $request->validate([
             'name'              => 'required|string|max:255',
             'description'       => 'nullable|string',
@@ -91,13 +109,14 @@ class ProductController extends Controller
             'is_new'            => 'nullable|boolean',
             'image'             => 'nullable|image|mimes:png,jpg,jpeg,webp|max:3072',
             'gallery.*'         => 'nullable|image|mimes:png,jpg,jpeg,webp|max:3072',
-            'video'             => 'nullable|file|mimes:mp4,webm|max:4096',
+            'video'             => 'nullable|file|mimes:mp4,webm,mov,quicktime|max:4096',
             'show_video_on_home'=> 'nullable|boolean',
             'replace_home_video_id' => 'nullable|integer|exists:products,id',
             'tags'              => 'nullable|string',
         ], [
-            'video.max'   => 'El video del producto no debe superar los 4 MB.',
-            'video.mimes' => 'El formato del video debe ser MP4 o WebM.',
+            'video.max'      => 'El video del producto no debe superar los 4 MB.',
+            'video.mimes'    => 'El formato del video debe ser MP4, WebM o MOV.',
+            'video.uploaded' => 'El video no se pudo subir. Asegúrate de que pese menos de 4 MB y que el servidor permita este tamaño de archivo.',
         ]);
 
         // Procesar precios multi-moneda personalizados
@@ -296,6 +315,24 @@ class ProductController extends Controller
         $store = $this->getStore();
         abort_if($product->store_id !== $store->id, 403);
 
+        // Verificación de errores a nivel de servidor PHP en la subida de video
+        if (isset($_FILES['video']) && !empty($_FILES['video']['name'])) {
+            $err = $_FILES['video']['error'];
+            if ($err !== UPLOAD_ERR_OK && $err !== UPLOAD_ERR_NO_FILE) {
+                $maxServer = ini_get('upload_max_filesize') ?: '2M';
+                $errorMsgs = [
+                    UPLOAD_ERR_INI_SIZE   => "El archivo de video supera el límite de subida del servidor PHP (upload_max_filesize = {$maxServer}). Aumenta este valor en php.ini a al menos 10M o comprime tu video a menos de 4 MB.",
+                    UPLOAD_ERR_FORM_SIZE  => "El archivo de video supera el tamaño máximo permitido por el formulario.",
+                    UPLOAD_ERR_PARTIAL    => "La subida del video se interrumpió y quedó incompleta. Por favor inténtalo de nuevo.",
+                    UPLOAD_ERR_NO_TMP_DIR => "Error del servidor: Falta la carpeta temporal de PHP (upload_tmp_dir).",
+                    UPLOAD_ERR_CANT_WRITE => "Error del servidor: No se pudo escribir el archivo temporal en el disco.",
+                    UPLOAD_ERR_EXTENSION  => "Una extensión de PHP detuvo la subida del video.",
+                ];
+                $errorMsg = $errorMsgs[$err] ?? "Error al subir el video al servidor (código {$err}).";
+                return back()->withInput()->withErrors(['video' => $errorMsg]);
+            }
+        }
+
         $data = $request->validate([
             'name'              => 'required|string|max:255',
             'description'       => 'nullable|string',
@@ -324,14 +361,15 @@ class ProductController extends Controller
             'image'             => 'nullable|image|mimes:png,jpg,jpeg,webp|max:3072',
             'gallery.*'         => 'nullable|image|mimes:png,jpg,jpeg,webp|max:3072',
             'remove_gallery'    => 'nullable|array',
-            'video'             => 'nullable|file|mimes:mp4,webm|max:4096',
+            'video'             => 'nullable|file|mimes:mp4,webm,mov,quicktime|max:4096',
             'show_video_on_home'=> 'nullable|boolean',
             'replace_home_video_id' => 'nullable|integer|exists:products,id',
             'remove_video'      => 'nullable|boolean',
             'tags'              => 'nullable|string',
         ], [
-            'video.max'   => 'El video del producto no debe superar los 4 MB.',
-            'video.mimes' => 'El formato del video debe ser MP4 o WebM.',
+            'video.max'      => 'El video del producto no debe superar los 4 MB.',
+            'video.mimes'    => 'El formato del video debe ser MP4, WebM o MOV.',
+            'video.uploaded' => 'El video no se pudo subir. Asegúrate de que pese menos de 4 MB y que el servidor permita este tamaño de archivo.',
         ]);
 
         // Procesar precios multi-moneda personalizados

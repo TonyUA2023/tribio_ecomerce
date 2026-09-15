@@ -524,43 +524,43 @@
                     this.primary = null;
                 }
             }">
-                <h3 class="text-white font-bold mb-4 text-sm uppercase tracking-wider opacity-60">Organización</h3>
+                <h3 class="font-black text-xs uppercase tracking-wider text-slate-400 mb-4">Organización</h3>
                 <div class="space-y-4">
                     {{-- Categorías Relacionadas --}}
                     <div>
                         <div class="flex items-center justify-between mb-1.5">
-                            <label class="input-label mb-0">Categorías relacionadas</label>
+                            <label class="input-label mb-0 font-bold text-slate-800 text-xs">Categorías relacionadas</label>
                             <div class="flex items-center gap-2">
                                 <template x-if="selected.length > 0">
-                                    <button type="button" @click="clearAll" class="text-[11px] text-red-400 hover:underline">
+                                    <button type="button" @click="clearAll" class="text-xs font-semibold text-red-600 hover:text-red-700 hover:underline cursor-pointer">
                                         Limpiar
                                     </button>
                                 </template>
-                                <a href="{{ route('dashboard.categorias.create') }}" target="_blank" class="text-[11px] text-sky-400 hover:underline">
+                                <a href="{{ route('dashboard.categorias.create') }}" target="_blank" class="text-xs font-semibold text-sky-600 hover:text-sky-700 hover:underline">
                                     + Nueva categoría
                                 </a>
                             </div>
                         </div>
-                        <p class="text-[11px] text-white/50 mb-2.5">Selecciona una o más categorías. Marca la estrella ⭐ para definir la principal.</p>
+                        <p class="text-xs text-slate-500 mb-3">Selecciona una o más categorías. Marca la estrella ⭐ para definir la principal.</p>
 
                         {{-- Chips de seleccionadas --}}
                         <template x-if="selected.length > 0">
-                            <div class="flex flex-wrap gap-1.5 mb-3 p-2 rounded-xl bg-white/5 border border-white/10 max-h-28 overflow-y-auto">
+                            <div class="flex flex-wrap gap-2 mb-3 p-3 rounded-2xl bg-slate-100/70 border border-slate-200 max-h-32 overflow-y-auto">
                                 <template x-for="catId in selected" :key="catId">
-                                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30">
-                                        <span x-text="categories.find(c => c.id === catId)?.icon"></span>
-                                        <span x-text="categories.find(c => c.id === catId)?.name"></span>
+                                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-800 shadow-xs transition hover:border-sky-300">
+                                        <span class="text-sm" x-text="categories.find(c => c.id === catId)?.icon || '🏷️'"></span>
+                                        <span class="text-slate-900 font-bold" x-text="categories.find(c => c.id === catId)?.name"></span>
                                         <template x-if="primary === catId">
-                                            <span class="text-[10px] px-1 py-0.2 rounded bg-amber-500/30 text-amber-300 border border-amber-500/40" title="Categoría Principal">
+                                            <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 font-black tracking-wide shadow-2xs" title="Categoría Principal">
                                                 ★ Principal
                                             </span>
                                         </template>
                                         <template x-if="primary !== catId">
-                                            <button type="button" @click="setPrimary(catId)" class="text-white/40 hover:text-amber-300 text-[11px]" title="Marcar como Principal">
+                                            <button type="button" @click="setPrimary(catId)" class="text-slate-400 hover:text-amber-500 hover:scale-110 text-xs font-bold transition cursor-pointer" title="Marcar como Principal">
                                                 ☆
                                             </button>
                                         </template>
-                                        <button type="button" @click="remove(catId)" class="text-white/40 hover:text-red-400 text-xs font-bold leading-none ml-0.5">
+                                        <button type="button" @click="remove(catId)" class="w-4 h-4 rounded-full flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 text-xs font-bold transition ml-0.5 cursor-pointer" title="Quitar">
                                             ×
                                         </button>
                                     </div>
@@ -569,30 +569,30 @@
                         </template>
 
                         {{-- Input buscador de categorías --}}
-                        <div class="relative mb-2">
-                            <input type="text" x-model="search" placeholder="🔍 Buscar o filtrar categorías..." class="input-field text-xs py-1.5 pl-3 pr-8">
+                        <div class="relative mb-2.5">
+                            <input type="text" x-model="search" placeholder="🔍 Buscar o filtrar categorías..." class="input-field text-xs py-2 pl-3 pr-8 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-800 placeholder-slate-400 w-full transition">
                             <template x-if="search.length > 0">
-                                <button type="button" @click="search = ''" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white text-xs font-bold">✕</button>
+                                <button type="button" @click="search = ''" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-xs font-bold cursor-pointer">✕</button>
                             </template>
                         </div>
 
                         {{-- Lista de categorías con checkboxes --}}
-                        <div class="border border-white/10 rounded-xl p-2 max-h-48 overflow-y-auto space-y-1 bg-black/20">
+                        <div class="border border-slate-200 rounded-2xl p-2 max-h-52 overflow-y-auto space-y-1 bg-slate-50/70 divide-y divide-slate-100">
                             <template x-if="filteredCategories.length === 0">
-                                <p class="text-xs text-white/40 text-center py-3">No se encontraron categorías.</p>
+                                <p class="text-xs text-slate-400 text-center py-4 font-medium">No se encontraron categorías.</p>
                             </template>
                             <template x-for="cat in filteredCategories" :key="cat.id">
-                                <div class="flex items-center justify-between p-1.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
-                                     :class="{'bg-sky-500/10 border border-sky-500/20': isSelected(cat.id)}">
-                                    <label class="flex items-center gap-2 flex-1 cursor-pointer select-none">
-                                        <input type="checkbox" :value="cat.id" :checked="isSelected(cat.id)" @change="toggle(cat.id)" class="accent-sky-500 w-4 h-4 rounded">
-                                        <span class="text-sm" x-text="cat.icon"></span>
-                                        <span class="text-xs text-white" x-text="cat.name"></span>
+                                <div class="flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer select-none"
+                                     :class="isSelected(cat.id) ? 'bg-sky-50/90 border border-sky-200/80 shadow-2xs' : 'hover:bg-white border border-transparent'">
+                                    <label class="flex items-center gap-2.5 flex-1 cursor-pointer select-none py-0.5">
+                                        <input type="checkbox" :value="cat.id" :checked="isSelected(cat.id)" @change="toggle(cat.id)" class="accent-sky-600 w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer">
+                                        <span class="text-base" x-text="cat.icon || '🏷️'"></span>
+                                        <span class="text-xs" :class="isSelected(cat.id) ? 'font-bold text-sky-950' : 'font-semibold text-slate-700'" x-text="cat.name"></span>
                                     </label>
                                     <template x-if="isSelected(cat.id)">
                                         <button type="button" @click="setPrimary(cat.id)" 
-                                                class="text-xs px-2 py-0.5 rounded transition-all"
-                                                :class="primary === cat.id ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-white/30 hover:text-amber-300'">
+                                                class="text-[11px] px-2.5 py-1 rounded-lg transition-all cursor-pointer font-semibold"
+                                                :class="primary === cat.id ? 'bg-amber-100 text-amber-900 border border-amber-300 font-bold shadow-2xs' : 'text-slate-500 hover:text-amber-800 hover:bg-amber-50 border border-slate-200 bg-white'">
                                             <span x-text="primary === cat.id ? '★ Principal' : '☆ Hacer principal'"></span>
                                         </button>
                                     </template>
@@ -685,6 +685,8 @@
                 hasVideo: {{ $product->video_path ? 'true' : 'false' }},
                 removeVideo: false,
                 videoPreview: null,
+                videoError: null,
+                videoSizeText: null,
                 showOnHome: {{ $product->show_video_on_home ? 'true' : 'false' }},
                 replaceId: '',
                 currentHomeSlots: {{ Js::from($homeVideoProducts->map(fn($p) => [
@@ -697,18 +699,34 @@
                     return this.currentHomeSlots.length >= 3;
                 },
                 handleVideoSelect(e) {
-                    const file = e.target.files[0];
+                    this.videoError = null;
+                    const file = e.target.files ? e.target.files[0] : null;
                     if (file) {
+                        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
                         if (file.size > 4 * 1024 * 1024) {
-                            alert('⚠️ El video supera el límite de 4 MB permitido. Por favor comprímelo o elige otro archivo más corto.');
+                            this.videoError = `El video seleccionado pesa ${sizeMB} MB y supera el límite de 4 MB permitido. Por favor comprímelo o elige un video más corto.`;
                             e.target.value = '';
                             this.videoPreview = null;
+                            this.videoSizeText = null;
                             return;
                         }
+                        this.videoSizeText = `${sizeMB} MB`;
                         this.videoPreview = URL.createObjectURL(file);
                         this.removeVideo = false;
                         this.hasVideo = true;
+                    } else {
+                        this.videoPreview = null;
+                        this.videoSizeText = null;
                     }
+                },
+                clearVideoSelection(inputRef) {
+                    this.videoError = null;
+                    this.videoPreview = null;
+                    this.videoSizeText = null;
+                    if (inputRef) {
+                        inputRef.value = '';
+                    }
+                    this.hasVideo = {{ $product->video_path ? 'true' : 'false' }};
                 }
             }">
                 <div class="flex items-center justify-between">
@@ -723,15 +741,30 @@
                     </span>
                 </div>
 
+                {{-- Mensaje de Error de Validación en Cliente --}}
+                <template x-if="videoError">
+                    <div class="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs text-red-300 flex items-start gap-2">
+                        <span class="text-base leading-none">⚠️</span>
+                        <span x-text="videoError"></span>
+                    </div>
+                </template>
+
                 {{-- Video Actual o Preview --}}
                 <template x-if="videoPreview">
                     <div class="space-y-2">
-                        <p class="input-label mb-1 text-xs text-emerald-400 font-bold flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                            <span>Nuevo video seleccionado para subir:</span>
-                        </p>
-                        <div class="relative rounded-2xl overflow-hidden bg-black border border-white/10 aspect-[4/5] max-w-[200px] shadow-md">
+                        <div class="flex items-center justify-between">
+                            <p class="input-label mb-0 text-xs text-emerald-400 font-bold flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span>Nuevo video seleccionado para subir:</span>
+                            </p>
+                            <span class="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20" x-text="'Tamaño: ' + videoSizeText + ' / 4 MB ✓'"></span>
+                        </div>
+                        <div class="relative rounded-2xl overflow-hidden bg-black border border-white/10 aspect-[4/5] max-w-[200px] shadow-md group">
                             <video :src="videoPreview" class="w-full h-full object-cover" autoplay loop muted playsinline></video>
+                            <button type="button" @click="clearVideoSelection($refs.videoInput)" 
+                                    class="absolute top-2 right-2 px-2 py-1 rounded-lg bg-red-600/90 hover:bg-red-600 text-white text-xs font-bold shadow-md transition cursor-pointer">
+                                ✕ Quitar
+                            </button>
                         </div>
                     </div>
                 </template>
@@ -761,63 +794,68 @@
 
                 {{-- Input para subir video --}}
                 <div>
-                    <label class="input-label" x-text="hasVideo ? 'Reemplazar video actual' : 'Subir video (MP4 o WebM)'"></label>
-                    <input type="file" name="video" accept="video/mp4,video/webm" @change="handleVideoSelect($event)" class="input-field py-2 text-xs">
-                    <p class="text-[11px] text-slate-400 mt-1">Formato recomendado: MP4 vertical (9:16 o 4:5), 5 a 15 segundos.</p>
+                    <label class="input-label" x-text="hasVideo ? 'Reemplazar video actual' : 'Subir video (MP4, WebM o MOV)'"></label>
+                    <input type="file" x-ref="videoInput" name="video" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov" @change="handleVideoSelect($event)" class="input-field py-2 text-xs">
+                    <p class="text-[11px] text-slate-400 mt-1">Formatos soportados: MP4, WebM, MOV. Tamaño máximo: 4 MB (5 a 15 segundos recomendado).</p>
+                    @error('video')
+                        <p class="text-xs text-red-400 font-bold mt-2 flex items-center gap-1">
+                            <span>⚠️</span> {{ $message }}
+                        </p>
+                    @enderror
                 </div>
 
                 {{-- Configuración de Destacado en el Home (Máximo 3 videos) --}}
-                <div class="pt-4 border-t border-white/10 space-y-3" x-show="hasVideo || videoPreview">
+                <div class="pt-4 border-t border-slate-200 space-y-3" x-show="hasVideo || videoPreview">
                     <div class="flex items-center justify-between">
                         <div>
-                            <span class="text-xs font-bold text-white block">Mostrar en el Home (Portada)</span>
-                            <span class="text-[11px] text-slate-400">Aparecerá en la sección de 3 videos después del Hero.</span>
+                            <span class="text-xs font-bold text-slate-800 block">Mostrar en el Home (Portada)</span>
+                            <span class="text-[11px] text-slate-500">Aparecerá en la sección de 3 videos después del Hero.</span>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" name="show_video_on_home" value="1" x-model="showOnHome" class="sr-only peer">
-                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#C8A68B]"></div>
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
                         </label>
                     </div>
 
                     {{-- Reemplazo Intuitivo si los 3 cupos están ocupados --}}
                     <div x-show="showOnHome && isHomeSlotsFull && !{{ $product->show_video_on_home ? 'true' : 'false' }}" 
-                         class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-3" style="display: none;">
-                        <div class="flex items-center gap-2 text-amber-300 text-xs font-bold">
+                         class="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-3" style="display: none;">
+                        <div class="flex items-center gap-2 text-amber-900 text-xs font-bold">
                             <span>⚠️</span>
                             <span>Los 3 cupos de video del Home ya están ocupados</span>
                         </div>
-                        <p class="text-[11px] text-slate-300 leading-snug">
+                        <p class="text-xs text-amber-800 leading-snug">
                             Para mostrar este producto, selecciona a cuál de los 3 productos actuales deseas reemplazar:
                         </p>
 
                         <div class="space-y-2">
                             <template x-for="slot in currentHomeSlots" :key="slot.id">
-                                <label class="flex items-center justify-between p-2.5 rounded-xl border transition cursor-pointer"
-                                       :class="replaceId == slot.id ? 'bg-amber-500/20 border-amber-400 text-white ring-1 ring-amber-400' : 'bg-black/30 border-white/10 hover:border-white/30 text-slate-300'">
+                                <label class="flex items-center justify-between p-2.5 rounded-xl border transition cursor-pointer select-none"
+                                       :class="replaceId == slot.id ? 'bg-amber-100 border-amber-400 text-slate-900 ring-2 ring-amber-400/40 shadow-xs' : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700'">
                                     <div class="flex items-center gap-2.5">
-                                        <input type="radio" name="replace_home_video_id" :value="slot.id" x-model="replaceId" class="accent-amber-400 w-4 h-4">
-                                        <img :src="slot.image" class="w-10 h-10 rounded-lg object-cover bg-slate-800 border border-white/10">
+                                        <input type="radio" name="replace_home_video_id" :value="slot.id" x-model="replaceId" class="accent-amber-500 w-4 h-4 cursor-pointer">
+                                        <img :src="slot.image" class="w-10 h-10 rounded-lg object-cover bg-slate-100 border border-slate-200">
                                         <div>
-                                            <p class="text-xs font-bold line-clamp-1" x-text="slot.name"></p>
-                                            <p class="text-[10px] text-slate-400" x-text="'S/. ' + slot.price"></p>
+                                            <p class="text-xs font-bold line-clamp-1 text-slate-900" x-text="slot.name"></p>
+                                            <p class="text-[11px] font-semibold text-slate-500" x-text="'S/. ' + slot.price"></p>
                                         </div>
                                     </div>
-                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-md"
-                                          :class="replaceId == slot.id ? 'bg-amber-400 text-stone-950' : 'bg-white/10 text-slate-400'">
+                                    <span class="text-[10px] font-bold px-2.5 py-1 rounded-md"
+                                          :class="replaceId == slot.id ? 'bg-amber-500 text-stone-950 shadow-xs' : 'bg-slate-100 text-slate-600 border border-slate-200'">
                                         Reemplazar
                                     </span>
                                 </label>
                             </template>
                         </div>
-                        <p class="text-[10px] text-amber-300/80">
+                        <p class="text-[11px] text-amber-800 font-medium">
                             * El producto que elijas dejará de mostrarse en el Home y este nuevo tomará su lugar.
                         </p>
                     </div>
 
                     {{-- Indicador de cupo disponible --}}
                     <template x-if="showOnHome && !isHomeSlotsFull">
-                        <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-300 flex items-center gap-2">
-                            <span>✓</span>
+                        <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-800 flex items-center gap-2">
+                            <span class="text-emerald-600 font-bold">✓</span>
                             <span>Cupo disponible en el Home (<span x-text="currentHomeSlots.length"></span> de 3 ocupados).</span>
                         </div>
                     </template>
