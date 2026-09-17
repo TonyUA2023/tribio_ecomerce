@@ -1,4 +1,4 @@
-﻿/node_modules
+/node_modules
 /public/build
 /vendor
 /.git
@@ -6,3 +6,11 @@
 /tests
 /phpunit.xml
 /storage/*.key
+/scratch
+/.system_generated
+*.log
+*.cache
+.phpunit.result.cache
+compiled.txt
+test_compile.php
+

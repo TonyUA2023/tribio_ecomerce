@@ -9,17 +9,18 @@ FROM node:20-alpine AS frontend
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
-COPY . .
+COPY vite.config.js ./
+COPY resources/ ./resources/
+COPY public/ ./public/
 RUN npm run build
 
-# Etapa 3: Imagen de Producción (Apache + PHP 8.2)
-FROM php:8.2-apache
+# Etapa 3: Imagen de Producción (Apache + PHP 8.2 en Debian Bookworm estable)
+FROM php:8.2-apache-bookworm
 WORKDIR /var/www/html
 
-# Instalar extensiones usando mlocati (súper rápido, consume casi 0 RAM y evita que el servidor colapse)
+# Instalar extensiones PHP necesarias usando instalador optimizado
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
-RUN apt-get update && apt-get install -y zip unzip && apt-get clean && rm -rf /var/lib/apt/lists/* \
-    && install-php-extensions gd pdo_mysql opcache
+RUN install-php-extensions gd pdo_mysql zip
 
 # Configurar Apache
 RUN a2enmod rewrite
