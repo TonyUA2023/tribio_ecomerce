@@ -18,8 +18,9 @@ class OrderController extends Controller
         $orders = $store->orders()
             ->with('items')
             ->when($request->status, fn($q) => $q->where('status', $request->status))
-            ->when($request->search, fn($q) => $q->where('order_number', 'like', "%{$request->search}%")
-                ->orWhere('customer_name', 'like', "%{$request->search}%"))
+            ->when($request->search, fn($q) => $q->where(fn($search) =>
+                $search->where('order_number', 'like', "%{$request->search}%")
+                    ->orWhere('customer_name', 'like', "%{$request->search}%")))
             ->latest()
             ->paginate(15);
 

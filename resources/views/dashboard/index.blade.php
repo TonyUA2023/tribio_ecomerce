@@ -1,136 +1,61 @@
 @extends('layouts.dashboard')
 @section('title', 'Mi Dashboard')
-@section('page_title', '¡Hola, ' . Auth::user()->name . '! 👋')
-
+@section('page_title', 'Hola, ' . Auth::user()->name)
 @section('content')
-<div class="space-y-6">
-
-    {{-- Stats Grid --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        @php
-        $statCards = [
-            ['label' => 'Productos activos', 'value' => $stats['active_products'], 'icon' => '📦', 'color' => 'purple', 'sub' => $stats['total_products'] . ' total'],
-            ['label' => 'Pedidos pendientes', 'value' => $stats['pending_orders'], 'icon' => '🛒', 'color' => 'yellow', 'sub' => $stats['total_orders'] . ' total'],
-            ['label' => 'Ingresos del mes', 'value' => 'S/. ' . number_format($stats['revenue_month'], 2), 'icon' => '💰', 'color' => 'green', 'sub' => 'S/. ' . number_format($stats['revenue_total'], 2) . ' total'],
-            ['label' => 'Stock bajo', 'value' => $stats['low_stock_products'], 'icon' => '⚠️', 'color' => 'red', 'sub' => $stats['out_of_stock'] . ' sin stock'],
-        ];
-        @endphp
-
-        @foreach($statCards as $card)
-        <div class="stat-card">
-            <div class="flex items-start justify-between mb-3">
-                <p class="text-white/50 text-xs font-medium">{{ $card['label'] }}</p>
-                <span class="text-2xl">{{ $card['icon'] }}</span>
-            </div>
-            <p class="text-2xl font-black text-white">{{ $card['value'] }}</p>
-            <p class="text-white/30 text-xs mt-1">{{ $card['sub'] }}</p>
+<div class="dash-overview">
+    <div class="dash-overview-main">
+        <div class="dash-welcome"><p>Así va tu tienda. Todo lo que necesitas, en un solo lugar.</p><a href="{{ route('dashboard.productos.create') }}" class="btn-primary"><x-dashboard-icon name="plus"/> Nuevo producto</a></div>
+        <div class="dash-metrics">
+            @php
+                $statCards = [
+                    ['label' => 'Productos activos', 'value' => $stats['active_products'], 'icon' => 'box', 'sub' => $stats['total_products'] . ' productos en tu catálogo', 'route' => route('dashboard.productos.index', ['status' => 'active'])],
+                    ['label' => 'Pedidos pendientes', 'value' => $stats['pending_orders'], 'icon' => 'cart', 'sub' => $stats['total_orders'] . ' pedidos en total', 'route' => route('dashboard.pedidos.index', ['status' => 'pending'])],
+                    ['label' => 'Stock bajo', 'value' => $stats['low_stock_products'], 'icon' => 'inventory', 'sub' => $stats['out_of_stock'] . ' productos sin stock', 'route' => route('dashboard.inventario.index', ['filter' => 'low'])],
+                ];
+            @endphp
+            @foreach($statCards as $card)
+            <a href="{{ $card['route'] }}" class="dash-metric"><span class="dash-metric-top"><span>{{ $card['label'] }}</span><x-dashboard-icon :name="$card['icon']"/></span><strong>{{ $card['value'] }}</strong><small>{{ $card['sub'] }}</small></a>
+            @endforeach
         </div>
-        @endforeach
-    </div>
-
-    {{-- Quick Actions --}}
-    <div class="glass-card p-5">
-        <h3 class="text-white font-bold mb-4 text-sm uppercase tracking-wider opacity-60">Acciones rápidas</h3>
-        <div class="flex flex-wrap gap-3">
-            <a href="{{ route('dashboard.productos.create') }}" class="btn-primary py-2.5 px-4 text-sm">
-                + Nuevo producto
-            </a>
-            <a href="{{ route('dashboard.pedidos.index') }}" class="btn-secondary py-2.5 px-4 text-sm">
-                🛒 Ver pedidos
-            </a>
-            <a href="{{ route('dashboard.galeria.index') }}" class="btn-secondary py-2.5 px-4 text-sm">
-                🖼️ Subir fotos
-            </a>
-            <a href="{{ route('dashboard.store.edit') }}" class="btn-secondary py-2.5 px-4 text-sm">
-                🎨 Personalizar tienda
-            </a>
-            @if($store)
-            <a href="{{ route('store.show', $store->slug) }}" target="_blank" class="btn-ghost py-2.5 px-4 text-sm">
-                🌐 Ver mi tienda
-            </a>
-            @endif
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {{-- Recent Orders --}}
-        <div class="glass-card p-6">
-            <div class="flex items-center justify-between mb-5">
-                <h3 class="text-white font-bold">Pedidos recientes</h3>
-                <a href="{{ route('dashboard.pedidos.index') }}" class="text-tribio-cyan text-sm hover:text-white transition-colors">Ver todos →</a>
-            </div>
-            @if($recentOrders->isEmpty())
-            <div class="text-center py-8">
-                <p class="text-5xl mb-3">🛒</p>
-                <p class="text-white/40 text-sm">Aún no tienes pedidos.</p>
-                <p class="text-white/25 text-xs mt-1">Comparte el link de tu tienda para empezar.</p>
-            </div>
-            @else
-            <div class="space-y-3">
-                @foreach($recentOrders as $order)
-                <div class="flex items-center gap-3 p-3 rounded-xl bg-white/3 hover:bg-white/5 transition-colors">
-                    <div class="flex-1 min-w-0">
-                        <p class="text-white text-sm font-medium">{{ $order->customer_name }}</p>
-                        <p class="text-white/40 text-xs">{{ $order->order_number }} • {{ $order->created_at->diffForHumans() }}</p>
-                    </div>
-                    <div class="text-right flex-shrink-0">
-                        <p class="text-white font-bold text-sm">S/. {{ number_format($order->total, 2) }}</p>
-                        <span class="badge badge-{{ $order->status_color }} text-xs">{{ $order->status_label }}</span>
-                    </div>
-                </div>
-                @endforeach
-            </div>
-            @endif
-        </div>
-
-        {{-- Top Products --}}
-        <div class="glass-card p-6">
-            <div class="flex items-center justify-between mb-5">
-                <h3 class="text-white font-bold">Productos más vendidos</h3>
-                <a href="{{ route('dashboard.productos.index') }}" class="text-tribio-cyan text-sm hover:text-white transition-colors">Ver todos →</a>
-            </div>
+        <section class="dash-section" aria-labelledby="top-products-heading">
+            <div class="dash-section-heading"><div><h2 id="top-products-heading">Tus productos más vendidos</h2><p>Un vistazo a tu catálogo</p></div><a href="{{ route('dashboard.productos.index') }}" class="dash-text-link">Ver todos <x-dashboard-icon name="chevron"/></a></div>
             @if($topProducts->isEmpty())
-            <div class="text-center py-8">
-                <p class="text-5xl mb-3">📦</p>
-                <p class="text-white/40 text-sm">Aún no tienes productos.</p>
-                <a href="{{ route('dashboard.productos.create') }}" class="btn-primary mt-3 text-sm py-2 px-4">+ Agregar producto</a>
-            </div>
+            <div class="dash-empty"><x-dashboard-icon name="box"/><h3>Tu próximo gran producto empieza aquí</h3><p>Agrega tu primer producto para mostrarlo en tu tienda.</p><a href="{{ route('dashboard.productos.create') }}" class="btn-primary">Agregar producto</a></div>
             @else
-            <div class="space-y-3">
-                @foreach($topProducts as $i => $product)
-                <div class="flex items-center gap-3">
-                    <span class="text-white/20 text-sm font-bold w-5 text-right flex-shrink-0">{{ $i + 1 }}</span>
-                    <div class="w-10 h-10 rounded-lg bg-tribio-purple/20 flex items-center justify-center overflow-hidden flex-shrink-0">
-                        @if($product->image_path)
-                            <img src="{{ $product->image_url }}" class="w-full h-full object-cover">
-                        @else
-                            <span class="text-lg">📦</span>
-                        @endif
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-white text-sm font-medium truncate">{{ $product->name }}</p>
-                        <p class="text-white/40 text-xs">{{ $product->sold_count }} ventas</p>
-                    </div>
-                    <p class="text-tribio-gold font-bold text-sm flex-shrink-0">S/. {{ number_format($product->price, 2) }}</p>
-                </div>
+            <div class="dash-product-strip" tabindex="0" aria-label="Productos más vendidos; desplaza para ver más">
+                @foreach($topProducts as $product)
+                <a href="{{ route('dashboard.productos.edit', $product) }}" class="dash-product">
+                    <div class="dash-product-image">@if($product->image_path)<img src="{{ $product->image_url }}" alt="{{ $product->name }}" loading="lazy">@else<x-dashboard-icon name="box"/>@endif<span>{{ $product->sold_count }} ventas</span></div>
+                    <h3>{{ $product->name }}</h3><div class="dash-product-price"><strong>S/. {{ number_format($product->price, 2) }}</strong><span>Editar <x-dashboard-icon name="chevron"/></span></div>
+                </a>
                 @endforeach
             </div>
             @endif
-        </div>
+        </section>
+        <section class="dash-section dash-orders" aria-labelledby="recent-orders-heading">
+            <div class="dash-section-heading"><div><h2 id="recent-orders-heading">Pedidos recientes</h2><p>Sigue las últimas compras de tu tienda</p></div><a href="{{ route('dashboard.pedidos.index') }}" class="dash-text-link">Ver todos <x-dashboard-icon name="chevron"/></a></div>
+            @if($recentOrders->isEmpty())
+                <div class="dash-empty"><x-dashboard-icon name="cart"/><h3>Todo listo para tu primera venta</h3><p>Comparte el enlace de tu tienda con tus clientes para empezar.</p>@if($store)<a href="{{ route('store.show', $store->slug) }}" target="_blank" rel="noopener" class="btn-secondary">Ver mi tienda <x-dashboard-icon name="external"/></a>@endif</div>
+            @else
+            <div class="overflow-x-auto"><table class="dash-orders-table"><thead><tr><th>Cliente / Pedido</th><th>Fecha</th><th>Estado</th><th class="dash-amount">Importe</th><th><span class="sr-only">Acciones</span></th></tr></thead><tbody>
+                @foreach($recentOrders as $order)
+                <tr><td><a href="{{ route('dashboard.pedidos.show', $order) }}" class="dash-order-customer"><span class="dash-order-icon"><x-dashboard-icon name="cart"/></span><span><strong>{{ $order->customer_name }}</strong><small>{{ $order->order_number }}</small></span></a></td><td><time datetime="{{ $order->created_at->toIso8601String() }}">{{ $order->created_at->format('d/m/Y') }}</time></td><td><span class="badge badge-{{ $order->status_color }}">{{ $order->status_label }}</span></td><td class="dash-amount">S/. {{ number_format($order->total, 2) }}</td><td><a href="{{ route('dashboard.pedidos.show', $order) }}" class="dash-icon-button" aria-label="Ver pedido {{ $order->order_number }}"><x-dashboard-icon name="chevron"/></a></td></tr>
+                @endforeach
+            </tbody></table></div>
+            @endif
+        </section>
     </div>
-
-    {{-- Store status card --}}
-    @if($store && !$store->isActive())
-    <div class="p-5 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center gap-4">
-        <span class="text-3xl">⚠️</span>
-        <div class="flex-1">
-            <p class="text-yellow-300 font-bold">Tu tienda no está activa</p>
-            <p class="text-yellow-300/60 text-sm mt-1">Estado actual: <strong>{{ $store->status }}</strong>. Contacta soporte si crees que esto es un error.</p>
-        </div>
-        <a href="{{ route('dashboard.store.edit') }}" class="btn-gold py-2 px-4 text-sm">Configurar</a>
-    </div>
-    @endif
-
+    <aside class="dash-summary" aria-label="Resumen de mi tienda">
+        <section><h2>Balance de tu tienda</h2><div class="dash-balance"><div><span>Ingresos del mes</span><x-dashboard-icon name="wallet"/></div><strong>S/. {{ number_format($stats['revenue_month'], 2) }}</strong><p>{{ now()->locale('es')->translatedFormat('F Y') }}</p><footer><span>Ingresos acumulados</span><b>S/. {{ number_format($stats['revenue_total'], 2) }}</b></footer></div><p class="dash-balance-note">Importes de pedidos no cancelados.</p></section>
+        <section><h2>Acciones rápidas</h2><div class="dash-shortcuts">
+            @foreach([['dashboard.productos.create', 'box', 'Nuevo producto', 'Amplía tu catálogo'], ['dashboard.pedidos.index', 'cart', 'Ver pedidos', 'Consulta tus ventas'], ['dashboard.galeria.index', 'image', 'Subir fotos', 'Da vida a tu tienda'], ['dashboard.store.edit', 'store', 'Personalizar tienda', 'Hazla a tu estilo']] as [$route, $icon, $label, $description])
+            <a href="{{ route($route) }}"><span class="dash-shortcut-icon"><x-dashboard-icon :name="$icon"/></span><span><strong>{{ $label }}</strong><small>{{ $description }}</small></span><x-dashboard-icon name="chevron"/></a>
+            @endforeach
+        </div></section>
+        <section class="dash-attention"><h2>Para tener en cuenta</h2><a href="{{ route('dashboard.inventario.index', ['filter' => 'out']) }}"><span>Productos sin stock</span><strong>{{ $stats['out_of_stock'] }}</strong></a><a href="{{ route('dashboard.pedidos.index', ['status' => 'pending']) }}"><span>Pedidos pendientes</span><strong>{{ $stats['pending_orders'] }}</strong></a></section>
+        @if($store)
+        <section class="dash-store-status"><div><span class="dash-status-dot {{ $store->isActive() ? 'is-active' : '' }}"></span><strong>{{ $store->isActive() ? 'Tu tienda está activa' : 'Tu tienda no está activa' }}</strong></div><p>{{ $store->isActive() ? 'Abre tu tienda y revisa cómo la ven tus clientes.' : 'Estado actual: ' . $store->status . '. Contacta soporte si crees que esto es un error.' }}</p><a href="{{ $store->isActive() ? route('store.show', $store->slug) : route('dashboard.store.edit') }}" @if($store->isActive()) target="_blank" rel="noopener" @endif class="dash-text-link">{{ $store->isActive() ? 'Ver mi tienda' : 'Configurar tienda' }}<x-dashboard-icon name="external"/></a></section>
+        @endif
+    </aside>
 </div>
 @endsection

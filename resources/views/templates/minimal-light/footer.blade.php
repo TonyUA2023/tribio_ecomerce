@@ -61,7 +61,7 @@
             <div class="flex flex-col lg:flex-row items-center justify-between gap-6">
                 <div class="text-center lg:text-left max-w-xl">
                     <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C8A68B]/20 text-[#E0C3AB] text-xs font-bold uppercase tracking-wider mb-2 border border-[#C8A68B]/30 font-brand">
-                        <span>✨</span> {{ $isEn ? 'Join the Club' : 'Club Exclusivo' }}
+                        {{ $isEn ? 'Join the Club' : 'Club Exclusivo' }}
                     </span>
                     <h3 class="text-xl sm:text-2xl font-bold text-white tracking-tight font-brand">
                         {{ $isEn ? 'Get 10% off your first purchase' : 'Recibe 10% de descuento en tu primera compra' }}
@@ -90,13 +90,12 @@
                             </button>
                         </form>
                         <p class="text-[11px] text-stone-400 mt-1.5 text-center sm:text-left flex items-center justify-center sm:justify-start gap-1">
-                            <span>🔒</span> {{ $isEn ? 'We respect your privacy. No spam ever.' : 'Respetamos tu privacidad. Cero spam garantizado.' }}
+                            {{ $isEn ? 'We respect your privacy. No spam ever.' : 'Respetamos tu privacidad. Cero spam garantizado.' }}
                         </p>
                     </div>
 
                     <div x-show="newsletterSent" style="display: none;"
                          class="p-3.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2.5">
-                        <span class="text-xl">🎉</span>
                         <div>
                             <p class="font-bold text-sm text-white font-brand">{{ $isEn ? 'Welcome to the Club!' : '¡Bienvenido a la comunidad!' }}</p>
                             <p class="text-[11px] text-emerald-300">{{ $isEn ? 'Check your inbox for your 10% welcome coupon.' : 'Revisa tu bandeja de entrada para canjear tu cupón de bienvenida.' }}</p>
@@ -134,26 +133,14 @@
 
                 {{-- Puntos de Contacto Directo --}}
                 <div class="space-y-2 pt-2 text-xs">
-                    {{-- WhatsApp --}}
-                    @php
-                        $waDisplay = $store->whatsapp_phone ?? $store->contact_phone ?? '+51 956 183 384';
-                    @endphp
-                    <a href="{{ $waUrl }}" target="_blank" rel="noopener"
-                       class="flex items-center gap-2.5 text-gray-300 hover:text-white transition group">
-                        <span class="w-7 h-7 rounded-full bg-[#25D366]/15 border border-[#25D366]/40 flex items-center justify-center text-[#25D366] group-hover:scale-110 transition">
-                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.969.541 1.961.824 2.796.824 3.183 0 5.77-2.586 5.77-5.766.001-3.181-2.586-5.767-5.77-5.767zm3.393 8.167c-.145.409-.844.757-1.171.808-.328.051-.734.072-2.374-.567-1.64-.639-2.716-2.28-2.798-2.389-.082-.109-.664-.883-.664-1.684 0-.802.422-1.195.572-1.356.15-.16.328-.2.438-.2.11 0 .219.002.315.007.102.005.239-.039.373.284.145.349.492 1.2.535 1.287.043.087.072.19.014.304-.058.114-.087.185-.174.286-.087.102-.183.228-.261.306-.087.087-.178.182-.077.355.101.173.45 1.002 1.328 1.782.721.641 1.332.84 1.52.923.188.083.298.073.409-.055.111-.128.475-.555.602-.745.127-.19.255-.16.429-.095.174.065 1.107.522 1.297.617.19.095.317.142.364.221.047.079.047.458-.098.867z"/></svg>
-                        </span>
-                        <span class="font-mono font-medium">{{ $waDisplay }}</span>
-                        <span class="text-[10px] text-emerald-400 uppercase tracking-wider font-bold">● En línea</span>
-                    </a>
 
                     {{-- Email --}}
-                    <a href="mailto:{{ $store->contact_email ?: 'contacto@maetek.com' }}"
+                    <a href="mailto:{{ $store->contact_email ?: 'maetek.pe@gmail.com' }}"
                        class="flex items-center gap-2.5 text-gray-300 hover:text-[#C8A68B] transition">
                         <span class="w-7 h-7 rounded-full bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                         </span>
-                        <span class="truncate">{{ $store->contact_email ?: 'contacto@maetek.com' }}</span>
+                        <span class="truncate">{{ $store->contact_email ?: 'maetek.pe@gmail.com' }}</span>
                     </a>
 
                     {{-- Ubicación --}}
@@ -189,12 +176,7 @@
                             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
                         </a>
 
-                        {{-- WhatsApp Oficial --}}
-                        <a href="{{ $waUrl }}" target="_blank" rel="noopener" 
-                           class="w-10 h-10 rounded-xl bg-[#25D366] flex items-center justify-center text-white shadow-md hover:scale-110 hover:bg-[#20bd5a] hover:shadow-lg transition-all duration-200" 
-                           title="WhatsApp +51 956 183 384">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.969.541 1.961.824 2.796.824 3.183 0 5.77-2.586 5.77-5.766.001-3.181-2.586-5.767-5.77-5.767zm3.393 8.167c-.145.409-.844.757-1.171.808-.328.051-.734.072-2.374-.567-1.64-.639-2.716-2.28-2.798-2.389-.082-.109-.664-.883-.664-1.684 0-.802.422-1.195.572-1.356.15-.16.328-.2.438-.2.11 0 .219.002.315.007.102.005.239-.039.373.284.145.349.492 1.2.535 1.287.043.087.072.19.014.304-.058.114-.087.185-.174.286-.087.102-.183.228-.261.306-.087.087-.178.182-.077.355.101.173.45 1.002 1.328 1.782.721.641 1.332.84 1.52.923.188.083.298.073.409-.055.111-.128.475-.555.602-.745.127-.19.255-.16.429-.095.174.065 1.107.522 1.297.617.19.095.317.142.364.221.047.079.047.458-.098.867z"/></svg>
-                        </a>
+
 
                         {{-- Facebook (si existe) --}}
                         @if($store->facebook_url)
@@ -216,7 +198,7 @@
                 <ul class="space-y-2.5 text-xs text-gray-400">
                     <li>
                         <a href="{{ route('store.catalog', $store->slug) }}" class="hover:text-[#C8A68B] transition flex items-center gap-1.5 font-semibold text-gray-200">
-                            <span>🛍️</span> {{ $isEn ? 'All Products' : 'Todos los Productos' }}
+                            {{ $isEn ? 'All Products' : 'Todos los Productos' }}
                         </a>
                     </li>
                     @foreach($footerCategories as $cat)
@@ -231,7 +213,7 @@
                     @if(method_exists($store, 'galleryItems') && $store->galleryItems()->exists())
                         <li class="pt-1 border-t border-white/5">
                             <a href="{{ route('gallery', $store->slug) }}" class="hover:text-[#C8A68B] transition flex items-center gap-1.5">
-                                <span>📸</span> {{ $isEn ? 'Photo Gallery' : 'Galería de Fotos' }}
+                                {{ $isEn ? 'Photo Gallery' : 'Galería de Fotos' }}
                             </a>
                         </li>
                     @endif
@@ -247,30 +229,30 @@
                     <li>
                         <button type="button" @click="window.openCustomerModal ? window.openCustomerModal('orders') : null"
                                 class="hover:text-[#C8A68B] transition flex items-center gap-1.5 text-left cursor-pointer font-medium text-gray-300">
-                            <span>📦</span> {{ $isEn ? 'Track My Order' : 'Rastrear mi Pedido' }}
+                            {{ $isEn ? 'Track My Order' : 'Rastrear mi Pedido' }}
                         </button>
                     </li>
                     <li>
                         <button type="button" @click="window.openCustomerModal ? window.openCustomerModal('login') : null"
                                 class="hover:text-white transition flex items-center gap-1.5 text-left cursor-pointer">
-                            <span>👤</span> {{ $isEn ? 'My Account / Login' : 'Mi Cuenta / Iniciar Sesión' }}
+                            {{ $isEn ? 'My Account / Login' : 'Mi Cuenta / Iniciar Sesión' }}
                         </button>
                     </li>
                     <li>
                         <button type="button" @click="faqOpen = true"
                                 class="hover:text-white transition flex items-center gap-1.5 text-left cursor-pointer">
-                            <span>❓</span> {{ $isEn ? 'Frequently Asked Questions' : 'Preguntas Frecuentes (FAQ)' }}
+                            {{ $isEn ? 'Frequently Asked Questions' : 'Preguntas Frecuentes (FAQ)' }}
                         </button>
                     </li>
                     <li>
                         <button type="button" @click="shippingPolicyOpen = true"
                                 class="hover:text-white transition flex items-center gap-1.5 text-left cursor-pointer">
-                            <span>🚚</span> {{ $isEn ? 'Shipping & Delivery' : 'Envíos y Tiempos de Entrega' }}
+                            {{ $isEn ? 'Shipping & Delivery' : 'Envíos y Tiempos de Entrega' }}
                         </button>
                     </li>
                     <li>
                         <a href="{{ route('store.contact', $store->slug) }}" class="hover:text-white transition flex items-center gap-1.5">
-                            <span>✉️</span> {{ $isEn ? 'Contact Us' : 'Escríbenos un Mensaje' }}
+                            {{ $isEn ? 'Contact Us' : 'Escríbenos un Mensaje' }}
                         </a>
                     </li>
                 </ul>
@@ -287,7 +269,6 @@
                     <button type="button" @click="reclamacionesOpen = true" 
                             class="w-full p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#C8A68B]/40 transition text-left cursor-pointer group">
                         <div class="flex items-center gap-2.5">
-                            <span class="text-2xl group-hover:scale-110 transition-transform">📖</span>
                             <div>
                                 <span class="text-xs font-bold text-white block group-hover:text-[#C8A68B] transition">Libro de Reclamaciones</span>
                                 <span class="text-[10px] text-gray-400 block font-mono">D.S. 011-2011-PCM</span>
@@ -583,7 +564,7 @@
                         <span x-text="activeAccordion === 1 ? '−' : '+'" class="text-base text-[#C8A68B]"></span>
                     </button>
                     <div x-show="activeAccordion === 1" class="mt-2.5 text-gray-400 leading-relaxed pt-2 border-t border-white/5">
-                        En Lima metropolitana las entregas suelen realizarse entre 24 a 48 horas hábiles. Para provincias a nivel nacional, los envíos se despachan vía Shalom u Olva Courier y toman de 2 a 4 días hábiles dependiendo del destino. Envíos internacionales toman entre 5 a 10 días laborables.
+                        Para envíos con stock en Perú las entregas son de 24 a 48 horas. Para provincias a nivel nacional, los envíos se despachan vía Shalom u Olva Courier y toman de 2 a 4 días hábiles dependiendo del destino. Envíos internacionales toman de 15 a 20 días.
                     </div>
                 </div>
 
@@ -623,8 +604,8 @@
 
             <div class="mt-6 pt-4 border-t border-white/10 text-center">
                 <p class="text-xs text-gray-400 mb-2">¿Tienes alguna otra duda o consulta especial?</p>
-                <a href="{{ $waUrl }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition">
-                    <span>💬</span> Chatear con un Asesor por WhatsApp
+                <a href="mailto:{{ $store->contact_email ?: 'maetek.pe@gmail.com' }}" class="inline-flex items-center justify-center px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white font-bold text-sm transition">
+                    Escríbenos a: {{ $store->contact_email ?: 'maetek.pe@gmail.com' }}
                 </a>
             </div>
         </div>

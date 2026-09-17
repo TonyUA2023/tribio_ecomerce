@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="">
+    <title>Mi Dashboard — Tribio</title>
+        <link rel="icon" href="http://127.0.0.1:8765/favicon.ico">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="preload" as="style" href="http://127.0.0.1:8765/build/assets/app-quunAb9E.css" /><link rel="preload" as="style" href="http://127.0.0.1:8765/build/assets/dashboard-BzEYI8LZ.css" /><link rel="modulepreload" as="script" href="http://127.0.0.1:8765/build/assets/app-B9getdLn.js" /><link rel="stylesheet" href="http://127.0.0.1:8765/build/assets/app-quunAb9E.css" data-navigate-track="reload" /><link rel="stylesheet" href="http://127.0.0.1:8765/build/assets/dashboard-BzEYI8LZ.css" data-navigate-track="reload" /><script type="module" src="http://127.0.0.1:8765/build/assets/app-B9getdLn.js" data-navigate-track="reload"></script>    </head>
+<body class="dashboard-body dashboard-workspace font-outfit antialiased">
+<div class="dash-shell" x-data="{
+    mobileOpen: false, collapsed: false, desktop: window.matchMedia('(min-width: 1024px)').matches,
+    closeMenu() { this.mobileOpen = false; this.$nextTick(() => this.$refs.menuToggle.focus()); },
+    toggleMenu() {
+        if (window.matchMedia('(min-width: 1024px)').matches) { this.collapsed = !this.collapsed; }
+        else { this.mobileOpen = !this.mobileOpen; if (this.mobileOpen) this.$nextTick(() => this.$refs.closeNavigation.focus()); }
+    },
+    trapNavigation(event) {
+        if (!this.mobileOpen || window.matchMedia('(min-width: 1024px)').matches) return;
+        const items = [...this.$refs.navigation.querySelectorAll('a[href], button')].filter(el => el.getClientRects().length);
+        const first = items[0], last = items[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+}" :class="{ 'is-collapsed': collapsed, 'is-mobile-open': mobileOpen }"
+     @keydown.escape.window="if (mobileOpen) closeMenu()"
+     @resize.window.debounce.150ms="desktop = window.matchMedia('(min-width: 1024px)').matches; if (desktop) mobileOpen = false">
+    <a href="#dashboard-content" class="dash-skip">Saltar al contenido</a>
+    <div class="dash-scrim" @click="closeMenu()" aria-hidden="true"></div>
+    <aside id="dashboard-navigation" class="dash-sidebar" x-ref="navigation" @keydown.tab="trapNavigation($event)" aria-label="Navegación de la tienda">
+        <div class="dash-brand-row">
+            <a href="http://127.0.0.1:8765/dashboard" class="dash-brand" aria-label="Tribio, inicio">
+                <span class="dash-brand-mark">t<span>.</span></span><span class="dash-nav-label">tribio<span class="dash-brand-dot">.</span></span>
+            </a>
+            <button type="button" class="dash-icon-button dash-close" x-ref="closeNavigation" @click="closeMenu()" aria-label="Cerrar navegación"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12 M6 18 18 6"/></svg>
+</button>
+        </div>
+                <a href="http://127.0.0.1:8765/dashboard/tienda/configuracion" class="dash-store-switch" title="Configurar Estudio Lucía">
+            <span class="dash-store-avatar">
+                <svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10v11h18V10 M2 10l2-7h16l2 7 M2 10c0 4 5 4 5 0 0 4 5 4 5 0 0 4 5 4 5 0 0 4 5 4 5 0 M9 21v-7h6v7"/></svg>
+            </span>
+            <span class="dash-nav-label min-w-0"><strong>Estudio Lucía</strong><small>Tu espacio de gestión</small></span>
+        </a>
+                <nav class="dash-nav" aria-label="Secciones">
+                                        <p class="dash-nav-group dash-nav-label">Resumen</p>                                <a href="http://127.0.0.1:8765/dashboard" class="sidebar-link "  title="Dashboard">
+                    <svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z"/></svg>
+<span class="dash-nav-label">Dashboard</span>
+                                    </a>
+                            <p class="dash-nav-group dash-nav-label">Catálogo</p>                                <a href="http://127.0.0.1:8765/dashboard/productos" class="sidebar-link "  title="Productos">
+                    <svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5z M3 8v9l9 5 9-5V8 M12 13v9 M7.5 5.5l9 5"/></svg>
+<span class="dash-nav-label">Productos</span>
+                                    </a>
+                                                            <a href="http://127.0.0.1:8765/dashboard/categorias" class="sidebar-link "  title="Categorías">
+                    <svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V4h6l2 3h10v13H3V7z"/></svg>
+<span class="dash-nav-label">Categorías</span>
+                                    </a>
+                                                            <a href="http://127.0.0.1:8765/dashboard/marcas" class="sidebar-link "  title="Marcas">
+                    <svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h8l10 10-8 8L3 11V3z M7 7h.01"/></svg>
+<span class="dash-nav-label">Marcas</span>
+                                    </a>
+                                                            <a href="http://127.0.0.1:8765/dashboard/galeria" class="sidebar-link "  title="Galería">
+                    <svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h18v18H3z M3 16l6-6 5 5 3-3 4 4 M16 7h.01"/></svg>
+<span class="dash-nav-label">Galería</span>
+                                    </a>
+                            <p class="dash-nav-group dash-nav-label">Operación</p>                                <a href="http://127.0.0.1:8765/dashboard/pedidos" class="sidebar-link "  title="Pedidos">
+                    <svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h3l3 13h11l3-9H6 M9 21h.01 M18 21h.01"/></svg>
+<span class="dash-nav-label">Pedidos</span>
+                                    </a>
+                                                            <a href="http://127.0.0.1:8765/dashboard/inventario" class="sidebar-link "  title="Inventario">
+                    <svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4H4v17h16V4h-4 M8 2h8v5H8z M8 12h8 M8 16h5"/></svg>
+<span class="dash-nav-label">Inventario</span>
+                                    </a>
+                                                            <a href="http://127.0.0.1:8765/dashboard/tienda/envios" class="sidebar-link "  title="Zonas de envío">
+                    <svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h12v13H2z M14 9h4l4 4v4h-8 M5 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4 M18 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4"/></svg>
+<span class="dash-nav-label">Zonas de envío</span>
+                                    </a>
+                            <p class="dash-nav-group dash-nav-label">Personalización</p>                                <a href="http://127.0.0.1:8765/dashboard/tienda/configuracion" class="sidebar-link "  title="Mi tienda">
+                    <svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10v11h18V10 M2 10l2-7h16l2 7 M2 10c0 4 5 4 5 0 0 4 5 4 5 0 0 4 5 4 5 0 0 4 5 4 5 0 M9 21v-7h6v7"/></svg>
+<span class="dash-nav-label">Mi tienda</span>
+                                    </a>
+                    </nav>
+        <div class="dash-sidebar-footer">
+                        <a href="http://127.0.0.1:8765/tienda/estudio-lucia" target="_blank" rel="noopener" class="sidebar-link" title="Ver mi tienda (nueva pestaña)"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7 M21 3 10 14 M10 3H3v18h18v-7"/></svg>
+<span class="dash-nav-label">Ver mi tienda</span></a>
+                        <form method="POST" action="http://127.0.0.1:8765/logout"><input type="hidden" name="_token" value="" autocomplete="off">                <button type="submit" class="sidebar-link w-full" title="Cerrar sesión"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3H3v18h6 M9 12h12 M17 8l4 4-4 4"/></svg>
+<span class="dash-nav-label">Cerrar sesión</span></button>
+            </form>
+        </div>
+    </aside>
+    <div class="dash-main" :inert="mobileOpen">
+        <header class="dash-topbar">
+            <button type="button" class="dash-icon-button" x-ref="menuToggle" @click="toggleMenu()" aria-label="Alternar navegación" aria-controls="dashboard-navigation" :aria-expanded="desktop ? !collapsed : mobileOpen"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16 M4 12h16 M4 18h16"/></svg>
+</button>
+            <form method="GET" action="http://127.0.0.1:8765/dashboard/productos" class="dash-search" role="search">
+                <label for="dashboard-search" class="sr-only">Buscar productos en mi tienda</label>
+                <svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15 M16 16l5 5"/></svg>
+                <input id="dashboard-search" name="search" type="search" placeholder="Buscar en tus productos…" value="">
+                <button type="submit" aria-label="Buscar productos"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+</button>
+            </form>
+            <div class="dash-account" x-data="{ open: false }" @keydown.escape.stop="open = false; $refs.accountToggle.focus()">
+                <button type="button" x-ref="accountToggle" @click="open = !open" :aria-expanded="open" aria-controls="dashboard-account" class="dash-account-button" aria-label="Menú de mi cuenta">
+                    <span class="dash-avatar">L</span>
+                    <span class="dash-account-name"><strong>Lucía Torres</strong><small>Mi cuenta</small></span>
+                    <svg class="dash-icon dash-account-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+                </button>
+                <div id="dashboard-account" x-cloak x-show="open" @click.outside="open = false" class="dash-account-menu">
+                    <a href="http://127.0.0.1:8765/dashboard/tienda/configuracion">Configurar tienda</a>
+                    <form method="POST" action="http://127.0.0.1:8765/logout"><input type="hidden" name="_token" value="" autocomplete="off"><button type="submit">Cerrar sesión</button></form>
+                </div>
+            </div>
+        </header>
+        <main id="dashboard-content" class="dash-content" tabindex="-1">
+            <div class="dash-page-heading"><div><p>Mi espacio / Mi Dashboard</p><h1>Hola, Lucía Torres</h1></div><span class="dash-date">17 sep., 2026</span></div>
+                                                                                                            <div class="dash-overview">
+    <div class="dash-overview-main">
+        <div class="dash-welcome"><p>Así va tu tienda. Todo lo que necesitas, en un solo lugar.</p><a href="http://127.0.0.1:8765/dashboard/productos/create" class="btn-primary"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14 M5 12h14"/></svg>
+ Nuevo producto</a></div>
+        <div class="dash-metrics">
+                                    <a href="http://127.0.0.1:8765/dashboard/productos?status=active" class="dash-metric"><span class="dash-metric-top"><span>Productos activos</span><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5z M3 8v9l9 5 9-5V8 M12 13v9 M7.5 5.5l9 5"/></svg>
+</span><strong>24</strong><small>28 productos en tu catálogo</small></a>
+                        <a href="http://127.0.0.1:8765/dashboard/pedidos?status=pending" class="dash-metric"><span class="dash-metric-top"><span>Pedidos pendientes</span><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h3l3 13h11l3-9H6 M9 21h.01 M18 21h.01"/></svg>
+</span><strong>8</strong><small>126 pedidos en total</small></a>
+                        <a href="http://127.0.0.1:8765/dashboard/inventario?filter=low" class="dash-metric"><span class="dash-metric-top"><span>Stock bajo</span><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4H4v17h16V4h-4 M8 2h8v5H8z M8 12h8 M8 16h5"/></svg>
+</span><strong>3</strong><small>2 productos sin stock</small></a>
+                    </div>
+        <section class="dash-section" aria-labelledby="top-products-heading">
+            <div class="dash-section-heading"><div><h2 id="top-products-heading">Tus productos más vendidos</h2><p>Un vistazo a tu catálogo</p></div><a href="http://127.0.0.1:8765/dashboard/productos" class="dash-text-link">Ver todos <svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+</a></div>
+                        <div class="dash-product-strip" tabindex="0" aria-label="Productos más vendidos; desplaza para ver más">
+                                <a href="http://127.0.0.1:8765/dashboard/productos/1/edit" class="dash-product">
+                    <div class="dash-product-image"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5z M3 8v9l9 5 9-5V8 M12 13v9 M7.5 5.5l9 5"/></svg>
+<span>36 ventas</span></div>
+                    <h3>Bolso de viaje</h3><div class="dash-product-price"><strong>S/. 89.00</strong><span>Editar <svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+</span></div>
+                </a>
+                                <a href="http://127.0.0.1:8765/dashboard/productos/2/edit" class="dash-product">
+                    <div class="dash-product-image"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5z M3 8v9l9 5 9-5V8 M12 13v9 M7.5 5.5l9 5"/></svg>
+<span>32 ventas</span></div>
+                    <h3>Zapatillas urbanas</h3><div class="dash-product-price"><strong>S/. 119.00</strong><span>Editar <svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+</span></div>
+                </a>
+                                <a href="http://127.0.0.1:8765/dashboard/productos/3/edit" class="dash-product">
+                    <div class="dash-product-image"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5z M3 8v9l9 5 9-5V8 M12 13v9 M7.5 5.5l9 5"/></svg>
+<span>28 ventas</span></div>
+                    <h3>Vestido de verano</h3><div class="dash-product-price"><strong>S/. 149.00</strong><span>Editar <svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+</span></div>
+                </a>
+                                <a href="http://127.0.0.1:8765/dashboard/productos/4/edit" class="dash-product">
+                    <div class="dash-product-image"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5z M3 8v9l9 5 9-5V8 M12 13v9 M7.5 5.5l9 5"/></svg>
+<span>24 ventas</span></div>
+                    <h3>Mochila clásica</h3><div class="dash-product-price"><strong>S/. 179.00</strong><span>Editar <svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+</span></div>
+                </a>
+                                <a href="http://127.0.0.1:8765/dashboard/productos/5/edit" class="dash-product">
+                    <div class="dash-product-image"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5z M3 8v9l9 5 9-5V8 M12 13v9 M7.5 5.5l9 5"/></svg>
+<span>20 ventas</span></div>
+                    <h3>Camisa de lino</h3><div class="dash-product-price"><strong>S/. 209.00</strong><span>Editar <svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+</span></div>
+                </a>
+                            </div>
+                    </section>
+        <section class="dash-section dash-orders" aria-labelledby="recent-orders-heading">
+            <div class="dash-section-heading"><div><h2 id="recent-orders-heading">Pedidos recientes</h2><p>Sigue las últimas compras de tu tienda</p></div><a href="http://127.0.0.1:8765/dashboard/pedidos" class="dash-text-link">Ver todos <svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+</a></div>
+                        <div class="overflow-x-auto"><table class="dash-orders-table"><thead><tr><th>Cliente / Pedido</th><th>Fecha</th><th>Estado</th><th class="dash-amount">Importe</th><th><span class="sr-only">Acciones</span></th></tr></thead><tbody>
+                                <tr><td><a href="http://127.0.0.1:8765/dashboard/pedidos/1" class="dash-order-customer"><span class="dash-order-icon"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h3l3 13h11l3-9H6 M9 21h.01 M18 21h.01"/></svg>
+</span><span><strong>Mariana López</strong><small>TRB-2026-0001</small></span></a></td><td><time datetime="2026-09-17T18:34:12+00:00">17/09/2026</time></td><td><span class="badge badge-yellow">Pendiente</span></td><td class="dash-amount">S/. 129.00</td><td><a href="http://127.0.0.1:8765/dashboard/pedidos/1" class="dash-icon-button" aria-label="Ver pedido TRB-2026-0001"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+</a></td></tr>
+                                <tr><td><a href="http://127.0.0.1:8765/dashboard/pedidos/2" class="dash-order-customer"><span class="dash-order-icon"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h3l3 13h11l3-9H6 M9 21h.01 M18 21h.01"/></svg>
+</span><span><strong>Carlos Mendoza</strong><small>TRB-2026-0002</small></span></a></td><td><time datetime="2026-09-17T12:34:12+00:00">17/09/2026</time></td><td><span class="badge badge-green">Entregado</span></td><td class="dash-amount">S/. 149.00</td><td><a href="http://127.0.0.1:8765/dashboard/pedidos/2" class="dash-icon-button" aria-label="Ver pedido TRB-2026-0002"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+</a></td></tr>
+                                <tr><td><a href="http://127.0.0.1:8765/dashboard/pedidos/3" class="dash-order-customer"><span class="dash-order-icon"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h3l3 13h11l3-9H6 M9 21h.01 M18 21h.01"/></svg>
+</span><span><strong>Ana Ramírez</strong><small>TRB-2026-0003</small></span></a></td><td><time datetime="2026-09-17T06:34:12+00:00">17/09/2026</time></td><td><span class="badge badge-blue">Confirmado</span></td><td class="dash-amount">S/. 169.00</td><td><a href="http://127.0.0.1:8765/dashboard/pedidos/3" class="dash-icon-button" aria-label="Ver pedido TRB-2026-0003"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+</a></td></tr>
+                                <tr><td><a href="http://127.0.0.1:8765/dashboard/pedidos/4" class="dash-order-customer"><span class="dash-order-icon"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h3l3 13h11l3-9H6 M9 21h.01 M18 21h.01"/></svg>
+</span><span><strong>Diego Flores</strong><small>TRB-2026-0004</small></span></a></td><td><time datetime="2026-09-17T00:34:12+00:00">17/09/2026</time></td><td><span class="badge badge-indigo">Enviado</span></td><td class="dash-amount">S/. 189.00</td><td><a href="http://127.0.0.1:8765/dashboard/pedidos/4" class="dash-icon-button" aria-label="Ver pedido TRB-2026-0004"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+</a></td></tr>
+                                <tr><td><a href="http://127.0.0.1:8765/dashboard/pedidos/5" class="dash-order-customer"><span class="dash-order-icon"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h3l3 13h11l3-9H6 M9 21h.01 M18 21h.01"/></svg>
+</span><span><strong>Valeria Rojas</strong><small>TRB-2026-0005</small></span></a></td><td><time datetime="2026-09-16T18:34:12+00:00">16/09/2026</time></td><td><span class="badge badge-yellow">Pendiente</span></td><td class="dash-amount">S/. 209.00</td><td><a href="http://127.0.0.1:8765/dashboard/pedidos/5" class="dash-icon-button" aria-label="Ver pedido TRB-2026-0005"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+</a></td></tr>
+                            </tbody></table></div>
+                    </section>
+    </div>
+    <aside class="dash-summary" aria-label="Resumen de mi tienda">
+        <section><h2>Balance de tu tienda</h2><div class="dash-balance"><div><span>Ingresos del mes</span><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h17v15H3V6z M3 6V3h14v3 M15 11h7v5h-7z"/></svg>
+</div><strong>S/. 8,420.50</strong><p>septiembre 2026</p><footer><span>Ingresos acumulados</span><b>S/. 32,650.00</b></footer></div><p class="dash-balance-note">Importes de pedidos no cancelados.</p></section>
+        <section><h2>Acciones rápidas</h2><div class="dash-shortcuts">
+                        <a href="http://127.0.0.1:8765/dashboard/productos/create"><span class="dash-shortcut-icon"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5z M3 8v9l9 5 9-5V8 M12 13v9 M7.5 5.5l9 5"/></svg>
+</span><span><strong>Nuevo producto</strong><small>Amplía tu catálogo</small></span><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+</a>
+                        <a href="http://127.0.0.1:8765/dashboard/pedidos"><span class="dash-shortcut-icon"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h3l3 13h11l3-9H6 M9 21h.01 M18 21h.01"/></svg>
+</span><span><strong>Ver pedidos</strong><small>Consulta tus ventas</small></span><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+</a>
+                        <a href="http://127.0.0.1:8765/dashboard/galeria"><span class="dash-shortcut-icon"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h18v18H3z M3 16l6-6 5 5 3-3 4 4 M16 7h.01"/></svg>
+</span><span><strong>Subir fotos</strong><small>Da vida a tu tienda</small></span><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+</a>
+                        <a href="http://127.0.0.1:8765/dashboard/tienda/configuracion"><span class="dash-shortcut-icon"><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10v11h18V10 M2 10l2-7h16l2 7 M2 10c0 4 5 4 5 0 0 4 5 4 5 0 0 4 5 4 5 0 0 4 5 4 5 0 M9 21v-7h6v7"/></svg>
+</span><span><strong>Personalizar tienda</strong><small>Hazla a tu estilo</small></span><svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+</a>
+                    </div></section>
+        <section class="dash-attention"><h2>Para tener en cuenta</h2><a href="http://127.0.0.1:8765/dashboard/inventario?filter=out"><span>Productos sin stock</span><strong>2</strong></a><a href="http://127.0.0.1:8765/dashboard/pedidos?status=pending"><span>Pedidos pendientes</span><strong>8</strong></a></section>
+                <section class="dash-store-status"><div><span class="dash-status-dot is-active"></span><strong>Tu tienda está activa</strong></div><p>Abre tu tienda y revisa cómo la ven tus clientes.</p><a href="http://127.0.0.1:8765/tienda/estudio-lucia"  target="_blank" rel="noopener"  class="dash-text-link">Ver mi tienda<svg class="dash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7 M21 3 10 14 M10 3H3v18h18v-7"/></svg>
+</a></section>
+            </aside>
+</div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

@@ -21,7 +21,7 @@
 <!-- Top Announcement Bar: Maetek Pastel Sage -->
 <div class="bg-[#E5EEDF] border-b border-[#CCDBC0] py-2 px-3 sm:px-6 text-center text-[11px] sm:text-xs font-semibold text-[#4A6038] tracking-wide flex items-center justify-center gap-2 font-brand">
     <span class="inline-block w-1.5 h-1.5 rounded-full bg-[#7DA268] animate-pulse"></span>
-    <span>{{ $isEn ? '🌿 YOUR LIFE, MADE EASIER • We ship to multiple countries • 100% Guaranteed' : '🌿 TU VIDA, MÁS FÁCIL — Llegamos a varios países • Compra 100% protegida' }}</span>
+    <span>{{ $isEn ? 'We ship to multiple countries • 100% Guaranteed' : 'Llegamos a varios países • Compra 100% protegida' }}</span>
 </div>
 
 <!-- Header Component -->
@@ -160,7 +160,6 @@
                             <svg class="w-16 sm:w-20 md:w-24 h-2 mt-0.5 text-[#C8A68B]" viewBox="0 0 100 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M4 3C30 11 70 11 96 3" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
                             </svg>
-                            <span class="text-[8px] md:text-[9px] tracking-[0.25em] text-[#6E6A63] uppercase font-semibold mt-0.5 hidden sm:block font-brand">— TU VIDA, MÁS FÁCIL —</span>
                         </div>
                     @endif
                 </a>

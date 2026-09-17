@@ -97,7 +97,7 @@
                     <!-- Brand Slogan Tag from Logo -->
                     <div class="inline-flex items-center gap-2 mb-3.5 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white text-[11px] md:text-xs font-bold tracking-[0.25em] uppercase shadow-xs font-brand">
                         <span class="w-2 h-2 rounded-full bg-[#7DA268]"></span>
-                        <span>— TU VIDA, MÁS FÁCIL —</span>
+                        <span>— {{ \App\Helpers\TranslationHelper::isEn() ? 'PREMIUM QUALITY' : 'PRODUCTOS EXCLUSIVOS' }} —</span>
                     </div>
 
                     <!-- Main Brand Name with Maetek Typography -->
@@ -110,16 +110,16 @@
                         {{ $store->hero_title ?: 'Innovación que inspira tu estilo de vida' }}
                     </h2>
 
-                    <!-- Circular "Comprar Ahora" Button with Pastel Green Accent -->
-                    <div class="relative inline-flex items-center justify-center w-32 h-32 md:w-36 md:h-36 group cursor-pointer" onclick="window.location='{{ route('store.catalog', $store->slug) }}'">
+                    <!-- Circular "Comprar Ahora" Button with Pastel Pink Accent -->
+                    <div class="relative inline-flex items-center justify-center w-36 h-36 md:w-40 md:h-40 group cursor-pointer" onclick="window.location='{{ route('store.catalog', $store->slug) }}'">
                         <!-- Outer Thin Ring -->
-                        <div class="absolute inset-0 rounded-full border-2 border-white/60 group-hover:scale-110 group-hover:border-[#CCDBC0] transition-all duration-500"></div>
+                        <div class="absolute inset-0 rounded-full border-2 border-white/60 group-hover:scale-110 group-hover:border-[#F4C5CD] transition-all duration-500"></div>
                         <!-- Inner Solid Circle (Centered Text & Arrow) -->
-                        <div class="absolute inset-2 md:inset-2.5 rounded-full bg-[#7DA268] flex flex-col items-center justify-center text-center px-3 shadow-xl group-hover:bg-[#6D9159] transition-all duration-500">
-                            <span class="text-white text-xs md:text-sm tracking-wider uppercase font-bold font-brand text-center block w-full leading-tight">
+                        <div class="absolute inset-2 md:inset-2.5 rounded-full bg-[#F4C5CD] flex flex-col items-center justify-center text-center px-4 shadow-xl group-hover:bg-[#E5AAB5] transition-all duration-500">
+                            <span class="text-white text-sm md:text-base tracking-wider uppercase font-extrabold font-brand text-center block w-full leading-tight">
                                 {{ \App\Helpers\TranslationHelper::trans('shop_now', 'Comprar Ahora') }}
                             </span>
-                            <span class="text-white/90 text-xs sm:text-sm mt-1.5 group-hover:translate-x-1 transition-transform inline-block">→</span>
+                            <span class="text-white/90 text-sm sm:text-base mt-1.5 group-hover:translate-x-1 transition-transform inline-block font-bold">→</span>
                         </div>
                     </div>
                 </div>
@@ -140,16 +140,7 @@
                 <span x-text="String(totalSlides).padStart(2, '0')">03</span>
             </div>
             
-            <!-- Bottom Right Tagline -->
-            @if($store->hero_subtitle)
-            <div class="absolute bottom-8 right-4 sm:right-6 lg:right-12 hidden md:block z-20 text-white/90 text-sm font-medium max-w-xs text-right font-brand">
-                {{ $store->hero_subtitle }}
-            </div>
-            @else
-            <div class="absolute bottom-8 right-4 sm:right-6 lg:right-12 hidden md:block z-20 text-white/90 text-sm font-medium max-w-xs text-right font-brand">
-                ✨ Tu vida, más fácil
-            </div>
-            @endif
+
         </section>
 
         <!-- Maetek 3 Pastel Brand Pillars (Inspired Directly from Official Logo: House, Leaf, Lightbulb) -->
@@ -376,7 +367,7 @@
         @if($featuredCats->isNotEmpty())
         <section class="py-12 bg-[#FAF7F2] border-t border-stone-200/50">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h2 class="text-xl md:text-2xl font-bold text-[#1E1D1B] mb-6 font-brand">{{ \App\Helpers\TranslationHelper::trans('featured_categories', 'Categorías destacadas') }}</h2>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-[#1E1D1B] mb-8 text-center font-brand">{{ \App\Helpers\TranslationHelper::trans('featured_categories', 'Categorías destacadas') }}</h2>
                 
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                     @foreach($featuredCats as $index => $cat)
@@ -404,13 +395,13 @@
                             <!-- Bottom Gradient Overlay for readability -->
                             <div class="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-0 pointer-events-none"></div>
 
-                            <!-- Bottom Capsule Pill (Pastel Frosted Glass) -->
-                            <div class="absolute bottom-0 left-0 right-0 flex items-end z-10 p-0">
-                                <div class="bg-white/90 backdrop-blur-md rounded-tr-2xl pr-3.5 pl-2 py-1.5 flex items-center gap-2 border-t border-r border-stone-200/70 shadow-xs max-w-[92%]">
-                                    <span class="w-7 h-7 rounded-full bg-stone-100 flex items-center justify-center text-sm shrink-0 shadow-2xs">
+                            <!-- Bottom Capsule Pill (Pastel Frosted Glass) Centered -->
+                            <div class="absolute bottom-4 left-0 right-0 flex items-center justify-center z-10 p-0">
+                                <div class="bg-white/95 backdrop-blur-md rounded-2xl px-4 py-2 flex items-center justify-center gap-2.5 shadow-sm max-w-[90%] mx-auto transition-transform group-hover:scale-105">
+                                    <span class="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-base shrink-0 shadow-2xs">
                                         {{ $cat->icon ?? '⭐' }}
                                     </span>
-                                    <span class="text-[#1E1D1B] text-xs font-bold tracking-tight truncate font-brand">
+                                    <span class="text-[#1E1D1B] text-sm md:text-base font-extrabold tracking-tight truncate font-brand">
                                         {{ $cat->getTranslatedName() }}
                                     </span>
                                 </div>
@@ -495,7 +486,7 @@
     <!-- Footer Features (Maetek Pastel Palette) -->
     <div class="bg-[#FAF7F2] border-y border-stone-200/70 py-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
                 <!-- Feature 1: Pastel Sage Green -->
                 <div class="p-4 rounded-2xl bg-white border border-[#CCDBC0] shadow-2xs hover:shadow-sm transition-all" data-animate style="animation-delay: 100ms;">
                     <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-[#EAF1E4] border border-[#CCDBC0] flex items-center justify-center text-[#4A6038]">
@@ -521,15 +512,6 @@
                     </div>
                     <h4 class="font-bold text-sm text-[#1E1D1B] mb-1 font-brand">Pagos 100% seguros</h4>
                     <p class="text-xs text-[#6E6A63]">Tus datos protegidos y encriptados</p>
-                </div>
-
-                <!-- Feature 4: Pastel Greige -->
-                <div class="p-4 rounded-2xl bg-white border border-[#E8E7E1] shadow-2xs hover:shadow-sm transition-all" data-animate style="animation-delay: 400ms;">
-                    <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-[#F2F2ED] border border-[#E8E7E1] flex items-center justify-center text-[#555450]">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
-                    </div>
-                    <h4 class="font-bold text-sm text-[#1E1D1B] mb-1 font-brand">Asesoría personalizada</h4>
-                    <p class="text-xs text-[#6E6A63]">Te acompañamos en tu compra por WhatsApp</p>
                 </div>
             </div>
         </div>
