@@ -96,7 +96,7 @@
                 <div class="max-w-2xl text-white md:ml-10" data-animate>
                     <!-- Brand Slogan Tag from Logo -->
                     <div class="inline-flex items-center gap-2 mb-3.5 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white text-[11px] md:text-xs font-bold tracking-[0.25em] uppercase shadow-xs font-brand">
-                        <span class="w-2 h-2 rounded-full bg-[#C8A68B]"></span>
+                        <span class="w-2 h-2 rounded-full bg-[#7DA268]"></span>
                         <span>— TU VIDA, MÁS FÁCIL —</span>
                     </div>
 
@@ -110,14 +110,16 @@
                         {{ $store->hero_title ?: 'Innovación que inspira tu estilo de vida' }}
                     </h2>
 
-                    <!-- Circular "Explorar" Button with Caramel Accent -->
+                    <!-- Circular "Comprar Ahora" Button with Pastel Green Accent -->
                     <div class="relative inline-flex items-center justify-center w-32 h-32 md:w-36 md:h-36 group cursor-pointer" onclick="window.location='{{ route('store.catalog', $store->slug) }}'">
                         <!-- Outer Thin Ring -->
-                        <div class="absolute inset-0 rounded-full border-2 border-white/60 group-hover:scale-110 group-hover:border-[#C8A68B] transition-all duration-500"></div>
-                        <!-- Inner Solid Circle -->
-                        <div class="absolute inset-2 md:inset-2.5 rounded-full bg-[#C8A68B] flex flex-col items-center justify-center shadow-xl group-hover:bg-[#B89578] transition-colors duration-500">
-                            <span class="text-white text-xs md:text-sm tracking-wider uppercase font-bold font-brand">{{ \App\Helpers\TranslationHelper::trans('shop_now', 'Explorar') }}</span>
-                            <span class="text-white/80 text-xs mt-0.5 group-hover:text-white transition-colors">→</span>
+                        <div class="absolute inset-0 rounded-full border-2 border-white/60 group-hover:scale-110 group-hover:border-[#CCDBC0] transition-all duration-500"></div>
+                        <!-- Inner Solid Circle (Centered Text & Arrow) -->
+                        <div class="absolute inset-2 md:inset-2.5 rounded-full bg-[#7DA268] flex flex-col items-center justify-center text-center px-3 shadow-xl group-hover:bg-[#6D9159] transition-all duration-500">
+                            <span class="text-white text-xs md:text-sm tracking-wider uppercase font-bold font-brand text-center block w-full leading-tight">
+                                {{ \App\Helpers\TranslationHelper::trans('shop_now', 'Comprar Ahora') }}
+                            </span>
+                            <span class="text-white/90 text-xs sm:text-sm mt-1.5 group-hover:translate-x-1 transition-transform inline-block">→</span>
                         </div>
                     </div>
                 </div>
@@ -151,45 +153,59 @@
         </section>
 
         <!-- Maetek 3 Pastel Brand Pillars (Inspired Directly from Official Logo: House, Leaf, Lightbulb) -->
-        <section class="py-5 sm:py-7 bg-[#FAF7F2] border-b border-stone-200/70">
-            <div class="max-w-6xl mx-auto px-4 sm:px-6">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-6">
+        <section class="py-6 sm:py-9 bg-[#FAF7F2] border-b border-stone-200/70">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                     <!-- Pillar 1: Hogar (Pastel Sand) -->
-                    <div class="flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl bg-white border border-[#EFE3D0] shadow-2xs hover:shadow-sm transition-all group">
-                        <div class="w-11 h-11 rounded-full bg-[#EFE3D0] flex items-center justify-center shrink-0 text-stone-800 text-lg shadow-inner group-hover:scale-105 transition-transform">
+                    <div class="flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#EFE3D0] shadow-2xs hover:shadow-md hover:border-[#DECBB5] transition-all duration-300 group">
+                        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#EFE3D0] flex items-center justify-center shrink-0 text-2xl sm:text-3xl shadow-inner group-hover:scale-110 transition-transform duration-300">
                             🏠
                         </div>
                         <div>
-                            <h4 class="font-bold text-xs sm:text-sm text-[#1E1D1B] font-brand">Tu Hogar, Mejor</h4>
-                            <p class="text-[11px] text-[#6E6A63]">Artículos esenciales para tu día a día</p>
+                            <h4 class="font-bold text-base sm:text-lg text-[#1E1D1B] font-brand tracking-tight mb-0.5">
+                                {{ \App\Helpers\TranslationHelper::isEn() ? 'Your Home, Better' : 'Tu Hogar, Mejor' }}
+                            </h4>
+                            <p class="text-xs sm:text-sm text-[#6E6A63] leading-snug">
+                                {{ \App\Helpers\TranslationHelper::isEn() ? 'Essential items for your everyday life' : 'Artículos esenciales para tu día a día' }}
+                            </p>
                         </div>
                     </div>
 
                     <!-- Pillar 2: Natural & Calidad (Pastel Sage Green) -->
-                    <div class="flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl bg-white border border-[#CCDBC0] shadow-2xs hover:shadow-sm transition-all group">
-                        <div class="w-11 h-11 rounded-full bg-[#C8D7BA] flex items-center justify-center shrink-0 text-[#3F542F] text-lg shadow-inner group-hover:scale-105 transition-transform">
+                    <div class="flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#CCDBC0] shadow-2xs hover:shadow-md hover:border-[#A2C493] transition-all duration-300 group">
+                        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#C8D7BA] flex items-center justify-center shrink-0 text-[#3F542F] text-2xl sm:text-3xl shadow-inner group-hover:scale-110 transition-transform duration-300">
                             🍃
                         </div>
                         <div>
-                            <h4 class="font-bold text-xs sm:text-sm text-[#1E1D1B] font-brand">Calidad Esencial</h4>
-                            <p class="text-[11px] text-[#6E6A63]">Seleccionados con cariño y durabilidad</p>
+                            <h4 class="font-bold text-base sm:text-lg text-[#1E1D1B] font-brand tracking-tight mb-0.5">
+                                {{ \App\Helpers\TranslationHelper::isEn() ? 'Essential Quality' : 'Calidad Esencial' }}
+                            </h4>
+                            <p class="text-xs sm:text-sm text-[#6E6A63] leading-snug">
+                                {{ \App\Helpers\TranslationHelper::isEn() ? 'Curated with care and durability' : 'Seleccionados con cariño y durabilidad' }}
+                            </p>
                         </div>
                     </div>
 
                     <!-- Pillar 3: Ideas Prácticas (Pastel Peach) -->
-                    <div class="flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl bg-white border border-[#F9D6CE] shadow-2xs hover:shadow-sm transition-all group">
-                        <div class="w-11 h-11 rounded-full bg-[#F9D6CE] flex items-center justify-center shrink-0 text-[#8C3425] text-lg shadow-inner group-hover:scale-105 transition-transform">
+                    <div class="flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#F9D6CE] shadow-2xs hover:shadow-md hover:border-[#E8A598] transition-all duration-300 group">
+                        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#F9D6CE] flex items-center justify-center shrink-0 text-[#8C3425] text-2xl sm:text-3xl shadow-inner group-hover:scale-110 transition-transform duration-300">
                             💡
                         </div>
                         <div>
-                            <h4 class="font-bold text-xs sm:text-sm text-[#1E1D1B] font-brand">Ideas Prácticas</h4>
-                            <p class="text-[11px] text-[#6E6A63]">Soluciones simples que facilitan tu vida</p>
+                            <h4 class="font-bold text-base sm:text-lg text-[#1E1D1B] font-brand tracking-tight mb-0.5">
+                                {{ \App\Helpers\TranslationHelper::isEn() ? 'Smart Ideas' : 'Ideas Prácticas' }}
+                            </h4>
+                            <p class="text-xs sm:text-sm text-[#6E6A63] leading-snug">
+                                {{ \App\Helpers\TranslationHelper::isEn() ? 'Simple solutions that make life easier' : 'Soluciones simples que facilitan tu vida' }}
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
-        <p class="text-center text-[11px] text-stone-400 py-2 bg-[#FAF7F2]">*Válido para pedidos realizados hasta las 5:00 p.m. Aplica T&C.</p>
+        <p class="text-center text-xs text-stone-400 py-2.5 bg-[#FAF7F2]">
+            {{ \App\Helpers\TranslationHelper::isEn() ? '*Valid for orders placed before 5:00 PM. T&C apply.' : '*Válido para pedidos realizados hasta las 5:00 p.m. Aplica T&C.' }}
+        </p>
 
         @if(isset($homeVideoProducts) && $homeVideoProducts->isNotEmpty())
         <!-- Featured Products with Short Videos Section (Pastel & Minimalist) -->
@@ -199,7 +215,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-end justify-between mb-6 md:mb-8 gap-3">
                     <div>
                         <h2 class="text-xl sm:text-2xl md:text-3xl font-bold text-[#1E1D1B] font-brand tracking-tight">
-                            Productos en Video
+                            {{ \App\Helpers\TranslationHelper::isEn() ? 'Trending Products' : 'Productos en Tendencia' }}
                         </h2>
                         <p class="text-xs sm:text-sm text-stone-500 mt-1 font-medium max-w-xl">
                             Detalles y acabados reales de nuestros productos destacados.

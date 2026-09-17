@@ -21,7 +21,7 @@
 <!-- Top Announcement Bar: Maetek Pastel Sage -->
 <div class="bg-[#E5EEDF] border-b border-[#CCDBC0] py-2 px-3 sm:px-6 text-center text-[11px] sm:text-xs font-semibold text-[#4A6038] tracking-wide flex items-center justify-center gap-2 font-brand">
     <span class="inline-block w-1.5 h-1.5 rounded-full bg-[#7DA268] animate-pulse"></span>
-    <span>{{ $isEn ? '🌿 YOUR LIFE, MADE EASIER • Safe shipping nationwide • 100% Guaranteed' : '🌿 TU VIDA, MÁS FÁCIL — Envíos a todo el país • Compra 100% protegida' }}</span>
+    <span>{{ $isEn ? '🌿 YOUR LIFE, MADE EASIER • We ship to multiple countries • 100% Guaranteed' : '🌿 TU VIDA, MÁS FÁCIL — Llegamos a varios países • Compra 100% protegida' }}</span>
 </div>
 
 <!-- Header Component -->
@@ -198,14 +198,14 @@
         </div>
 
         <!-- Bottom Row: Navigation (Desktop) with Fredoka Typography -->
-        <nav class="hidden md:flex justify-center items-center space-x-8 mt-4 pb-0.5 font-brand">
+        <nav class="hidden md:flex flex-wrap justify-center items-center gap-x-7 lg:gap-x-9 gap-y-2 mt-4 pb-1 font-brand">
             <a href="{{ route('store.show', $store->slug) }}" 
-               class="font-semibold text-sm transition {{ request()->routeIs('store.show') ? 'text-[#C8A68B] font-bold border-b-2 border-[#C8A68B] pb-1' : 'text-[#4A4742] hover:text-[#C8A68B]' }}">
+               class="text-base lg:text-[17px] font-semibold transition-colors duration-200 {{ request()->routeIs('store.show') ? 'text-[#C8A68B] font-bold border-b-2 border-[#C8A68B] pb-1' : 'text-[#363430] hover:text-[#C8A68B]' }}">
                 {{ $isEn ? 'Home' : 'Inicio' }}
             </a>
             
             <a href="{{ route('store.catalog', $store->slug) }}" 
-               class="font-semibold text-sm transition {{ (request()->routeIs('store.catalog') && !request()->has('category')) ? 'text-[#C8A68B] font-bold border-b-2 border-[#C8A68B] pb-1' : 'text-[#4A4742] hover:text-[#C8A68B]' }}">
+               class="text-base lg:text-[17px] font-semibold transition-colors duration-200 {{ (request()->routeIs('store.catalog') && !request()->has('category')) ? 'text-[#C8A68B] font-bold border-b-2 border-[#C8A68B] pb-1' : 'text-[#363430] hover:text-[#C8A68B]' }}">
                 {{ $isEn ? 'Shop' : 'Catálogo' }}
             </a>
             
@@ -214,13 +214,13 @@
                     $isCatActive = request()->routeIs('store.catalog') && (request('category') == $cat->slug || request('category') == $cat->id);
                 @endphp
                 <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $cat->slug]) }}" 
-                   class="font-semibold text-sm transition {{ $isCatActive ? 'text-[#C8A68B] font-bold border-b-2 border-[#C8A68B] pb-1' : 'text-[#4A4742] hover:text-[#C8A68B]' }}">
+                   class="text-base lg:text-[17px] font-semibold transition-colors duration-200 {{ $isCatActive ? 'text-[#C8A68B] font-bold border-b-2 border-[#C8A68B] pb-1' : 'text-[#363430] hover:text-[#C8A68B]' }}">
                     {{ $cat->getTranslatedName() }}
                 </a>
             @endforeach
             
             <a href="{{ route('store.contact', $store->slug) }}" 
-               class="font-semibold text-sm transition {{ request()->routeIs('store.contact') ? 'text-[#C8A68B] font-bold border-b-2 border-[#C8A68B] pb-1' : 'text-[#4A4742] hover:text-[#C8A68B]' }}">
+               class="text-base lg:text-[17px] font-semibold transition-colors duration-200 {{ request()->routeIs('store.contact') ? 'text-[#C8A68B] font-bold border-b-2 border-[#C8A68B] pb-1' : 'text-[#363430] hover:text-[#C8A68B]' }}">
                 {{ $isEn ? 'Contact' : 'Contacto' }}
             </a>
         </nav>
@@ -258,23 +258,23 @@
 
             <!-- Links -->
             <a href="{{ route('store.show', $store->slug) }}" 
-               class="block px-3 py-2 text-sm font-semibold {{ request()->routeIs('store.show') ? 'text-[#C8A68B]' : 'text-gray-800' }}">
+               class="block px-3 py-2 text-base font-semibold {{ request()->routeIs('store.show') ? 'text-[#C8A68B]' : 'text-stone-800' }}">
                 {{ $isEn ? 'Home' : 'Inicio' }}
             </a>
             
             <a href="{{ route('store.catalog', $store->slug) }}" 
-               class="block px-3 py-2 text-sm font-semibold {{ (request()->routeIs('store.catalog') && !request()->has('category')) ? 'text-[#C8A68B]' : 'text-gray-800' }}">
+               class="block px-3 py-2 text-base font-semibold {{ (request()->routeIs('store.catalog') && !request()->has('category')) ? 'text-[#C8A68B]' : 'text-stone-800' }}">
                 {{ $isEn ? 'Shop' : 'Catálogo' }}
             </a>
 
             @if($headerCategories->isNotEmpty())
-                <div class="border-t border-gray-100 pt-2 pb-1 my-1">
-                    <span class="px-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                <div class="border-t border-stone-200/80 pt-2.5 pb-1 my-1">
+                    <span class="px-3 text-[11px] font-bold text-stone-400 uppercase tracking-wider">
                         {{ $isEn ? 'Categories' : 'Categorías' }}
                     </span>
                     @foreach($headerCategories as $cat)
                         <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $cat->slug]) }}" 
-                           class="block px-3 py-2 text-sm text-gray-700 hover:text-[#C8A68B]">
+                           class="block px-3 py-2 text-[15px] font-medium text-stone-700 hover:text-[#C8A68B]">
                             {{ $cat->getTranslatedName() }}
                         </a>
                     @endforeach
@@ -282,7 +282,7 @@
             @endif
 
             <a href="{{ route('store.contact', $store->slug) }}" 
-               class="block px-3 py-2 text-sm font-semibold {{ request()->routeIs('store.contact') ? 'text-[#C8A68B]' : 'text-gray-800' }}">
+               class="block px-3 py-2 text-base font-semibold {{ request()->routeIs('store.contact') ? 'text-[#C8A68B]' : 'text-stone-800' }}">
                 {{ $isEn ? 'Contact' : 'Contacto' }}
             </a>
 
