@@ -333,7 +333,7 @@
                         $isUsd = \App\Helpers\CurrencyHelper::isUsd();
                         $highlights = [
                             ['title' => \App\Helpers\TranslationHelper::trans('new', 'Nuevo'), 'bg' => '#E8D5C4', 'text' => '#4A3525', 'icon' => '✨', 'query' => 'sort=newest'],
-                            ['title' => \App\Helpers\TranslationHelper::trans('outlet', 'Outlet'), 'bg' => '#FBDDD6', 'text' => '#5A2C22', 'icon' => '🏷️', 'query' => 'sale=1'],
+                            ['title' => \App\Helpers\TranslationHelper::trans('outlet', 'Outlet'), 'bg' => '#FBDDD6', 'text' => '#5A2C22', 'icon' => '🏷️', 'query' => 'on_sale=1'],
                             ['title' => \App\Helpers\TranslationHelper::trans('essentials', 'Esenciales'), 'bg' => '#C8D7BA', 'text' => '#2A3A1E', 'icon' => '🍃', 'query' => 'q=esenciales'],
                             ['title' => \App\Helpers\TranslationHelper::trans('back_in_stock', 'De regreso'), 'bg' => '#FAF0E4', 'text' => '#4A4335', 'icon' => '🔄', 'query' => 'q=destacado'],
                             ['title' => \App\Helpers\TranslationHelper::trans('deco', 'Deco'), 'bg' => '#E8E7E1', 'text' => '#363532', 'icon' => '🪴', 'query' => 'category=deco'],
@@ -369,14 +369,14 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <h2 class="text-3xl md:text-4xl font-extrabold text-[#1E1D1B] mb-8 text-center font-brand">{{ \App\Helpers\TranslationHelper::trans('featured_categories', 'Categorías destacadas') }}</h2>
                 
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div class="flex flex-wrap justify-center gap-4">
                     @foreach($featuredCats as $index => $cat)
                         @php
                             $catBg = $cat->color ?: '#F5EDE2';
                             $imgUrl = $cat->image_url;
                         @endphp
                         <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $cat->slug]) }}" 
-                           class="relative overflow-hidden rounded-2xl h-56 flex flex-col justify-end cursor-pointer group shadow-2xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 block border border-stone-200/60" 
+                           class="w-[calc(50%-0.5rem)] sm:w-[calc(33.333%-0.67rem)] md:w-[calc(25%-0.75rem)] lg:w-[calc(16.666%-0.84rem)] relative overflow-hidden rounded-2xl h-56 flex flex-col justify-end cursor-pointer group shadow-2xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 block border border-stone-200/60" 
                            style="background-color: {{ $catBg }}; animation-delay: {{ $index * 100 }}ms;" 
                            data-animate>
                             

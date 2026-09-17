@@ -14,7 +14,7 @@ class Product extends Model
         'store_id', 'category_id', 'brand_id', 'parent_id', 'name', 'slug', 'description', 'short_description', 'sku', 'origin_code',
         'price', 'compare_price', 'price_usd', 'compare_price_usd', 'cost_price',
         'currency_prices', 'compare_currency_prices',
-        'stock', 'track_stock', 'allow_backorder', 'low_stock_alert', 'unit',
+        'stock', 'track_stock', 'allow_backorder', 'out_of_stock_message', 'low_stock_alert', 'unit',
         'image_path', 'gallery_images', 'video_path', 'show_video_on_home',
         'is_active', 'is_featured', 'is_new', 'is_digital',
         'has_variants', 'variant_options',

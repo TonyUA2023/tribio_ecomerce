@@ -82,6 +82,7 @@
                 basePrice: {{ (float) ($product->resolvePrice() ?? 0) }},
                 baseComparePrice: {{ (float) ($product->resolveComparePrice() ?? 0) }},
                 baseStock: {{ (int) ($product->stock ?? 0) }},
+                outOfStockMessage: @js($product->out_of_stock_message),
                 currencySymbol: '{{ \App\Helpers\CurrencyHelper::symbol() }}',
                 options: {{ Js::from($product->variant_options ?? []) }},
                 variants: {{ Js::from($product->activeVariants->map(function($v) {
@@ -127,6 +128,7 @@
                     return this.baseComparePrice;
                 },
                 get isOutOfStock() {
+                    if (this.outOfStockMessage) return false; // Bypass si hay mensaje personalizado
                     if (!this.trackStock) return false;
                     if (this.hasVariants) {
                         return !this.currentVariant || this.currentVariant.stock <= 0;
@@ -190,9 +192,21 @@
                     @endif
 
                     @if($product->isInStock())
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                            {{ \App\Helpers\TranslationHelper::isEn() ? 'In Stock' : 'En Stock' }}
+                        @if($product->stock <= 0 && !empty($product->out_of_stock_message))
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                {{ $product->out_of_stock_message }}
+                            </span>
+                        @else
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                {{ \App\Helpers\TranslationHelper::isEn() ? 'In Stock' : 'En Stock' }}
+                            </span>
+                        @endif
+                    @elseif(!empty($product->out_of_stock_message))
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                            <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                            {{ $product->out_of_stock_message }}
                         </span>
                     @else
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-200">

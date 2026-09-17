@@ -288,9 +288,14 @@
                         <input type="number" name="stock" class="input-field" value="{{ old('stock', $product->stock) }}" min="0">
                     </div>
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 mb-4">
                     <input type="checkbox" name="track_stock" id="track_stock" value="1" class="w-4 h-4 accent-tribio-purple" {{ $product->track_stock ? 'checked' : '' }}>
                     <label for="track_stock" class="text-white/70 text-sm cursor-pointer select-none">Controlar inventario (descontar stock en cada venta)</label>
+                </div>
+                <div>
+                    <label class="input-label">Mensaje personalizado cuando el stock llega a 0 (Opcional)</label>
+                    <input type="text" name="out_of_stock_message" class="input-field" value="{{ old('out_of_stock_message', $product->out_of_stock_message) }}" placeholder="Ej: Pre-venta: Disponible en 15 días">
+                    <p class="text-xs text-white/50 mt-1">Si se llena, el producto permitirá compras sin stock y mostrará este mensaje en lugar de "Agotado".</p>
                 </div>
             </div>
 

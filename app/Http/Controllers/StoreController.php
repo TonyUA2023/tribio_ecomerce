@@ -221,6 +221,7 @@ class StoreController extends Controller
         }
 
         // Precios límite para el slider y moneda
+        $isUsd = \App\Helpers\CurrencyHelper::currentCurrency() === 'USD';
         $priceColumn = $isUsd ? 'price_usd' : 'price';
         $currencySymbol = \App\Helpers\CurrencyHelper::symbol();
 
@@ -497,23 +498,27 @@ class StoreController extends Controller
                     $variantAttributes = $variant->attributes;
                     if (!empty($variant->image_path)) $imagePath = $variant->image_path;
 
-                    if ($product->track_stock) {
+                    if ($product->track_stock && empty($product->out_of_stock_message) && !$product->allow_backorder) {
                         if ($variant->stock < $qty) {
                             return response()->json([
                                 'error' => "Stock insuficiente para {$product->name} ({$variantTitle}). Disponibles: {$variant->stock}."
                             ], 422);
                         }
+                    }
+                    if ($product->track_stock) {
                         $variant->decrement('stock', $qty);
                     }
                 }
             }
 
-            if ($product->track_stock) {
+            if ($product->track_stock && empty($product->out_of_stock_message) && !$product->allow_backorder) {
                 if (!$variantId && $product->stock < $qty) {
                     return response()->json([
                         'error' => "Stock insuficiente para {$product->name}. Disponibles: {$product->stock}."
                     ], 422);
                 }
+            }
+            if ($product->track_stock) {
                 $product->decrement('stock', $qty);
             }
 
