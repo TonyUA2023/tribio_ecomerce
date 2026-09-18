@@ -274,7 +274,14 @@
                              }
                          }
                      },
-                     paymentMethods: { creditCard: 'all', debitCard: 'all', maxInstallments: 1 }
+                     paymentMethods: {
+                        creditCard: 'all',
+                        debitCard: 'all',
+                        ticket: 'all',
+                        bankTransfer: 'all',
+                        wallet_purchase: 'all',
+                        maxInstallments: 1
+                    }
                  },
                  callbacks: {
                      onReady: () => {},
@@ -309,6 +316,7 @@
     <div x-show="cartOpen"
          x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full sm:translate-x-full" x-transition:enter-end="translate-x-0"
          x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full"
+         :class="checkoutStep === 3 ? 'pay-drawer-panel--wide' : ''"
          class="relative pay-drawer-panel h-full flex flex-col bg-white border-l border-[var(--pay-border)] shadow-2xl">
 
         {{-- Header --}}

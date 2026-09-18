@@ -79,7 +79,7 @@
 }
 
 /* ── Panel: hoja inferior en móvil, lateral en desktop (mismo markup) ── */
-.pay-drawer-panel { width: 100%; max-width: 28rem; }
+.pay-drawer-panel { width: 100%; max-width: 28rem; transition: max-width .25s ease; }
 @media (max-width: 640px) {
     .pay-drawer-panel {
         max-width: 100% !important;
@@ -89,6 +89,16 @@
         border-left: none !important;
     }
 }
+/* Paso 3 (Pago): el widget de Mercado Pago necesita más ancho para no
+   comprimir el selector de tarjeta ni los campos del formulario. */
+@media (min-width: 641px) {
+    .pay-drawer-panel--wide { max-width: 34rem; }
+}
+
+/* El widget de Mercado Pago (Payment Brick) debe ocupar siempre el 100%
+   del ancho disponible dentro de su contenedor — nunca se le impone un
+   ancho fijo propio. */
+#paymentBrick_container, #paymentBrick_container > div { width: 100% !important; }
 
 /* ── Campos con error inline ── */
 .pay-field-error { border-color: var(--pay-danger) !important; background: var(--pay-danger-bg) !important; }
