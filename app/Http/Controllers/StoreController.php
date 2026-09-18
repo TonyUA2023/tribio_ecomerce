@@ -642,77 +642,128 @@ class StoreController extends Controller
         if (($paymentMethod === 'mercadopago' || $store->checkout_mode === 'card') && $mpToken) {
             try {
                 $client = new \GuzzleHttp\Client(['timeout' => 15]);
-                
-                $items = [];
-                foreach ($order->items as $orderItem) {
-                    $itemTitle = $orderItem->product_name;
-                    if (!empty($orderItem->variant_title)) {
-                        $itemTitle .= " ({$orderItem->variant_title})";
-                    }
-                    $items[] = [
-                        'title'       => Str::limit($itemTitle, 250),
-                        'quantity'    => (int) $orderItem->quantity,
-                        'unit_price'  => round((float) $orderItem->price, 2),
-                        'currency_id' => $currency === 'USD' ? 'USD' : 'PEN',
-                    ];
-                }
-                
-                if ($shippingCost > 0) {
-                    $items[] = [
-                        'title'       => 'Costo de Envío',
-                        'quantity'    => 1,
-                        'unit_price'  => round((float) $shippingCost, 2),
-                        'currency_id' => $currency === 'USD' ? 'USD' : 'PEN',
-                    ];
-                }
+                $mpFormData = $request->input('mp_form_data');
 
-                $backUrl = route('store.order.confirmation', [$store->slug, $order->id]);
-                $webhookUrl = route('api.mercadopago.webhook', [$store->id]);
+                if ($mpFormData && isset($mpFormData['token'])) {
+                    // --- FLUJO PAYMENT BRICK (Sin redirección) ---
+                    $paymentBody = [
+                        'transaction_amount' => round((float) $total, 2),
+                        'token' => $mpFormData['token'],
+                        'description' => 'Pedido en ' . $store->name . ' - ' . $order->order_number,
+                        'installments' => $mpFormData['installments'] ?? 1,
+                        'payment_method_id' => $mpFormData['payment_method_id'] ?? null,
+                        'issuer_id' => $mpFormData['issuer_id'] ?? null,
+                        'payer' => array_merge([
+                            'email' => $order->customer_email
+                        ], $mpFormData['payer'] ?? [])
+                    ];
 
-                $preferenceBody = [
-                    'items' => $items,
-                    'payer' => [
-                        'name'    => $order->customer_name,
-                        'email'   => $order->customer_email,
-                        'phone'   => [
-                            'number' => preg_replace('/[^0-9]/', '', $order->customer_phone ?? '')
+                    $mpResponse = $client->post('https://api.mercadopago.com/v1/payments', [
+                        'headers' => [
+                            'Authorization' => 'Bearer ' . trim($mpToken),
+                            'Content-Type'  => 'application/json',
+                            'X-Idempotency-Key' => (string) $order->order_number . '_' . time()
                         ],
-                        'address' => [
-                            'street_name' => $order->customer_address ?? ''
-                        ]
-                    ],
-                    'back_urls' => [
-                        'success' => $backUrl,
-                        'failure' => $backUrl,
-                        'pending' => $backUrl,
-                    ],
-                    'auto_return'         => 'approved',
-                    'external_reference'  => (string) $order->order_number,
-                    'statement_descriptor'=> Str::limit(preg_replace('/[^A-Za-z0-9 ]/', '', $store->name), 22),
-                ];
-
-                if (!str_contains($webhookUrl, 'localhost') && !str_contains($webhookUrl, '127.0.0.1')) {
-                    $preferenceBody['notification_url'] = $webhookUrl;
-                }
-
-                $mpResponse = $client->post('https://api.mercadopago.com/checkout/preferences', [
-                    'headers' => [
-                        'Authorization' => 'Bearer ' . trim($mpToken),
-                        'Content-Type'  => 'application/json',
-                    ],
-                    'json' => $preferenceBody
-                ]);
-
-                $preference = json_decode($mpResponse->getBody()->getContents(), true);
-                $isSandbox = str_starts_with(trim($mpToken), 'TEST-');
-                $paymentUrl = $isSandbox ? ($preference['sandbox_init_point'] ?? $preference['init_point'] ?? null) : ($preference['init_point'] ?? null);
-
-                if ($paymentUrl) {
-                    $response['payment_url'] = $paymentUrl;
-                    $order->update([
-                        'payment_method' => 'mercadopago',
-                        'internal_notes' => 'Mercado Pago Preference ID: ' . ($preference['id'] ?? 'N/A') . ' (' . ($isSandbox ? 'Sandbox/Test' : 'Producción') . ')'
+                        'json' => $paymentBody
                     ]);
+
+                    $paymentData = json_decode($mpResponse->getBody()->getContents(), true);
+
+                    if (($paymentData['status'] ?? '') === 'approved') {
+                        $order->update([
+                            'status' => 'confirmed',
+                            'payment_status' => 'paid',
+                            'payment_method' => 'mercadopago',
+                            'internal_notes' => trim(($order->internal_notes ?? '') . "\nMercado Pago Payment ID: " . ($paymentData['id'] ?? 'N/A') . " (Pago Aprobado en Brick)")
+                        ]);
+                        // La url de redirección se mantiene igual (página de confirmación de Tribio)
+                    } else if (($paymentData['status'] ?? '') === 'in_process') {
+                        $order->update([
+                            'payment_method' => 'mercadopago',
+                            'internal_notes' => trim(($order->internal_notes ?? '') . "\nMercado Pago Payment ID: " . ($paymentData['id'] ?? 'N/A') . " (Pago en proceso - Brick)")
+                        ]);
+                    } else {
+                        // Pago rechazado
+                        $statusDetail = $paymentData['status_detail'] ?? 'Desconocido';
+                        return response()->json([
+                            'success' => false,
+                            'error' => 'El pago fue rechazado. (' . $statusDetail . ')'
+                        ]);
+                    }
+
+                } else {
+                    // --- FLUJO CHECKOUT PRO ANTIGUO (Con redirección) ---
+                    $items = [];
+                    foreach ($order->items as $orderItem) {
+                        $itemTitle = $orderItem->product_name;
+                        if (!empty($orderItem->variant_title)) {
+                            $itemTitle .= " ({$orderItem->variant_title})";
+                        }
+                        $items[] = [
+                            'title'       => Str::limit($itemTitle, 250),
+                            'quantity'    => (int) $orderItem->quantity,
+                            'unit_price'  => round((float) $orderItem->price, 2),
+                            'currency_id' => $currency === 'USD' ? 'USD' : 'PEN',
+                        ];
+                    }
+                    
+                    if ($shippingCost > 0) {
+                        $items[] = [
+                            'title'       => 'Costo de Envío',
+                            'quantity'    => 1,
+                            'unit_price'  => round((float) $shippingCost, 2),
+                            'currency_id' => $currency === 'USD' ? 'USD' : 'PEN',
+                        ];
+                    }
+
+                    $backUrl = route('store.order.confirmation', [$store->slug, $order->id]);
+                    $webhookUrl = route('api.mercadopago.webhook', [$store->id]);
+
+                    $preferenceBody = [
+                        'items' => $items,
+                        'payer' => [
+                            'name'    => $order->customer_name,
+                            'email'   => $order->customer_email,
+                            'phone'   => [
+                                'number' => preg_replace('/[^0-9]/', '', $order->customer_phone ?? '')
+                            ],
+                            'address' => [
+                                'street_name' => $order->customer_address ?? ''
+                            ]
+                        ],
+                        'back_urls' => [
+                            'success' => $backUrl,
+                            'failure' => $backUrl,
+                            'pending' => $backUrl,
+                        ],
+                        'auto_return'         => 'approved',
+                        'external_reference'  => (string) $order->order_number,
+                        'statement_descriptor'=> Str::limit(preg_replace('/[^A-Za-z0-9 ]/', '', $store->name), 22),
+                    ];
+
+                    if (!str_contains($webhookUrl, 'localhost') && !str_contains($webhookUrl, '127.0.0.1')) {
+                        $preferenceBody['notification_url'] = $webhookUrl;
+                    }
+
+                    $mpResponse = $client->post('https://api.mercadopago.com/checkout/preferences', [
+                        'headers' => [
+                            'Authorization' => 'Bearer ' . trim($mpToken),
+                            'Content-Type'  => 'application/json',
+                        ],
+                        'json' => $preferenceBody
+                    ]);
+
+                    $preference = json_decode($mpResponse->getBody()->getContents(), true);
+                    $isSandbox = str_starts_with(trim($mpToken), 'TEST-');
+                    $paymentUrl = $isSandbox ? ($preference['sandbox_init_point'] ?? $preference['init_point'] ?? null) : ($preference['init_point'] ?? null);
+
+                    if ($paymentUrl) {
+                        $response['payment_url'] = $paymentUrl;
+                        $order->update([
+                            'payment_method' => 'mercadopago',
+                            'internal_notes' => 'Mercado Pago Preference ID: ' . ($preference['id'] ?? 'N/A') . ' (' . ($isSandbox ? 'Sandbox/Test' : 'Producción') . ')'
+                        ]);
+                    }
                 }
             } catch (\Exception $e) {
                 \Log::error('Mercado Pago Error: ' . $e->getMessage());

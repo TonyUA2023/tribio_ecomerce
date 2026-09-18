@@ -181,7 +181,7 @@ window.TribioCart = {
     async checkout(storeSlug, customerData) {
         if (this.items.length === 0) {
             alert('El carrito está vacío');
-            return;
+            return false;
         }
 
         const token = document.querySelector('meta[name="csrf-token"]')?.content || window.tribioCsrfToken || customerData._token || '';
@@ -224,6 +224,7 @@ window.TribioCart = {
                 } else {
                     window.location.href = data.redirect_url;
                 }
+                return true;
             } else {
                 let errorMsg = data.error || data.message;
                 if (!errorMsg && data.errors) {
@@ -237,15 +238,20 @@ window.TribioCart = {
                     btn.innerText = 'Confirmar y Pagar';
                     btn.disabled = false;
                 }
+                throw new Error(errorMsg || 'Error processing order');
             }
         } catch (error) {
             console.error('Error during checkout:', error);
-            alert('Ocurrió un error inesperado al procesar el checkout.');
+            // Only alert if it's not a thrown error from above
+            if (error.message === 'Failed to fetch') {
+                alert('Ocurrió un error inesperado al procesar el checkout.');
+            }
             const btn = document.getElementById('btnSubmitOrder');
             if (btn) {
                 btn.innerText = 'Confirmar y Pagar';
                 btn.disabled = false;
             }
+            throw error;
         }
     }
 };

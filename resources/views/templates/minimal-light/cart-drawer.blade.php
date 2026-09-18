@@ -236,23 +236,56 @@
                  alert('Por favor completa los campos obligatorios (Nombre, Teléfono y Correo).');
                  return;
              }
-              if (this.customer.create_account && (!this.customer.password || this.customer.password.length < 6)) {
-                  alert('Para crear tu cuenta, la contraseña debe tener al menos 6 caracteres.');
-                  return;
-              }
               if (this.paymentMethod === 'mercadopago' && !this.hasActiveToken) {
                   alert('La tienda tiene habilitado el pago con tarjeta pero aún no ha configurado sus credenciales de Mercado Pago en el panel. Por favor selecciona WhatsApp / Pago Directo o ingresa tus credenciales en Configurar Tienda.');
                   return;
               }
               this.customer.payment_method = this.paymentMethod;
-             if(window.TribioCart) {
-                 const btn = document.getElementById('btnSubmitOrder');
-                 if(btn) {
-                     btn.innerText = 'Procesando...';
-                     btn.disabled = true;
+
+             if (this.paymentMethod === 'mercadopago') {
+                 this.checkoutStep = 3;
+                 this.$nextTick(() => {
+                     this.initPaymentBrick();
+                 });
+             } else {
+                 if(window.TribioCart) {
+                     const btn = document.getElementById('btnSubmitOrder');
+                     if(btn) { btn.innerText = 'Procesando...'; btn.disabled = true; }
+                     window.TribioCart.checkout(this.storeSlug, this.customer);
                  }
-                 window.TribioCart.checkout(this.storeSlug, this.customer);
              }
+         },
+         async initPaymentBrick() {
+            if (this.brickController) {
+                this.brickController.unmount();
+            }
+            if (!window.MercadoPago) {
+                alert('Error al cargar Mercado Pago SDK.');
+                return;
+            }
+            const mp = new window.MercadoPago('{{ $store->mp_public_key ?? $store->gateway_public_key }}', { locale: 'es-PE' });
+            const bricksBuilder = mp.bricks();
+            const settings = {
+                initialization: { amount: this.cartTotal },
+                customization: {
+                    visual: { style: { theme: "default", customVariables: { formBackgroundColor: "#f9fafb" } } },
+                    paymentMethods: { maxInstallments: 1 }
+                },
+                callbacks: {
+                    onReady: () => {},
+                    onSubmit: (formData) => {
+                        return new Promise((resolve, reject) => {
+                            this.customer.payment_method = 'mercadopago';
+                            this.customer.mp_form_data = formData;
+                            window.TribioCart.checkout(this.storeSlug, this.customer)
+                                .then(() => resolve())
+                                .catch(() => reject());
+                        });
+                    },
+                    onError: (error) => { console.error(error); }
+                }
+            };
+            this.brickController = await bricksBuilder.create("payment", "paymentBrick_container", settings);
          }
      }"
      @cart-updated.window="cartItems = $event.detail"
@@ -330,36 +363,6 @@
             <template x-if="cartItems.length > 0 && checkoutStep === 2">
                 <div class="space-y-4 text-gray-700">
                     
-                    {{-- Banner 1: Tribio Pass Obligatorio si no está autenticado --}}
-                    <template x-if="!customerLoggedIn">
-                        <div class="p-4 bg-gradient-to-br from-amber-50 via-orange-50/40 to-amber-50 border-2 border-amber-300/90 rounded-2xl shadow-xs">
-                            <div class="flex items-start gap-3">
-                                <div class="w-10 h-10 rounded-xl bg-[#1A1A1A] text-white flex items-center justify-center text-lg shadow-xs flex-shrink-0">
-                                    🔑
-                                </div>
-                                <div class="flex-1">
-                                    <div class="flex items-center justify-between gap-2">
-                                        <p class="text-xs font-black text-stone-900 uppercase tracking-wider">Tribio Pass Obligatorio</p>
-                                        <span class="text-[10px] bg-amber-200/90 text-amber-900 font-extrabold px-2 py-0.5 rounded-full">Requerido</span>
-                                    </div>
-                                    <p class="text-[11px] text-stone-600 mt-1 leading-snug">
-                                        Para proceder al pago de tu pedido, debes iniciar sesión o crear tu cuenta gratuita en <strong>Tribio Pass</strong>.
-                                    </p>
-                                    <div class="mt-3 flex flex-wrap gap-2">
-                                        <button type="button" @click="openTribioPass('register')"
-                                                class="flex-1 min-w-[140px] py-2.5 px-3.5 rounded-xl bg-[#1A1A1A] hover:bg-[#C8A68B] text-white text-xs font-black transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer">
-                                            <span>✨</span>
-                                            <span>Crear Cuenta Tribio Pass</span>
-                                        </button>
-                                        <button type="button" @click="openTribioPass('login')"
-                                                class="flex-1 min-w-[120px] py-2.5 px-3 rounded-xl bg-white hover:bg-stone-100 text-stone-900 border border-stone-300 text-xs font-black transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer">
-                                            <span>🔑 Iniciar Sesión</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </template>
 
                     {{-- Banner 2: Estado Autenticado del Comprador --}}
                     <template x-if="customerLoggedIn">
@@ -650,12 +653,23 @@
                         </template>
                         <template x-if="customerLoggedIn">
                             <button id="btnSubmitOrder" @click="submitOrder" class="flex-1 py-3 bg-[#1A1A1A] hover:bg-[#C8A68B] rounded-xl font-bold text-white transition-colors shadow-md text-center flex items-center justify-center gap-2">
-                                <span x-text="paymentMethod === 'mercadopago' ? '{{ \App\Helpers\TranslationHelper::isEn() ? '💳 Pay with Card' : '💳 Pagar con Tarjeta' }}' : '{{ \App\Helpers\TranslationHelper::isEn() ? 'Confirm Order' : 'Confirmar Pedido' }}'"></span>
+                                <span x-text="paymentMethod === 'mercadopago' ? '{{ \App\Helpers\TranslationHelper::isEn() ? '💳 Continue to Payment' : '💳 Continuar al Pago' }}' : '{{ \App\Helpers\TranslationHelper::isEn() ? 'Confirm Order' : 'Confirmar Pedido' }}'"></span>
                             </button>
                         </template>
+                    </div>
+                </template>
+
+                <template x-if="checkoutStep === 3">
+                    <div class="flex flex-col gap-3">
+                        <button @click="checkoutStep = 2" class="self-start text-xs font-bold text-gray-500 hover:text-gray-800 transition">
+                            ← Volver
+                        </button>
+                        <div id="paymentBrick_container" class="w-full bg-white rounded-xl"></div>
+                        <p class="text-[10px] text-center text-gray-400 mt-2">🛡️ Pagos seguros procesados por Mercado Pago</p>
                     </div>
                 </template>
             </div>
         </template>
     </div>
 </div>
+<script src="https://sdk.mercadopago.com/js/v2"></script>
