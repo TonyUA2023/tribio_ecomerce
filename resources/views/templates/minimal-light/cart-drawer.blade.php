@@ -268,7 +268,7 @@
             const settings = {
                 initialization: { amount: this.cartTotal },
                 customization: {
-                    visual: { style: { theme: "default", customVariables: { formBackgroundColor: "#f9fafb" } } },
+                    visual: { style: { theme: 'default', customVariables: { formBackgroundColor: '#f9fafb' } } },
                     paymentMethods: { maxInstallments: 1 }
                 },
                 callbacks: {
@@ -285,7 +285,7 @@
                     onError: (error) => { console.error(error); }
                 }
             };
-            this.brickController = await bricksBuilder.create("payment", "paymentBrick_container", settings);
+            this.brickController = await bricksBuilder.create('payment', 'paymentBrick_container', settings);
          }
      }"
      @cart-updated.window="cartItems = $event.detail"

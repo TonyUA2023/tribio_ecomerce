@@ -40,8 +40,8 @@ COPY . .
 COPY --from=vendor /app/vendor/ ./vendor/
 COPY --from=frontend /app/public/build/ ./public/build/
 
-# Ajustar permisos
-RUN chown -R www-data:www-data /var/www/html \
+# Ajustar permisos (Solo lo estrictamente necesario para máxima velocidad)
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage \
     && chmod -R 775 /var/www/html/bootstrap/cache
 
