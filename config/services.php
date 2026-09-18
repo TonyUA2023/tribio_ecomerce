@@ -40,4 +40,8 @@ return [
         'public_key'   => env('MERCADO_PAGO_PUBLIC_KEY', 'TEST-238d2f59-a292-4217-bc1a-64152df6e5ab'),
     ],
 
+    'brevo' => [
+        'api_key' => env('BREVO_API_KEY'),
+    ],
+
 ];

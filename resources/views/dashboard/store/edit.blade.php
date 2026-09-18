@@ -85,7 +85,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
                         <label class="input-label">Nombre del negocio *</label>
-                        <input type="text" name="name" class="input-field" value="{{ old('name', $store?->name) }}" required>
+                        <input type="text" name="name" class="input-field" value="{{ old('name', $store?->name) }}">
                     </div>
                     <div>
                         <label class="input-label">Enlace de la tienda (Slug)</label>
@@ -103,7 +103,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
                         <label class="input-label">Categoría / Rubro *</label>
-                        <select name="category" class="input-field" required>
+                        <select name="category" class="input-field">
                             <option value="" disabled>Selecciona una categoría</option>
                             @foreach(['moda' => 'Moda y Ropa', 'calzado' => 'Calzado', 'tecnologia' => 'Tecnología', 'alimentos' => 'Alimentos y Bebidas', 'joyeria' => 'Joyería y Accesorios', 'hogar' => 'Hogar y Decoración', 'deporte' => 'Deportes', 'salud' => 'Salud y Belleza', 'servicios' => 'Servicios', 'otros' => 'Otros'] as $value => $label)
                                 <option value="{{ $value }}" {{ old('category', $store?->category) == $value ? 'selected' : '' }}>{{ $label }}</option>
@@ -376,7 +376,7 @@
             <div class="glass-card p-6">
                 <h3 class="text-white font-bold text-sm mb-2">🧩 Modo de Construcción de Sitio</h3>
                 <p class="text-xs text-white/50 mb-4">La mayoría de tiendas usa el constructor visual. Solo cambia esto si un desarrollador te creó una plantilla a medida.</p>
-                <select name="build_mode" class="input-field" required>
+                <select name="build_mode" class="input-field">
                     <option value="builder" {{ old('build_mode', $store?->build_mode) == 'builder' ? 'selected' : '' }}>Constructor Visual Tribio (recomendado)</option>
                     <option value="custom_code" {{ old('build_mode', $store?->build_mode) == 'custom_code' ? 'selected' : '' }}>Código a Medida (Desarrollador)</option>
                 </select>
@@ -456,13 +456,13 @@
                             <button type="button" @click="removeRegion(rIdx)" class="absolute top-4 right-4 text-xs text-red-400 hover:underline">Eliminar Región</button>
                             <div>
                                 <label class="input-label">Región (Ej: AMÉRICA DEL SUR)</label>
-                                <input type="text" :name="'distributors[' + rIdx + '][region]'" x-model="reg.region" class="input-field" required placeholder="Región o Continente">
+                                <input type="text" :name="'distributors[' + rIdx + '][region]'" x-model="reg.region" class="input-field" placeholder="Región o Continente">
                             </div>
                             <div class="space-y-2">
                                 <label class="input-label">Ciudades / Sucursales</label>
                                 <template x-for="(loc, lIdx) in reg.locations" :key="lIdx">
                                     <div class="flex gap-2">
-                                        <input type="text" :name="'distributors[' + rIdx + '][locations][' + lIdx + ']'" x-model="reg.locations[lIdx]" class="input-field py-1.5" required placeholder="Ej: Perú (Chiclayo - Oficina Central B2B)">
+                                        <input type="text" :name="'distributors[' + rIdx + '][locations][' + lIdx + ']'" x-model="reg.locations[lIdx]" class="input-field py-1.5" placeholder="Ej: Perú (Chiclayo - Oficina Central B2B)">
                                         <button type="button" @click="removeLocation(rIdx, lIdx)" class="px-3 text-red-400 hover:text-red-300 font-bold">✕</button>
                                     </div>
                                 </template>
