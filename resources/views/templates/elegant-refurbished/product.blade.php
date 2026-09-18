@@ -27,10 +27,7 @@
             <h1 class="er-title-lg" style="margin-bottom: 0.5rem;">{{ $product->name ?? 'iPhone 13 Pro' }}</h1>
             <p class="er-subtitle" style="margin-bottom: var(--space-md); color: var(--er-accent); font-weight: 700; font-size: 1.5rem;">S/ {{ number_format($product->price ?? 2499, 2) }}</p>
 
-            <form action="{{ route('store.checkout', ['slug' => $store->slug]) }}" method="POST">
-                @csrf
-                <input type="hidden" name="product_id" value="{{ $product->id ?? 1 }}">
-                
+            <div>
                 <!-- Status Selector -->
                 <div class="er-form-group" style="margin-bottom: var(--space-md);">
                     <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Condición Estética</label>
@@ -63,10 +60,12 @@
                     </div>
                 </div>
 
-                <button type="submit" class="er-btn er-btn-primary" style="width: 100%; font-size: 1.1rem; padding: 1rem;">
-                    Comprar Ahora
+                <button type="button"
+                        onclick="window.TribioCart && window.TribioCart.add({{ $product->id ?? 1 }}, '{{ addslashes($product->name ?? 'iPhone 13 Pro') }}', {{ $product->price ?? 2499 }}, '{{ $product->image_path ?? false ? $product->image_url : '' }}'); window.dispatchEvent(new CustomEvent('open-cart-drawer'));"
+                        class="er-btn er-btn-primary" style="width: 100%; font-size: 1.1rem; padding: 1rem;">
+                    Agregar al carrito
                 </button>
-            </form>
+            </div>
 
             <div style="margin-top: var(--space-lg); border-top: 1px solid var(--border-color); padding-top: var(--space-md);">
                 <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">

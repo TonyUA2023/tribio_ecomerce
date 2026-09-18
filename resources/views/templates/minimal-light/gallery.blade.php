@@ -48,5 +48,5 @@
 </div>
 
 <!-- Cart Drawer -->
-@include('templates.minimal-light.cart-drawer')
+@include('components.checkout.drawer')
 @endsection

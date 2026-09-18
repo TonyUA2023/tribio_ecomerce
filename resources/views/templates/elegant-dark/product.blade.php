@@ -9,11 +9,12 @@
             @if($product->description)
             <p class="text-white/60 mt-4">{{ $product->description }}</p>
             @endif
-            @if($store->whatsapp_phone)
-            <a href="{{ $store->whatsapp_link }}" target="_blank" class="btn-whatsapp mt-6">Comprar por WhatsApp</a>
-            @endif
+            <button onclick="window.TribioCart && window.TribioCart.add({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->price }}, '{{ $product->image_path ? $product->image_url : '' }}'); window.dispatchEvent(new CustomEvent('open-cart-drawer'));"
+                    class="btn-primary mt-6">Agregar al carrito</button>
             <a href="{{ route('store.show', $store->slug) }}" class="btn-ghost mt-3">← Volver a la tienda</a>
         </div>
     </div>
 </div>
+
+@include('components.checkout.gateway')
 @endsection

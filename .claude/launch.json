@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "tribio-serve",
+      "runtimeExecutable": "php",
+      "runtimeArgs": ["artisan", "serve", "--port=8551"],
+      "port": 8551
+    }
+  ]
+}

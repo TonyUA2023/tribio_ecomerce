@@ -11,6 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
@@ -81,9 +82,17 @@
                     <span class="text-2xl font-black tracking-tight text-gray-900">TFL <span class="text-accent">PARTS</span></span>
                 @endif
             </a>
-            <a href="{{ route('store.show', $store->slug) }}" class="text-sm font-bold text-gray-600 hover:text-accent flex items-center gap-1">
-                Volver a la tienda
-            </a>
+            <div class="flex items-center gap-4">
+                <a href="{{ route('store.show', $store->slug) }}" class="text-sm font-bold text-gray-600 hover:text-accent flex items-center gap-1">
+                    Volver a la tienda
+                </a>
+                <button onclick="window.dispatchEvent(new CustomEvent('open-cart-drawer'))" class="relative p-2.5 rounded-full bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors shrink-0">
+                    <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                    </svg>
+                    <span data-cart-count class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center bg-[#E50914] shadow-md">0</span>
+                </button>
+            </div>
         </div>
     </header>
 
@@ -150,6 +159,9 @@
             </svg>
         </a>
     @endif
+
+    {{-- Pasarela de pago estándar (carrito + Tribio Pass) --}}
+    @include('components.checkout.gateway')
 
 </body>
 </html>

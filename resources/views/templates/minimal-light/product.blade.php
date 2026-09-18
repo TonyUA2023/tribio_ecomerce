@@ -154,8 +154,7 @@
                                 variant
                             );
                         }
-                        const drawer = document.getElementById('cartDrawer');
-                        if (drawer) drawer.style.display = 'flex';
+                        window.dispatchEvent(new CustomEvent('open-cart-drawer'));
                     }
                 },
                 buyNow() {
@@ -607,6 +606,6 @@
 </div>
 
 <!-- Cart Drawer -->
-@include('templates.minimal-light.cart-drawer')
+@include('components.checkout.drawer')
 
 @endsection

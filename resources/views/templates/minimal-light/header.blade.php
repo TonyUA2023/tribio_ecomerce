@@ -182,7 +182,7 @@
                 </button>
 
                 <!-- Cart Drawer Trigger (Pastel Caramel Badge) -->
-                <button onclick="document.getElementById('cartDrawer').style.display='flex'" 
+                <button onclick="window.dispatchEvent(new CustomEvent('open-cart-drawer'))"
                         class="text-[#1E1D1B] hover:text-[#C8A68B] p-2 rounded-full hover:bg-stone-100/70 transition relative cursor-pointer" 
                         title="{{ $isEn ? 'Cart' : 'Carrito' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>

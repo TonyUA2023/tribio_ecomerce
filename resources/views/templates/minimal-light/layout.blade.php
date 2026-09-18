@@ -96,8 +96,8 @@
 
     @yield('content')
 
-    {{-- Customer Account & Dashboard Modal --}}
-    @include('templates.minimal-light.customer-modal')
+    {{-- Pasarela de pago estándar (Tribio Pass) --}}
+    @include('components.checkout.customer-modal')
 
 </body>
 </html>

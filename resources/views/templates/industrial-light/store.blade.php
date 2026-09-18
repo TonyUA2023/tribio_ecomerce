@@ -96,7 +96,7 @@
         }
     </style>
 </head>
-<body x-data="cartApp()" x-init="initCart()" class="antialiased scroll-smooth bg-white">
+<body x-data="cartApp()" class="antialiased scroll-smooth bg-white">
 
     <!-- Dynamic Header will be rendered in the section loop -->
 
@@ -763,122 +763,28 @@
     <script>
         function cartApp() {
             return {
-                openCartDrawer: false,
-                openCartDropdown: false,
                 showToast: false,
                 toastMessage: '',
-                items: [],
-                cartCount: 0,
-                submitting: false,
-                checkoutStep: 1,
-                checkoutForm: {
-                    customer_name: '',
-                    customer_phone: '',
-                    customer_address: '',
-                    customer_notes: ''
-                },
-
-                initCart() {
-                    const loadCart = () => {
-                        if (window.TribioCart) {
-                            this.items = [...window.TribioCart.items];
-                            this.cartCount = window.TribioCart.count();
-                        }
-                    };
-                    loadCart();
-                    document.addEventListener('DOMContentLoaded', loadCart);
-                },
 
                 showToastNotification(message) {
                     this.toastMessage = message;
                     this.showToast = true;
-                    setTimeout(() => {
-                        this.showToast = false;
-                    }, 3000);
+                    setTimeout(() => { this.showToast = false; }, 3000);
                 },
 
                 addToCart(id, name, price, image) {
                     if (window.TribioCart) {
                         window.TribioCart.add(id, name, price, image);
-                        this.items = [...window.TribioCart.items];
-                        this.cartCount = window.TribioCart.count();
                         this.showToastNotification(name + ' añadido al carrito');
-                    }
-                },
-
-                removeItem(id) {
-                    if (window.TribioCart) {
-                        window.TribioCart.remove(id);
-                        this.items = [...window.TribioCart.items];
-                        this.cartCount = window.TribioCart.count();
-                    }
-                },
-
-                updateQty(id, qty) {
-                    if (window.TribioCart) {
-                        window.TribioCart.updateQuantity(id, qty);
-                        this.items = [...window.TribioCart.items];
-                        this.cartCount = window.TribioCart.count();
-                    }
-                },
-
-                totalSum() {
-                    if (window.TribioCart) {
-                        return window.TribioCart.total();
-                    }
-                    return 0;
-                },
-
-                async submitOrder() {
-                    if (!this.checkoutForm.customer_name || !this.checkoutForm.customer_phone || !this.checkoutForm.customer_address) {
-                        alert('Por favor complete todos los campos obligatorios (*)');
-                        return;
-                    }
-
-                    this.submitting = true;
-
-                    try {
-                        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-                        const payload = {
-                            customer_name: this.checkoutForm.customer_name,
-                            customer_phone: this.checkoutForm.customer_phone,
-                            customer_address: this.checkoutForm.customer_address,
-                            customer_notes: this.checkoutForm.customer_notes,
-                            items: this.items.map(item => ({ id: item.id, quantity: item.quantity })),
-                            _token: token
-                        };
-
-                        const response = await fetch('{{ route("store.checkout", $store->slug) }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json',
-                                'X-CSRF-TOKEN': token
-                            },
-                            body: JSON.stringify(payload)
-                        });
-
-                        const data = await response.json();
-
-                        if (data.success) {
-                            if (window.TribioCart) {
-                                window.TribioCart.clear();
-                            }
-                            window.open(data.whatsapp_url, '_blank');
-                            window.location.href = data.redirect_url;
-                        } else {
-                            alert(data.error || 'Ocurrió un error al procesar el pedido.');
-                        }
-                    } catch (error) {
-                        console.error('Error:', error);
-                        alert('Error al enviar el pedido. Por favor intente nuevamente.');
-                    } finally {
-                        this.submitting = false;
+                        window.dispatchEvent(new CustomEvent('open-cart-drawer'));
                     }
                 }
             }
         }
     </script>
+
+    {{-- Pasarela de pago estándar (carrito + Tribio Pass) --}}
+    @include('components.checkout.gateway')
 
     <!-- Floating WhatsApp Button with Pulsating Effect -->
     @if($store->whatsapp_phone)

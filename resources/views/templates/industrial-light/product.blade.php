@@ -87,7 +87,7 @@
         }
     </style>
 </head>
-<body x-data="cartApp()" x-init="initCart()" class="antialiased bg-gray-50">
+<body x-data="cartApp()" class="antialiased bg-gray-50">
 
     <!-- Top Red Banner -->
     <div class="bg-[#E50914] text-white text-center py-2 px-4 font-black uppercase italic tracking-[0.15em] text-xs sm:text-sm border-b border-red-700">
@@ -129,152 +129,13 @@
                         </button>
                     </form>
 
-                    <!-- Cart Indicator Button & Dropdown -->
-                    <div class="relative">
-                        <button @click="openCartDropdown = !openCartDropdown" class="relative p-2.5 rounded-full bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors shrink-0">
-                            <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                            </svg>
-                            <span x-show="cartCount > 0" x-text="cartCount" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center bg-[#E50914] shadow-md animate-pulse"></span>
-                        </button>
-
-                        <!-- Mini Dropdown Cart Container -->
-                        <div x-show="openCartDropdown"
-                             @click.outside="openCartDropdown = false"
-                             x-transition:enter="transition ease-out duration-200"
-                             x-transition:enter-start="opacity-0 translate-y-1"
-                             x-transition:enter-end="opacity-100 translate-y-0"
-                             x-transition:leave="transition ease-in duration-150"
-                             x-transition:leave-start="opacity-100 translate-y-0"
-                             x-transition:leave-end="opacity-0 translate-y-1"
-                             style="display: none;"
-                             class="absolute right-0 mt-3 w-80 sm:w-96 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 p-4 space-y-4 text-left">
-                            
-                            <!-- Step 1: Resumen de Compra -->
-                            <div x-show="checkoutStep === 1" class="space-y-4">
-                                <div class="flex items-center justify-between pb-2 border-b border-gray-100">
-                                    <h3 class="text-xs font-black uppercase tracking-wider text-gray-900">
-                                        Mi carrito (<span x-text="cartCount"></span>)
-                                    </h3>
-                                    <button @click="openCartDropdown = false" class="text-gray-400 hover:text-gray-500 text-xs">✕</button>
-                                </div>
-
-                                <!-- Items List -->
-                                <div class="max-h-60 overflow-y-auto divide-y divide-gray-100 pr-1">
-                                    <template x-if="items.length === 0">
-                                        <div class="text-center py-8 space-y-2">
-                                            <svg class="w-8 h-8 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                                            </svg>
-                                            <p class="text-gray-500 font-bold text-[10px]">Tu carrito está vacío.</p>
-                                        </div>
-                                    </template>
-
-                                    <template x-if="items.length > 0">
-                                        <template x-for="item in items" :key="item.id">
-                                            <div class="flex py-3 gap-3">
-                                                <div class="w-12 h-12 bg-gray-50 rounded border border-gray-100 shrink-0 flex items-center justify-center overflow-hidden">
-                                                    <template x-if="item.image">
-                                                        <img :src="item.image" class="w-full h-full object-contain">
-                                                    </template>
-                                                    <template x-if="!item.image">
-                                                        <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                                                        </svg>
-                                                    </template>
-                                                </div>
-                                                <div class="flex-1 flex flex-col justify-between min-w-0">
-                                                    <div>
-                                                        <h4 class="text-[10px] font-black text-gray-900 leading-tight truncate uppercase" x-text="item.name"></h4>
-                                                        <span class="text-[10px] text-green-600 font-bold" x-text="'S/. ' + item.price.toFixed(2)"></span>
-                                                    </div>
-                                                    <div class="flex items-center justify-between mt-1">
-                                                        <!-- Quantity Buttons -->
-                                                        <div class="flex items-center border border-gray-200 rounded overflow-hidden bg-gray-50">
-                                                            <button @click="updateQty(item.id, item.quantity - 1)" class="px-1.5 py-0.5 text-gray-500 hover:bg-gray-200 text-[10px]">-</button>
-                                                            <span class="px-2 text-[10px] font-bold text-gray-700" x-text="item.quantity"></span>
-                                                            <button @click="updateQty(item.id, item.quantity + 1)" class="px-1.5 py-0.5 text-gray-500 hover:bg-gray-200 text-[10px]">+</button>
-                                                        </div>
-                                                        <!-- Delete -->
-                                                        <button @click="removeItem(item.id)" class="text-[10px] text-red-500 font-semibold hover:underline">Eliminar</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </template>
-                                    </template>
-                                </div>
-
-                                <!-- Subtotal & Continue Button -->
-                                <template x-if="items.length > 0">
-                                    <div class="pt-3 border-t border-gray-100 space-y-3">
-                                        <div class="flex justify-between items-center text-xs">
-                                            <span class="font-bold text-gray-600">Total Estimado:</span>
-                                            <span class="font-black text-gray-900 text-sm" x-text="'S/. ' + totalSum().toFixed(2)"></span>
-                                        </div>
-                                        <div class="flex gap-2">
-                                            <button @click="checkoutStep = 2" class="flex-1 py-2 px-3 font-bold bg-[#E50914] hover:bg-red-700 text-white text-[10px] uppercase tracking-wider text-center rounded">
-                                                Continuar pedido
-                                            </button>
-                                            <button @click="openCartDropdown = false" class="py-2 px-3 font-bold bg-gray-100 hover:bg-gray-200 text-gray-800 text-[10px] uppercase tracking-wider text-center rounded">
-                                                Cerrar
-                                            </button>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-
-                            <!-- Step 2: Formulario de Cotización -->
-                            <div x-show="checkoutStep === 2" class="space-y-4">
-                                <div class="flex items-center justify-between pb-2 border-b border-gray-100">
-                                    <h3 class="text-xs font-black uppercase tracking-wider text-gray-900">
-                                        Detalles de Cotización
-                                    </h3>
-                                    <button @click="checkoutStep = 1" class="text-[#E50914] hover:underline text-[10px] font-bold">Volver</button>
-                                </div>
-
-                                <!-- Form Fields -->
-                                <div class="space-y-2">
-                                    <div>
-                                        <label class="block text-[9px] font-bold text-gray-600 mb-0.5">Nombre Comercial / Razón Social *</label>
-                                        <input type="text" x-model="checkoutForm.customer_name" class="w-full px-2 py-1.5 rounded border border-gray-200 focus:outline-none focus:border-[#E50914] text-[10px]" placeholder="Ej. Corporación Agrícola S.A.">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[9px] font-bold text-gray-600 mb-0.5">Celular / WhatsApp *</label>
-                                        <input type="text" x-model="checkoutForm.customer_phone" class="w-full px-2 py-1.5 rounded border border-gray-200 focus:outline-none focus:border-[#E50914] text-[10px]" placeholder="Ej. 987654321">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[9px] font-bold text-gray-600 mb-0.5">Dirección de Despacho *</label>
-                                        <input type="text" x-model="checkoutForm.customer_address" class="w-full px-2 py-1.5 rounded border border-gray-200 focus:outline-none focus:border-[#E50914] text-[10px]" placeholder="Ej. Chiclayo o Provincia de destino">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[9px] font-bold text-gray-600 mb-0.5">Notas (Detalles de Tractor o Motor)</label>
-                                        <textarea x-model="checkoutForm.customer_notes" rows="2" class="w-full px-2 py-1.5 rounded border border-gray-200 focus:outline-none focus:border-[#E50914] text-[10px]" placeholder="Ej. Filtro para MF 290 del año 2012"></textarea>
-                                    </div>
-                                </div>
-
-                                <!-- Action Buttons -->
-                                <div class="pt-2 border-t border-gray-100 space-y-2">
-                                    <div class="flex justify-between items-center text-xs mb-1">
-                                        <span class="font-bold text-gray-600">Total Estimado:</span>
-                                        <span class="font-black text-gray-900 text-sm" x-text="'S/. ' + totalSum().toFixed(2)"></span>
-                                    </div>
-                                    <button @click="submitOrder()"
-                                            :disabled="submitting"
-                                            class="w-full py-2.5 px-3 font-bold bg-[#16A34A] hover:bg-green-700 text-white text-[10px] uppercase tracking-wider text-center flex items-center justify-center gap-2 rounded">
-                                        <template x-if="submitting">
-                                            <span>Procesando...</span>
-                                        </template>
-                                        <template x-if="!submitting">
-                                            <span>Confirmar Pedido por WhatsApp</span>
-                                        </template>
-                                    </button>
-                                    <button @click="checkoutStep = 1" class="w-full py-2 px-3 font-bold bg-gray-100 hover:bg-gray-200 text-gray-800 text-[10px] uppercase tracking-wider text-center rounded">
-                                        Volver al resumen
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Cart Trigger (pasarela de pago estándar) -->
+                    <button onclick="window.dispatchEvent(new CustomEvent('open-cart-drawer'))" class="relative p-2.5 rounded-full bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors shrink-0">
+                        <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                        </svg>
+                        <span data-cart-count class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center bg-[#E50914] shadow-md">0</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -469,122 +330,28 @@
     <script>
         function cartApp() {
             return {
-                openCartDrawer: false,
-                openCartDropdown: false,
                 showToast: false,
                 toastMessage: '',
-                items: [],
-                cartCount: 0,
-                submitting: false,
-                checkoutStep: 1,
-                checkoutForm: {
-                    customer_name: '',
-                    customer_phone: '',
-                    customer_address: '',
-                    customer_notes: ''
-                },
-
-                initCart() {
-                    const loadCart = () => {
-                        if (window.TribioCart) {
-                            this.items = [...window.TribioCart.items];
-                            this.cartCount = window.TribioCart.count();
-                        }
-                    };
-                    loadCart();
-                    document.addEventListener('DOMContentLoaded', loadCart);
-                },
 
                 showToastNotification(message) {
                     this.toastMessage = message;
                     this.showToast = true;
-                    setTimeout(() => {
-                        this.showToast = false;
-                    }, 3000);
+                    setTimeout(() => { this.showToast = false; }, 3000);
                 },
 
                 addToCart(id, name, price, image) {
                     if (window.TribioCart) {
                         window.TribioCart.add(id, name, price, image);
-                        this.items = [...window.TribioCart.items];
-                        this.cartCount = window.TribioCart.count();
                         this.showToastNotification(name + ' añadido al carrito');
-                    }
-                },
-
-                removeItem(id) {
-                    if (window.TribioCart) {
-                        window.TribioCart.remove(id);
-                        this.items = [...window.TribioCart.items];
-                        this.cartCount = window.TribioCart.count();
-                    }
-                },
-
-                updateQty(id, qty) {
-                    if (window.TribioCart) {
-                        window.TribioCart.updateQuantity(id, qty);
-                        this.items = [...window.TribioCart.items];
-                        this.cartCount = window.TribioCart.count();
-                    }
-                },
-
-                totalSum() {
-                    if (window.TribioCart) {
-                        return window.TribioCart.total();
-                    }
-                    return 0;
-                },
-
-                async submitOrder() {
-                    if (!this.checkoutForm.customer_name || !this.checkoutForm.customer_phone || !this.checkoutForm.customer_address) {
-                        alert('Por favor complete todos los campos obligatorios (*)');
-                        return;
-                    }
-
-                    this.submitting = true;
-
-                    try {
-                        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-                        const payload = {
-                            customer_name: this.checkoutForm.customer_name,
-                            customer_phone: this.checkoutForm.customer_phone,
-                            customer_address: this.checkoutForm.customer_address,
-                            customer_notes: this.checkoutForm.customer_notes,
-                            items: this.items.map(item => ({ id: item.id, quantity: item.quantity })),
-                            _token: token
-                        };
-
-                        const response = await fetch('{{ route("store.checkout", $store->slug) }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json',
-                                'X-CSRF-TOKEN': token
-                            },
-                            body: JSON.stringify(payload)
-                        });
-
-                        const data = await response.json();
-
-                        if (data.success) {
-                            if (window.TribioCart) {
-                                window.TribioCart.clear();
-                            }
-                            window.open(data.whatsapp_url, '_blank');
-                            window.location.href = data.redirect_url;
-                        } else {
-                            alert(data.error || 'Ocurrió un error al procesar el pedido.');
-                        }
-                    } catch (error) {
-                        console.error('Error:', error);
-                        alert('Error al enviar el pedido. Por favor intente nuevamente.');
-                    } finally {
-                        this.submitting = false;
+                        window.dispatchEvent(new CustomEvent('open-cart-drawer'));
                     }
                 }
             }
         }
     </script>
+
+    {{-- Pasarela de pago estándar (carrito + Tribio Pass) --}}
+    @include('components.checkout.gateway')
 
     <!-- Floating WhatsApp Button with Pulsating Effect -->
     @if($store->whatsapp_phone)

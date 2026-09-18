@@ -66,7 +66,7 @@
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                     @foreach($allProducts as $product)
                     <div class="glass-card overflow-hidden group hover:border-white/20 transition-all cursor-pointer"
-                         onclick="window.TribioCart && window.TribioCart.add({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->price }}, '{{ $product->image_path ? $product->image_url : '' }}')">
+                         onclick="window.TribioCart && window.TribioCart.add({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->price }}, '{{ $product->image_path ? $product->image_url : '' }}'); window.dispatchEvent(new CustomEvent('open-cart-drawer'));">
                         <div class="aspect-square overflow-hidden bg-white/5">
                             @if($product->image_path)
                                 <img src="{{ $product->image_url }}" alt="{{ $product->name }}"
@@ -99,134 +99,16 @@
         </section>
     @endif
 
-    {{-- Cart Drawer --}}
-    <div id="cartDrawer" x-data="{
-             checkoutStep: 1,
-             customer: { name: '', phone: '', address: '', notes: '', express_shipping: false },
-             storeSlug: '{{ $store->slug }}',
-             isExpressEnabled: {{ $store->is_express_shipping_enabled ? 'true' : 'false' }},
-             expressCost: {{ $store->express_shipping_cost ?? 0 }},
-             get cartItems() { return window.TribioCart ? window.TribioCart.items : []; },
-             get cartTotal() { 
-                 let total = this.cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-                 if (this.customer.express_shipping) total += this.expressCost;
-                 return total;
-             },
-             submitOrder() {
-                 if(!this.customer.name || !this.customer.phone) {
-                     alert('Por favor completa los campos obligatorios (Nombre y Teléfono).');
-                     return;
-                 }
-                 if(window.TribioCart) {
-                     const btn = document.getElementById('btnSubmitOrder');
-                     btn.innerText = 'Procesando...';
-                     btn.disabled = true;
-                     window.TribioCart.checkout(this.storeSlug, this.customer);
-                 }
-             }
-         }"
-         @cart-updated.window="$forceUpdate()"
-         style="display:none; position: fixed; inset: 0; z-index: 999; justify-content: flex-end;">
-        <div style="background: rgba(0,0,0,0.5);" class="absolute inset-0" onclick="document.getElementById('cartDrawer').style.display='none'"></div>
-        <div class="relative w-full max-w-md h-full flex flex-col" style="background: #1A1A2E; border-left: 1px solid rgba(255,255,255,0.1);">
-            <div class="flex items-center justify-between p-5 border-b" style="border-color: rgba(255,255,255,0.1);">
-                <h3 class="text-white font-bold text-lg" x-text="checkoutStep === 1 ? '🛒 Mi carrito' : 'Finalizar Compra'"></h3>
-                <button onclick="document.getElementById('cartDrawer').style.display='none'" class="text-white/50 hover:text-white">✕</button>
-            </div>
-            
-            <div class="flex-1 p-5 overflow-y-auto">
-                <template x-if="cartItems.length === 0">
-                    <p class="text-white/40 text-sm text-center mt-8">Tu carrito está vacío.</p>
-                </template>
+    <!-- Cart Trigger flotante (visible cuando no hay header configurado en el constructor) -->
+    <button onclick="window.dispatchEvent(new CustomEvent('open-cart-drawer'))"
+            class="fixed bottom-6 left-6 z-40 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-2xl hover:scale-105 transition-all"
+            style="background: {{ $store->accent_color }};" aria-label="Carrito">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+        <span data-cart-count class="absolute -top-1 -right-1 bg-white text-gray-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow">0</span>
+    </button>
 
-                <template x-if="cartItems.length > 0 && checkoutStep === 1">
-                    <div class="space-y-4">
-                        <template x-for="(item, index) in cartItems" :key="index">
-                            <div class="flex gap-4 p-3 bg-white/5 rounded-xl border border-white/10 items-center">
-                                <template x-if="item.image">
-                                    <img :src="item.image" class="w-16 h-16 object-cover rounded-lg">
-                                </template>
-                                <template x-if="!item.image">
-                                    <div class="w-16 h-16 bg-white/10 rounded-lg flex items-center justify-center text-xl">📦</div>
-                                </template>
-                                <div class="flex-1">
-                                    <h4 class="text-white font-semibold text-sm leading-tight" x-text="item.name"></h4>
-                                    <div class="flex justify-between items-center mt-2">
-                                        <p class="text-tribio-cyan font-bold text-sm" x-text="'S/. ' + (item.price * item.quantity).toFixed(2)"></p>
-                                        <div class="flex items-center gap-2 text-white text-xs">
-                                            <button @click="window.TribioCart.updateQuantity(item.id, item.quantity - 1); $dispatch('cart-updated')" class="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20">-</button>
-                                            <span x-text="item.quantity" class="w-4 text-center"></span>
-                                            <button @click="window.TribioCart.updateQuantity(item.id, item.quantity + 1); $dispatch('cart-updated')" class="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20">+</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-                </template>
-
-                <template x-if="cartItems.length > 0 && checkoutStep === 2">
-                    <div class="space-y-4 text-white">
-                        <div>
-                            <label class="block text-xs font-bold text-white/70 mb-1">Nombre Completo *</label>
-                            <input type="text" x-model="customer.name" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:border-tribio-cyan focus:ring-1 focus:ring-tribio-cyan outline-none transition" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-white/70 mb-1">Teléfono (WhatsApp) *</label>
-                            <input type="text" x-model="customer.phone" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:border-tribio-cyan focus:ring-1 focus:ring-tribio-cyan outline-none transition" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-white/70 mb-1">Dirección de Envío</label>
-                            <input type="text" x-model="customer.address" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:border-tribio-cyan focus:ring-1 focus:ring-tribio-cyan outline-none transition">
-                        </div>
-                        
-                        <template x-if="isExpressEnabled">
-                            <div class="p-4 bg-tribio-cyan/10 border border-tribio-cyan/30 rounded-xl mt-4">
-                                <label class="flex items-start gap-3 cursor-pointer">
-                                    <input type="checkbox" x-model="customer.express_shipping" class="mt-1 accent-tribio-cyan w-4 h-4 rounded">
-                                    <div>
-                                        <p class="font-bold text-sm text-tribio-cyan flex items-center gap-1">🚀 ¡Quiero Envío Express!</p>
-                                        <p class="text-xs text-white/70 mt-1">Llega más rápido a tu domicilio. <span x-show="expressCost > 0" x-text="'+ S/. ' + expressCost.toFixed(2)"></span><span x-show="expressCost == 0">¡Es gratis!</span></p>
-                                    </div>
-                                </label>
-                            </div>
-                        </template>
-                        
-                        <div>
-                            <label class="block text-xs font-bold text-white/70 mb-1 mt-2">Notas adicionales</label>
-                            <textarea x-model="customer.notes" rows="2" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm focus:border-tribio-cyan focus:ring-1 focus:ring-tribio-cyan outline-none transition"></textarea>
-                        </div>
-                    </div>
-                </template>
-            </div>
-            
-            <template x-if="cartItems.length > 0">
-                <div class="p-5 border-t" style="border-color: rgba(255,255,255,0.1);">
-                    <div class="flex justify-between items-center mb-4 text-white">
-                        <span class="font-bold text-white/70">Total a pagar:</span>
-                        <span class="font-black text-xl" x-text="'S/. ' + cartTotal.toFixed(2)"></span>
-                    </div>
-                    
-                    <template x-if="checkoutStep === 1">
-                        <button @click="checkoutStep = 2" class="w-full py-3 rounded-xl font-bold text-white transition-all shadow-lg shadow-tribio-cyan/20 hover:-translate-y-0.5 text-center flex items-center justify-center gap-2" style="background: var(--accent, #7c3aed)">
-                            Siguiente Paso →
-                        </button>
-                    </template>
-                    
-                    <template x-if="checkoutStep === 2">
-                        <div class="flex gap-2">
-                            <button @click="checkoutStep = 1" class="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors">
-                                ←
-                            </button>
-                            <button id="btnSubmitOrder" @click="submitOrder()" class="flex-1 py-3 rounded-xl font-bold text-white transition-all shadow-lg text-center" style="background: var(--accent, #7c3aed)">
-                                Confirmar y Pagar
-                            </button>
-                        </div>
-                    </template>
-                </div>
-            </template>
-        </div>
-    </div>
+    {{-- Pasarela de pago estándar (carrito + Tribio Pass) --}}
+    @include('components.checkout.gateway')
 
     <!-- Dynamic Footer will be rendered in the section loop -->
 

@@ -549,82 +549,14 @@
                     </div>
 
                 @elseif($block['type'] === 'store_cart')
+                    {{-- Disparador estándar de la pasarela de pago compartida (components.checkout.gateway) --}}
                     <div class="w-full h-full flex items-center justify-center {{ $isEditor ? 'pointer-events-auto relative z-50' : '' }}">
-                        <div class="relative">
-                            <button @click="openCartDropdown = !openCartDropdown" class="relative p-2.5 rounded-full bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors shrink-0">
-                                <svg class="w-5 h-5" style="color: {{ $block['icon_color'] ?? '#374151' }};" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                                </svg>
-                                <span x-show="cartCount > 0" x-text="cartCount" style="background-color: {{ $block['background_color'] ?? '#E50914' }}; color: {{ $block['text_color'] ?? '#FFFFFF' }};" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center shadow-md animate-pulse"></span>
-                            </button>
-
-                            <!-- Mini Cart -->
-                            <div x-show="openCartDropdown" @click.outside="openCartDropdown = false" style="display: none;" class="absolute right-0 mt-3 w-80 sm:w-96 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 p-4 space-y-4 text-left">
-                                <div x-show="checkoutStep === 1" class="space-y-4">
-                                    <div class="flex items-center justify-between pb-2 border-b border-gray-100">
-                                        <h3 class="text-xs font-black uppercase tracking-wider text-gray-900">Mi carrito (<span x-text="cartCount"></span>)</h3>
-                                        <button @click="openCartDropdown = false" class="text-gray-400 hover:text-gray-500 text-xs">✕</button>
-                                    </div>
-                                    <div class="max-h-60 overflow-y-auto divide-y divide-gray-100 pr-1">
-                                        <template x-if="items.length === 0">
-                                            <div class="text-center py-8 space-y-2">
-                                                <p class="text-gray-500 font-bold text-[10px]">Tu carrito está vacío.</p>
-                                            </div>
-                                        </template>
-                                        <template x-if="items.length > 0">
-                                            <template x-for="item in items" :key="item.id">
-                                                <div class="flex py-3 gap-3">
-                                                    <div class="w-12 h-12 bg-gray-50 rounded border border-gray-100 shrink-0 flex items-center justify-center overflow-hidden">
-                                                        <img x-show="item.image" :src="item.image" class="w-full h-full object-contain">
-                                                    </div>
-                                                    <div class="flex-1 flex flex-col justify-between min-w-0">
-                                                        <div>
-                                                            <h4 class="text-[10px] font-black text-gray-900 leading-tight truncate uppercase" x-text="item.name"></h4>
-                                                            <span class="text-[10px] text-green-600 font-bold" x-text="'S/. ' + item.price.toFixed(2)"></span>
-                                                        </div>
-                                                        <div class="flex items-center justify-between mt-1">
-                                                            <div class="flex items-center border border-gray-200 rounded bg-gray-50">
-                                                                <button @click="updateQty(item.id, item.quantity - 1)" class="px-1.5 py-0.5 text-gray-500 hover:bg-gray-200 text-[10px]">-</button>
-                                                                <span class="px-2 text-[10px] font-bold text-gray-700" x-text="item.quantity"></span>
-                                                                <button @click="updateQty(item.id, item.quantity + 1)" class="px-1.5 py-0.5 text-gray-500 hover:bg-gray-200 text-[10px]">+</button>
-                                                            </div>
-                                                            <button @click="removeItem(item.id)" class="text-[10px] text-red-500 font-semibold hover:underline">Eliminar</button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </template>
-                                        </template>
-                                    </div>
-                                    <template x-if="items.length > 0">
-                                        <div class="pt-3 border-t border-gray-100 space-y-3">
-                                            <div class="flex justify-between items-center text-xs">
-                                                <span class="font-bold text-gray-600">Total:</span>
-                                                <span class="font-black text-gray-900 text-sm" x-text="'S/. ' + totalSum().toFixed(2)"></span>
-                                            </div>
-                                            <div class="flex gap-2">
-                                                <button @click="checkoutStep = 2" style="background-color: {{ $block['background_color'] ?? '#E50914' }}; color: {{ $block['text_color'] ?? '#FFFFFF' }};" class="flex-1 py-2 px-3 font-bold text-[10px] uppercase tracking-wider text-center rounded hover:opacity-90">Continuar pedido</button>
-                                            </div>
-                                        </div>
-                                    </template>
-                                </div>
-                                <div x-show="checkoutStep === 2" class="space-y-4">
-                                    <div class="flex items-center justify-between pb-2 border-b border-gray-100">
-                                        <h3 class="text-xs font-black uppercase tracking-wider text-gray-900">Cotización</h3>
-                                        <button @click="checkoutStep = 1" style="color: {{ $block['background_color'] ?? '#E50914' }};" class="hover:underline text-[10px] font-bold">Volver</button>
-                                    </div>
-                                    <div class="space-y-2">
-                                        <div><label class="block text-[9px] font-bold text-gray-600 mb-0.5">Nombre *</label><input type="text" x-model="checkoutForm.customer_name" class="w-full px-2 py-1.5 rounded border text-[10px]"></div>
-                                        <div><label class="block text-[9px] font-bold text-gray-600 mb-0.5">WhatsApp *</label><input type="text" x-model="checkoutForm.customer_phone" class="w-full px-2 py-1.5 rounded border text-[10px]"></div>
-                                        <div><label class="block text-[9px] font-bold text-gray-600 mb-0.5">Dirección *</label><input type="text" x-model="checkoutForm.customer_address" class="w-full px-2 py-1.5 rounded border text-[10px]"></div>
-                                    </div>
-                                    <div class="pt-2 border-t border-gray-100 space-y-2">
-                                        <button @click="submitOrder()" :disabled="submitting" style="background-color: {{ $block['background_color'] ?? '#E50914' }}; color: {{ $block['text_color'] ?? '#FFFFFF' }};" class="w-full py-2.5 px-3 font-bold text-[10px] uppercase text-center rounded hover:opacity-90">
-                                            <span x-show="!submitting">Confirmar por WhatsApp</span><span x-show="submitting">Enviando...</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <button onclick="window.dispatchEvent(new CustomEvent('open-cart-drawer'))" class="relative p-2.5 rounded-full bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors shrink-0">
+                            <svg class="w-5 h-5" style="color: {{ $block['icon_color'] ?? '#374151' }};" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                            </svg>
+                            <span data-cart-count style="background-color: {{ $block['background_color'] ?? '#E50914' }}; color: {{ $block['text_color'] ?? '#FFFFFF' }};" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center shadow-md">0</span>
+                        </button>
                     </div>
                 @endif
 

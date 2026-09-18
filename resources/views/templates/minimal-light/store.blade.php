@@ -520,11 +520,8 @@
     <!-- Main Footer -->
     @include('templates.minimal-light.footer')
 
-    {{-- Cart Drawer --}}
-    @include('templates.minimal-light.cart-drawer')
-
-    {{-- Customer Account & Dashboard Modal --}}
-    @include('templates.minimal-light.customer-modal')
+    {{-- Pasarela de pago estándar (carrito + Tribio Pass) --}}
+    @include('components.checkout.gateway')
 
     </div>
 

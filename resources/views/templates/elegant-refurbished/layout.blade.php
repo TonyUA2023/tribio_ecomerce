@@ -43,7 +43,12 @@
     
     <!-- Styles -->
     <link rel="stylesheet" href="{{ asset('css/templates/elegant-refurbished/style.css') }}">
-    
+
+    <!-- Pasarela de pago estándar: requiere Alpine.js + Tailwind (app.css) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
     @yield('extra_head')
 </head>
 <body class="er-body-dark">
@@ -59,6 +64,11 @@
                 <li><a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => 'ipad']) }}">iPads</a></li>
                 <li><a href="{{ route('store.catalog', ['slug' => $store->slug]) }}">Catálogo Completo</a></li>
             </ul>
+            <button onclick="window.dispatchEvent(new CustomEvent('open-cart-drawer'))" aria-label="Carrito"
+                    style="position:relative; background:transparent; border:none; cursor:pointer; color:inherit; padding:.5rem;">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:22px;height:22px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                <span data-cart-count style="position:absolute; top:-2px; right:-2px; background:{{ $store->accent_color ?: '#0071e3' }}; color:#fff; font-size:10px; font-weight:700; min-width:16px; padding:1px 4px; border-radius:9999px; text-align:center;">0</span>
+            </button>
         </div>
     </header>
 
@@ -102,5 +112,8 @@
         });
     </script>
     @yield('extra_scripts')
+
+    {{-- Pasarela de pago estándar (carrito + Tribio Pass) --}}
+    @include('components.checkout.gateway')
 </body>
 </html>
