@@ -269,7 +269,11 @@
                 initialization: { amount: this.cartTotal },
                 customization: {
                     visual: { style: { theme: 'default', customVariables: { formBackgroundColor: '#f9fafb' } } },
-                    paymentMethods: { maxInstallments: 1 }
+                    paymentMethods: { 
+                        creditCard: 'all', 
+                        debitCard: 'all', 
+                        maxInstallments: 1 
+                    }
                 },
                 callbacks: {
                     onReady: () => {},
