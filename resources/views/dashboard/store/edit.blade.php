@@ -108,20 +108,6 @@
             </div>
         </div>
 
-        {{-- Logo y portada: forms independientes (suben archivo aparte) --}}
-        <div class="glass-card p-5 sm:p-8">
-            <h3 class="text-white font-bold text-lg mb-1 flex items-center gap-2">🖼️ Logo y Portada</h3>
-            <p class="text-xs text-white/50 mb-6">Personaliza la apariencia visual de tu tienda.</p>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
-                <form method="POST" action="{{ route('dashboard.store.logo') }}" enctype="multipart/form-data" class="space-y-4 bg-white/3 p-6 rounded-xl border border-white/5">@csrf
-                    <x-image-picker name="logo" label="Logo de tu tienda" :current="$store?->logo_path ? $store->logo_url : null" :max-mb="2" save-label="Guardar logo" />
-                </form>
-                <form method="POST" action="{{ route('dashboard.store.cover') }}" enctype="multipart/form-data" class="space-y-4 bg-white/3 p-6 rounded-xl border border-white/5">@csrf
-                    <x-image-picker name="cover" label="Portada de tu tienda" :current="$store?->cover_path ? $store->cover_url : null" :max-mb="5" :wide="true" save-label="Guardar portada" />
-                </form>
-            </div>
-        </div>
-
         {{-- Contacto y Redes --}}
         <div class="glass-card p-5 sm:p-8">
             <h3 class="text-white font-bold text-lg mb-1 flex items-center gap-2">📱 Contacto y Redes</h3>
@@ -461,5 +447,23 @@
             </div>
         </div>
     </form>
+
+    {{-- Logo y portada: forms independientes que suben archivo aparte de inmediato —
+         deben quedar FUERA del <form> principal: un <form> no puede anidarse dentro
+         de otro <form>; si se anida, el navegador cierra el <form> principal en el
+         primer </form> que encuentra y todo lo que sigue queda fuera de él (sin
+         enviarse nunca). Por eso viven como hermanos del formulario, no dentro. --}}
+    <div class="glass-card p-5 sm:p-8">
+        <h3 class="text-white font-bold text-lg mb-1 flex items-center gap-2">🖼️ Logo y Portada</h3>
+        <p class="text-xs text-white/50 mb-6">Personaliza la apariencia visual de tu tienda. Se guardan de inmediato, por separado del resto del formulario.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
+            <form method="POST" action="{{ route('dashboard.store.logo') }}" enctype="multipart/form-data" class="space-y-4 bg-white/3 p-6 rounded-xl border border-white/5">@csrf
+                <x-image-picker name="logo" label="Logo de tu tienda" :current="$store?->logo_path ? $store->logo_url : null" :max-mb="2" save-label="Guardar logo" />
+            </form>
+            <form method="POST" action="{{ route('dashboard.store.cover') }}" enctype="multipart/form-data" class="space-y-4 bg-white/3 p-6 rounded-xl border border-white/5">@csrf
+                <x-image-picker name="cover" label="Portada de tu tienda" :current="$store?->cover_path ? $store->cover_url : null" :max-mb="5" :wide="true" save-label="Guardar portada" />
+            </form>
+        </div>
+    </div>
 </div>
 @endsection
