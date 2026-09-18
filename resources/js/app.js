@@ -1,4 +1,5 @@
 import './bootstrap';
+import './dashboard-images';
 
 // ═══════════════════════════════════════════════════════════
 //  TRIBIO APP — Main JS

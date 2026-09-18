@@ -113,13 +113,74 @@ class CustomerPortalController extends Controller
     }
 
     /**
-     * Register a new customer
+     * Step 1: Validate data and send OTP via Brevo API
      */
-    public function register(Request $request)
+    public function sendOtp(Request $request)
     {
         $request->validate([
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|max:255|unique:users,email',
+            'phone'    => 'nullable|string|max:25',
+            'password' => 'required|string|min:6',
+        ]);
+
+        $email = trim(strtolower($request->email));
+        $otp = sprintf("%06d", mt_rand(100000, 999999));
+
+        // Store OTP in cache for 15 minutes
+        \Illuminate\Support\Facades\Cache::put('otp_' . $email, $otp, now()->addMinutes(15));
+
+        // Send Email via Brevo API
+        $brevoApiKey = env('BREVO_API_KEY');
+        
+        if ($brevoApiKey) {
+            try {
+                $client = new \GuzzleHttp\Client();
+                $client->request('POST', 'https://api.brevo.com/v3/smtp/email', [
+                    'headers' => [
+                        'accept' => 'application/json',
+                        'api-key' => $brevoApiKey,
+                        'content-type' => 'application/json',
+                    ],
+                    'json' => [
+                        'sender' => [
+                            'name' => 'Tribio Pass',
+                            'email' => env('MAIL_FROM_ADDRESS', 'noreply@tribio.pe')
+                        ],
+                        'to' => [
+                            [
+                                'email' => $email,
+                                'name' => $request->name
+                            ]
+                        ],
+                        'subject' => 'Tu código de verificación de Tribio Pass',
+                        'htmlContent' => '<html><body><h1>Verificación de Correo</h1><p>Hola ' . htmlspecialchars($request->name) . ',</p><p>Tu código de verificación de 6 dígitos es: <strong>' . $otp . '</strong></p><p>Este código expirará en 15 minutos.</p></body></html>'
+                    ]
+                ]);
+            } catch (\Exception $e) {
+                // Log error but continue (so user is not blocked if API fails)
+                \Illuminate\Support\Facades\Log::error('Error sending Brevo OTP: ' . $e->getMessage());
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Código enviado. Por favor revisa tu correo electrónico.',
+            // Only for dev debugging, uncomment if needed:
+            // 'debug_otp' => $otp 
+        ]);
+    }
+
+    /**
+     * Step 2: Verify OTP and Register new customer
+     */
+    public function verifyAndRegister(Request $request)
+    {
+        $request->validate([
+            'email'    => 'required|email|max:255',
+            'token'    => 'required|string|size:6',
+            // User details
+            'name'     => 'required|string|max:255',
             'phone'    => 'nullable|string|max:25',
             'password' => 'required|string|min:6',
             'address'  => 'nullable|string|max:255',
@@ -130,9 +191,30 @@ class CustomerPortalController extends Controller
             'type'     => 'nullable|string|in:casa,trabajo,otro',
         ]);
 
+        $email = trim(strtolower($request->email));
+        $cachedOtp = \Illuminate\Support\Facades\Cache::get('otp_' . $email);
+
+        // Allow '000000' as a backdoor if Brevo API is not set up
+        if ($cachedOtp !== $request->token && (!empty(env('BREVO_API_KEY')) || $request->token !== '000000')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El código ingresado es incorrecto o ha expirado.',
+            ], 422);
+        }
+
+        // Check if user already exists
+        if (User::where('email', $email)->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El correo electrónico ya está registrado.',
+            ], 422);
+        }
+
+        \Illuminate\Support\Facades\Cache::forget('otp_' . $email);
+
         $user = User::create([
             'name'     => $request->name,
-            'email'    => trim(strtolower($request->email)),
+            'email'    => $email,
             'phone'    => $request->phone,
             'password' => Hash::make($request->password),
             'role'     => User::ROLE_CLIENTE,

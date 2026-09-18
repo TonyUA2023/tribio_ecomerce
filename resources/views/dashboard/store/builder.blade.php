@@ -31,7 +31,7 @@
             <span x-show="isSaving" style="display: none;" class="text-xs text-gray-400 font-bold flex items-center gap-1">
                 Borrador guardado
             </span>
-            <button @click="publishChanges" class="px-4 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center gap-2">
+            <button @click="publishChanges" :disabled="isUploadingImage || isPublishing" class="px-4 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center gap-2">
                 <span x-show="!isPublishing">🚀 Publicar Cambios</span>
                 <span x-show="isPublishing">Publicando...</span>
             </button>
@@ -47,6 +47,12 @@
     <div class="flex h-[calc(100vh-3.5rem)]">
         <!-- Sidebar Controles (Izquierda) -->
         <aside class="w-[350px] bg-white border-r border-gray-200 flex flex-col shrink-0">
+            <div x-show="imageUploadMessage" style="display:none" class="p-3 bg-blue-50 border-b border-blue-200 text-blue-900" role="status" aria-live="polite">
+                <div class="flex items-center gap-3">
+                    <img x-show="imageUploadPreview" :src="imageUploadPreview || null" alt="Vista previa de la imagen seleccionada" class="w-16 h-16 object-contain bg-white rounded-lg shrink-0">
+                    <div class="min-w-0"><p class="text-xs font-bold truncate" x-text="imageUploadName"></p><p class="text-xs mt-1" x-text="imageUploadMessage"></p></div>
+                </div>
+            </div>
             <!-- Pestañas o Header del Sidebar -->
             <div class="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                 <h2 class="font-bold text-gray-800" x-text="activeSection ? 'Editando Sección' : 'Tus Secciones'"></h2>
@@ -1146,6 +1152,25 @@
                 isSaving: false,
                 isPublishing: false,
                 isUploadingImage: false,
+                imageUploadPreview: '',
+                imageUploadName: '',
+                imageUploadMessage: '',
+                imageUploadComplete: false,
+                beginImageUpload(file) {
+                    if (this.isUploadingImage) return false;
+                    this.imageUploadComplete = false;
+                    if (this.imageUploadPreview) URL.revokeObjectURL(this.imageUploadPreview);
+                    this.imageUploadPreview = '';
+                    this.imageUploadName = file.name;
+                    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp'].includes(file.type) || file.size > 2 * 1024 * 1024) {
+                        this.imageUploadMessage = 'Elige una imagen JPG, PNG, WEBP, GIF o BMP de hasta 2 MB.';
+                        return false;
+                    }
+                    this.imageUploadPreview = URL.createObjectURL(file);
+                    this.imageUploadMessage = 'Subiendo imagen… Espera antes de cambiar de sección.';
+                    this.isUploadingImage = true;
+                    return true;
+                },
                 searchBlockQuery: '',
                 showAllBlocks: false,
                 availableBlocks: [
@@ -1653,7 +1678,7 @@
                     const file = event.target.files[0];
                     if(!file) return;
 
-                    this.isUploadingImage = true;
+                    if (!this.beginImageUpload(file)) { event.target.value = ''; return; }
                     const formData = new FormData();
                     formData.append('image', file);
 
@@ -1684,6 +1709,8 @@
                         }
 
                         if(response.ok) {
+                            this.imageUploadComplete = true;
+                            this.imageUploadMessage = 'Imagen cargada. Revisa el lienzo y pulsa Publicar Cambios para mostrarla en tu tienda.';
                             this.activeSection.data[key] = data.url;
                             this.saveActiveSection();
                         } else {
@@ -1698,6 +1725,7 @@
                         alert('Error de conexión');
                     } finally {
                         this.isUploadingImage = false;
+                        if (!this.imageUploadComplete) this.imageUploadMessage = 'No se pudo cargar la imagen. La imagen anterior se conserva; vuelve a intentarlo.';
                         event.target.value = ''; // clear input
                     }
                 },
@@ -1706,7 +1734,7 @@
                     const file = event.target.files[0];
                     if(!file) return;
 
-                    this.isUploadingImage = true;
+                    if (!this.beginImageUpload(file)) { event.target.value = ''; return; }
                     const formData = new FormData();
                     formData.append('image', file);
 
@@ -1737,6 +1765,8 @@
                         }
 
                         if(response.ok) {
+                            this.imageUploadComplete = true;
+                            this.imageUploadMessage = 'Imagen cargada. Revisa el lienzo y pulsa Publicar Cambios para mostrarla en tu tienda.';
                             this.activeBlock[propertyName] = data.url;
                             this.saveActiveSection(false);
                         } else {
@@ -1751,6 +1781,7 @@
                         alert('Error de conexión');
                     } finally {
                         this.isUploadingImage = false;
+                        if (!this.imageUploadComplete) this.imageUploadMessage = 'No se pudo cargar la imagen. La imagen anterior se conserva; vuelve a intentarlo.';
                         event.target.value = ''; // clear input
                     }
                 },
@@ -1759,7 +1790,7 @@
                     const file = event.target.files[0];
                     if(!file) return;
 
-                    this.isUploadingImage = true;
+                    if (!this.beginImageUpload(file)) { event.target.value = ''; return; }
                     const formData = new FormData();
                     formData.append('image', file);
 
@@ -1790,6 +1821,8 @@
                         }
 
                         if(response.ok) {
+                            this.imageUploadComplete = true;
+                            this.imageUploadMessage = 'Imagen cargada. Revisa el lienzo y pulsa Publicar Cambios para mostrarla en tu tienda.';
                             if (!Array.isArray(this.activeSection.data[key])) {
                                 this.activeSection.data[key] = [];
                             }
@@ -1807,6 +1840,7 @@
                         alert('Error de conexión');
                     } finally {
                         this.isUploadingImage = false;
+                        if (!this.imageUploadComplete) this.imageUploadMessage = 'No se pudo cargar la imagen. La imagen anterior se conserva; vuelve a intentarlo.';
                         event.target.value = ''; // clear input
                     }
                 },

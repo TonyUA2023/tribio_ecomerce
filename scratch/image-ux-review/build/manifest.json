@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-quunAb9E.css",
+    "file": "assets/app-B-Bdgqwz.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -9,7 +9,7 @@
     ]
   },
   "resources/css/dashboard.css": {
-    "file": "assets/dashboard-BzEYI8LZ.css",
+    "file": "assets/dashboard-DDpb5wfL.css",
     "src": "resources/css/dashboard.css",
     "isEntry": true,
     "name": "dashboard",
@@ -18,7 +18,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-B9getdLn.js",
+    "file": "assets/app-CcjFInng.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true

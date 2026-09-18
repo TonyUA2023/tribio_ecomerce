@@ -9,7 +9,7 @@
 
 {{-- Widget de Videos Destacados en el Home (Máximo 3) --}}
 @if(isset($homeVideoProducts) && $homeVideoProducts->count() > 0)
-<div class="mb-6 p-4 rounded-2xl bg-gradient-to-r from-stone-900 via-stone-950 to-stone-900 border border-stone-800 shadow-lg">
+<div class="mb-6 p-4 rounded-2xl bg-slate-50 border border-slate-200">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
         <div class="flex items-center gap-2">
             <span class="text-base">🎬</span>

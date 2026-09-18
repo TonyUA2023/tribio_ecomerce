@@ -2,9 +2,8 @@
 @section('title','Galería') @section('page_title','🖼️ Galería')
 @section('content')
 <div class="glass-card p-6 mb-6">
-    <form method="POST" action="{{ route('dashboard.galeria.store') }}" enctype="multipart/form-data" class="flex items-end gap-4">@csrf
-        <div class="flex-1"><label class="input-label">Subir imágenes (múltiples)</label><input type="file" name="images[]" multiple accept="image/*" class="input-field py-2"></div>
-        <button type="submit" class="btn-primary">Subir</button>
+    <form method="POST" action="{{ route('dashboard.galeria.store') }}" enctype="multipart/form-data" class="space-y-4">@csrf
+        <x-image-picker name="images[]" label="Agregar fotos a la galería" :multiple="true" :max-mb="5" save-label="Subir fotos a la galería" />
     </form>
 </div>
 @if($items->isEmpty())

@@ -17,7 +17,7 @@
              express_shipping: false,
              create_account: false,
              password: '',
-             payment_method: '{{ ($store->checkout_mode === 'card' || $store->payment_gateway === 'mercado_pago' || !empty($store->mp_access_token) || !empty($store->gateway_access_token)) ? 'mercadopago' : 'whatsapp' }}'
+             payment_method: '{{ ($store->checkout_mode === 'card' || ($store->checkout_mode === 'mixed' && !empty($store->mp_access_token))) ? 'mercadopago' : 'whatsapp' }}'
          },
          customerLoggedIn: false,
          customerUser: null,
@@ -36,8 +36,9 @@
          currentCurrency: '{{ \App\Helpers\CurrencyHelper::currentCurrency() }}',
          currencySymbol: '{{ \App\Helpers\CurrencyHelper::symbol() }}',
          shippingCost: 0,
-         hasMercadoPago: {{ ($store->checkout_mode === 'card' || $store->payment_gateway === 'mercado_pago' || !empty($store->mp_access_token) || !empty($store->gateway_access_token)) ? 'true' : 'false' }},
-         paymentMethod: '{{ ($store->checkout_mode === 'card' || $store->payment_gateway === 'mercado_pago' || !empty($store->mp_access_token) || !empty($store->gateway_access_token)) ? 'mercadopago' : 'whatsapp' }}',
+         hasMercadoPago: {{ (in_array($store->checkout_mode, ['card', 'mixed']) && (!empty($store->mp_access_token) || !empty($store->gateway_access_token))) ? 'true' : 'false' }},
+         hasWhatsapp: {{ in_array($store->checkout_mode, ['whatsapp', 'mixed']) ? 'true' : 'false' }},
+         paymentMethod: '{{ ($store->checkout_mode === 'card' || ($store->checkout_mode === 'mixed' && !empty($store->mp_access_token))) ? 'mercadopago' : 'whatsapp' }}',
          hasActiveToken: {{ (!empty($store->mp_access_token) || !empty($store->gateway_access_token)) ? 'true' : 'false' }},
          cartItems: window.TribioCart ? window.TribioCart.items : [],
          formatMoney(amount) {
@@ -438,114 +439,6 @@
                         </div>
                     </template>
 
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Nombre Completo *</label>
-                        <input type="text" name="name" autocomplete="name" x-model="customer.name" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none transition" required>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1">Correo Electrónico *</label>
-                            <input type="email" name="email" autocomplete="email" x-model="customer.email" @input="onEmailInput" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none transition" required>
-                            
-                            {{-- State: registered / new customer --}}
-                            <template x-if="emailCheckStatus === 'exists' && !customerLoggedIn">
-                                <div class="mt-1.5 p-2 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-900 flex items-center justify-between">
-                                    <span>👋 Ya tienes cuenta Tribio Pass.</span>
-                                    <button type="button" @click="openTribioPass('login')" class="font-bold underline text-amber-950 hover:text-black cursor-pointer">Iniciar sesión</button>
-                                </div>
-                            </template>
-
-                            <template x-if="emailCheckStatus === 'admin_exists' && !customerLoggedIn">
-                                <div class="mt-1.5 p-2 bg-blue-50 border border-blue-200 rounded-lg text-[11px] text-blue-900">
-                                    <span>🏪 Correo de administrador. Usa una cuenta de cliente Tribio Pass para pagar.</span>
-                                </div>
-                            </template>
-
-                            <template x-if="emailCheckStatus === 'new' && !customerLoggedIn">
-                                <div class="mt-1.5 flex items-center justify-between text-[11px]">
-                                    <span class="font-bold text-emerald-700 flex items-center gap-1.5">
-                                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                        <span>✨ Cliente nuevo</span>
-                                    </span>
-                                    <button type="button" @click="openTribioPass('register')" class="text-[10px] font-bold text-[#C8A68B] hover:underline cursor-pointer">
-                                        Crear Tribio Pass →
-                                    </button>
-                                </div>
-                            </template>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1">Teléfono (WhatsApp) *</label>
-                            <input type="tel" name="tel" autocomplete="tel" x-model="customer.phone" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none transition" required>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <div class="flex items-center justify-between mb-1">
-                                <label class="block text-xs font-bold text-gray-700">País de Envío *</label>
-                                <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/80">
-                                    <svg class="w-2.5 h-2.5 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                                    Fijado
-                                </span>
-                            </div>
-                            @php
-                                $checkoutCountryCode = \App\Helpers\CurrencyHelper::currentCountry();
-                                $checkoutCountryData = \App\Helpers\CurrencyHelper::getCountryInfo($checkoutCountryCode);
-                            @endphp
-                            <div class="w-full bg-stone-100/90 border border-stone-300 rounded-lg px-3 py-2 text-sm flex items-center justify-between select-none" title="País autoseleccionado y bloqueado según tu moneda">
-                                <div class="flex items-center gap-2 overflow-hidden">
-                                    <div class="w-6 h-4 rounded-xs overflow-hidden border border-stone-300 shadow-2xs flex-shrink-0 bg-white">
-                                        <img src="{{ $checkoutCountryData['flag_url'] ?? \App\Helpers\CurrencyHelper::flagUrl($checkoutCountryCode) }}" 
-                                             alt="{{ $checkoutCountryData['name'] ?? $checkoutCountryCode }}" 
-                                             class="w-full h-full object-cover">
-                                    </div>
-                                    <span class="font-bold text-gray-900 text-xs truncate">{{ $checkoutCountryData['name'] ?? $checkoutCountryCode }}</span>
-                                </div>
-                                <span class="text-[10px] text-gray-600 font-mono flex-shrink-0 bg-white px-1.5 py-0.5 rounded border border-stone-200 font-bold">
-                                    {{ $checkoutCountryData['currency'] ?? '' }}
-                                </span>
-                            </div>
-                            <input type="hidden" name="country" :value="customer.country" value="{{ $checkoutCountryCode }}">
-                            <p class="text-[10px] text-gray-400 mt-1 leading-tight">
-                                🔒 Autoseleccionado según tu moneda y tienda.
-                            </p>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">Estado / Departamento</label>
-                            <input type="text" name="address-level1" autocomplete="address-level1" x-model="customer.state" @blur="updateShipping" placeholder="Ej: Lima, CDMX, BsAs..." class="w-full bg-white border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none transition">
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="flex items-center justify-between mb-1">
-                            <label class="block text-xs font-bold text-gray-500">Dirección de Envío *</label>
-                            <div class="flex gap-1">
-                                <button type="button" @click="customer.address_type = 'casa'"
-                                        :class="customer.address_type === 'casa' ? 'bg-[#1A1A1A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
-                                        class="px-2 py-0.5 rounded text-[10px] font-bold transition">🏠 Casa</button>
-                                <button type="button" @click="customer.address_type = 'trabajo'"
-                                        :class="customer.address_type === 'trabajo' ? 'bg-[#1A1A1A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
-                                        class="px-2 py-0.5 rounded text-[10px] font-bold transition">💼 Trabajo</button>
-                                <button type="button" @click="customer.address_type = 'otro'"
-                                        :class="customer.address_type === 'otro' ? 'bg-[#1A1A1A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
-                                        class="px-2 py-0.5 rounded text-[10px] font-bold transition">📍 Otro</button>
-                            </div>
-                        </div>
-                        <input type="text" name="street-address" autocomplete="street-address" x-model="customer.address" placeholder="Av., Calle, Número o Dpto" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none transition" required>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1">Ciudad</label>
-                            <input type="text" name="address-level2" autocomplete="address-level2" x-model="customer.city" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none transition">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1">Código Postal</label>
-                            <input type="text" name="postal_code" autocomplete="postal-code" x-model="customer.zipcode" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none transition">
-                        </div>
-                    </div>
-
                     {{-- Bloque Obligatorio: Crear Cuenta o Iniciar Sesión en Tribio Pass --}}
                     <template x-if="!customerLoggedIn">
                         <div class="p-4 bg-gradient-to-br from-[#1A1A1A] via-stone-900 to-[#1A1A1A] text-white rounded-2xl shadow-md mt-3 border border-stone-700/70 relative overflow-hidden">
@@ -561,7 +454,7 @@
                                     <span class="text-[10px] bg-amber-400 text-stone-950 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Obligatorio</span>
                                 </div>
                                 <p class="text-xs text-stone-300 leading-snug">
-                                    Para proceder al pago debes contar con tu cuenta universal <strong>Tribio Pass</strong>. Si no tienes cuenta, créala en segundos.
+                                    Para proceder al pago y gestionar tus direcciones de envío debes iniciar sesión o crear tu cuenta universal <strong>Tribio Pass</strong> en segundos.
                                 </p>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
                                     <button type="button" @click="openTribioPass('register')"
@@ -573,12 +466,80 @@
                                         <span>🔑 Iniciar Sesión</span>
                                     </button>
                                 </div>
-                                <p class="text-[10px] text-stone-400 text-center">
-                                    🔒 Válido para todas las tiendas y marcas de la red Tribio.
-                                </p>
                             </div>
                         </div>
                     </template>
+
+                    <template x-if="customerLoggedIn">
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-1">Teléfono (WhatsApp) *</label>
+                                    <input type="tel" name="tel" autocomplete="tel" x-model="customer.phone" class="w-full bg-stone-100 border border-stone-200 rounded-lg px-4 py-2.5 text-sm focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none transition" required>
+                                </div>
+                            </div>
+
+                            {{-- Formulario para nueva dirección solo si selecciona 'new' --}}
+                            <template x-if="selectedAddressId === 'new'">
+                                <div class="space-y-4 p-4 border border-stone-200 rounded-2xl bg-stone-50 mt-2">
+                                    <h4 class="text-xs font-black text-stone-800 uppercase">Nueva Dirección de Entrega</h4>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <div class="flex items-center justify-between mb-1">
+                                                <label class="block text-xs font-bold text-gray-700">País de Envío *</label>
+                                            </div>
+                                            @php
+                                                $checkoutCountryCode = \App\Helpers\CurrencyHelper::currentCountry();
+                                                $checkoutCountryData = \App\Helpers\CurrencyHelper::getCountryInfo($checkoutCountryCode);
+                                            @endphp
+                                            <div class="w-full bg-white border border-stone-300 rounded-lg px-3 py-2 text-sm flex items-center justify-between select-none" title="País autoseleccionado">
+                                                <div class="flex items-center gap-2 overflow-hidden">
+                                                    <div class="w-6 h-4 rounded-xs overflow-hidden border border-stone-300 shadow-2xs flex-shrink-0 bg-white">
+                                                        <img src="{{ $checkoutCountryData['flag_url'] ?? \App\Helpers\CurrencyHelper::flagUrl($checkoutCountryCode) }}" 
+                                                             alt="{{ $checkoutCountryData['name'] ?? $checkoutCountryCode }}" 
+                                                             class="w-full h-full object-cover">
+                                                    </div>
+                                                    <span class="font-bold text-gray-900 text-xs truncate">{{ $checkoutCountryData['name'] ?? $checkoutCountryCode }}</span>
+                                                </div>
+                                            </div>
+                                            <input type="hidden" name="country" :value="customer.country" value="{{ $checkoutCountryCode }}">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-gray-700 mb-1">Estado / Departamento</label>
+                                            <input type="text" name="address-level1" autocomplete="address-level1" x-model="customer.state" @blur="updateShipping" placeholder="Ej: Lima, CDMX..." class="w-full bg-white border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm focus:border-[#C8A68B] outline-none transition" required>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <div class="flex items-center justify-between mb-1">
+                                            <label class="block text-xs font-bold text-gray-500">Dirección de Envío *</label>
+                                            <div class="flex gap-1">
+                                                <button type="button" @click="customer.address_type = 'casa'"
+                                                        :class="customer.address_type === 'casa' ? 'bg-[#1A1A1A] text-white' : 'bg-white text-gray-600 border border-stone-200'"
+                                                        class="px-2 py-0.5 rounded text-[10px] font-bold transition">🏠 Casa</button>
+                                                <button type="button" @click="customer.address_type = 'trabajo'"
+                                                        :class="customer.address_type === 'trabajo' ? 'bg-[#1A1A1A] text-white' : 'bg-white text-gray-600 border border-stone-200'"
+                                                        class="px-2 py-0.5 rounded text-[10px] font-bold transition">💼 Trabajo</button>
+                                            </div>
+                                        </div>
+                                        <input type="text" name="street-address" autocomplete="street-address" x-model="customer.address" placeholder="Av., Calle, Número o Dpto" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-[#C8A68B] outline-none transition" required>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-xs font-bold text-gray-500 mb-1">Ciudad</label>
+                                            <input type="text" name="address-level2" autocomplete="address-level2" x-model="customer.city" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-[#C8A68B] outline-none transition" required>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-gray-500 mb-1">Código Postal</label>
+                                            <input type="text" name="postal_code" autocomplete="postal-code" x-model="customer.zipcode" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-[#C8A68B] outline-none transition">
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
 
                     <template x-if="isExpressEnabled">
                         <div class="p-4 bg-green-50 border border-green-200 rounded-xl mt-4 relative overflow-hidden">
@@ -624,21 +585,23 @@
                             </template>
 
                             {{-- WhatsApp / Pago Directo --}}
-                            <label :class="paymentMethod === 'whatsapp' ? 'border-[#1A1A1A] bg-stone-50 ring-1 ring-[#1A1A1A]' : 'border-gray-200 bg-white hover:border-gray-300'"
-                                   class="flex flex-col p-3.5 rounded-xl border cursor-pointer transition-all">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-2.5">
-                                        <input type="radio" name="payment_method" value="whatsapp" x-model="paymentMethod" class="accent-[#1A1A1A] w-4 h-4">
-                                        <span class="font-bold text-sm text-gray-900 flex items-center gap-1.5">
-                                            💬 WhatsApp / Pago Directo
-                                        </span>
+                            <template x-if="hasWhatsapp">
+                                <label :class="paymentMethod === 'whatsapp' ? 'border-[#1A1A1A] bg-stone-50 ring-1 ring-[#1A1A1A]' : 'border-gray-200 bg-white hover:border-gray-300'"
+                                       class="flex flex-col p-3.5 rounded-xl border cursor-pointer transition-all">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-2.5">
+                                            <input type="radio" name="payment_method" value="whatsapp" x-model="paymentMethod" class="accent-[#1A1A1A] w-4 h-4">
+                                            <span class="font-bold text-sm text-gray-900 flex items-center gap-1.5">
+                                                💬 WhatsApp / Pago Directo
+                                            </span>
+                                        </div>
+                                        <span class="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.5 rounded border border-emerald-200">Yape / Plin / Efectivo</span>
                                     </div>
-                                    <span class="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.5 rounded border border-emerald-200">Yape / Plin / Efectivo</span>
-                                </div>
-                                <p class="mt-1 text-[11px] text-gray-500 pl-6">
-                                    Coordina tu compra directamente con el vendedor por WhatsApp.
-                                </p>
-                            </label>
+                                    <p class="mt-1 text-[11px] text-gray-500 pl-6">
+                                        Coordina tu compra directamente con el vendedor por WhatsApp.
+                                    </p>
+                                </label>
+                            </template>
                         </div>
                     </div>
                     

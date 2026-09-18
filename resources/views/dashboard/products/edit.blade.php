@@ -6,6 +6,7 @@
     @csrf
     @method('PUT')
 
+    <a href="#product-images" class="btn-secondary"><x-dashboard-icon name="image"/> Ir a las fotos del producto</a>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {{-- Columna Izquierda (2/3) --}}
         <div class="lg:col-span-2 space-y-6">
@@ -466,6 +467,53 @@
 
         {{-- Columna Derecha (1/3) --}}
         <div class="lg:col-span-1 space-y-6">
+            {{-- Imagen --}}
+            <div id="product-images" class="glass-card p-6 space-y-6" tabindex="-1">
+                <x-image-picker name="image" label="Imagen principal del producto" :current="$product->image_path ? $product->image_url : null" save-label="Guardar cambios" />
+
+                {{-- Fotos Secundarias (Galería) --}}
+                <div class="pt-5 border-t border-white/10" x-data="{ toRemove: [] }">
+                    <h3 class="text-white font-bold mb-1 text-sm uppercase tracking-wider opacity-60">Fotos Secundarias (Galería)</h3>
+                    <p class="text-xs text-slate-400 mb-4">Añade imágenes adicionales para que los clientes vean tu producto desde varios ángulos.</p>
+
+                    @if(!empty($product->gallery_images) && count($product->gallery_images) > 0)
+                    <div class="mb-4">
+                        <p class="input-label mb-2">Fotos secundarias actuales</p>
+                        <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                            @foreach($product->gallery_images as $img)
+                            <div class="relative group rounded-xl overflow-hidden aspect-square border border-white/10 bg-slate-800"
+                                 :class="{'opacity-30 border-red-500': toRemove.includes('{{ $img }}')}">
+                                <img src="{{ asset('storage/' . $img) }}" class="w-full h-full object-cover">
+                                
+                                <label class="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                                    <input type="checkbox" name="remove_gallery[]" value="{{ $img }}" 
+                                           @change="if($el.checked) { toRemove.push('{{ $img }}') } else { toRemove = toRemove.filter(i => i !== '{{ $img }}') }"
+                                           class="sr-only">
+                                    <span class="text-xs font-bold px-2 py-1 rounded bg-red-600 text-white shadow"
+                                          x-text="toRemove.includes('{{ $img }}') ? '✓ Deshacer' : '🗑️ Eliminar'">
+                                    </span>
+                                </label>
+
+                                <template x-if="toRemove.includes('{{ $img }}')">
+                                    <div class="absolute top-1 right-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                                        Eliminar
+                                    </div>
+                                </template>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+
+                    <div x-cloak x-show="toRemove.length" class="space-y-2 mb-4"><p class="text-sm text-amber-700">Las fotos marcadas se quitarán al guardar. Pulsa Deshacer sobre una foto para conservarla.</p><button type="submit" class="btn-primary w-full">Guardar cambios</button></div>
+                    <div>
+                        <x-image-picker name="gallery[]" label="Fotos nuevas de la galería" :multiple="true" save-label="Guardar cambios" />
+                        <p class="text-[11px] text-slate-400 mt-1">Puedes seleccionar varias fotos a la vez (PNG, JPG, WEBP).</p>
+                    </div>
+                </div>
+            </div>
+
+
             {{-- Estado y Visibilidad --}}
             <div class="glass-card p-6">
                 <h3 class="text-white font-bold mb-4 text-sm uppercase tracking-wider opacity-60">Estado y Visibilidad</h3>
@@ -623,64 +671,6 @@
                             </option>
                             @endforeach
                         </select>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Imagen --}}
-            <div class="glass-card p-6 space-y-6">
-                <div>
-                    <h3 class="text-white font-bold mb-4 text-sm uppercase tracking-wider opacity-60">Imagen del Producto</h3>
-                    @if($product->image_path)
-                    <div class="mb-4">
-                        <p class="input-label mb-2">Imagen actual</p>
-                        <img src="{{ $product->image_url }}" class="h-32 w-auto rounded-xl object-cover shadow-sm border border-slate-100">
-                    </div>
-                    @endif
-                    <div>
-                        <label class="input-label">Reemplazar imagen principal</label>
-                        <input type="file" name="image" accept="image/*" class="input-field py-2">
-                    </div>
-                </div>
-
-                {{-- Fotos Secundarias (Galería) --}}
-                <div class="pt-5 border-t border-white/10" x-data="{ toRemove: [] }">
-                    <h3 class="text-white font-bold mb-1 text-sm uppercase tracking-wider opacity-60">Fotos Secundarias (Galería)</h3>
-                    <p class="text-xs text-slate-400 mb-4">Añade imágenes adicionales para que los clientes vean tu producto desde varios ángulos.</p>
-
-                    @if(!empty($product->gallery_images) && count($product->gallery_images) > 0)
-                    <div class="mb-4">
-                        <p class="input-label mb-2">Fotos secundarias actuales</p>
-                        <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                            @foreach($product->gallery_images as $img)
-                            <div class="relative group rounded-xl overflow-hidden aspect-square border border-white/10 bg-slate-800"
-                                 :class="{'opacity-30 border-red-500': toRemove.includes('{{ $img }}')}">
-                                <img src="{{ asset('storage/' . $img) }}" class="w-full h-full object-cover">
-                                
-                                <label class="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                                    <input type="checkbox" name="remove_gallery[]" value="{{ $img }}" 
-                                           @change="if($el.checked) { toRemove.push('{{ $img }}') } else { toRemove = toRemove.filter(i => i !== '{{ $img }}') }"
-                                           class="sr-only">
-                                    <span class="text-xs font-bold px-2 py-1 rounded bg-red-600 text-white shadow"
-                                          x-text="toRemove.includes('{{ $img }}') ? '✓ Deshacer' : '🗑️ Eliminar'">
-                                    </span>
-                                </label>
-
-                                <template x-if="toRemove.includes('{{ $img }}')">
-                                    <div class="absolute top-1 right-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                                        Eliminar
-                                    </div>
-                                </template>
-                            </div>
-                            @endforeach
-                        </div>
-                    </div>
-                    @endif
-
-                    <div>
-                        <label class="input-label">Agregar más fotos secundarias</label>
-                        <input type="file" name="gallery[]" multiple accept="image/*" class="input-field py-2">
-                        <p class="text-[11px] text-slate-400 mt-1">Puedes seleccionar varias fotos a la vez (PNG, JPG, WEBP).</p>
                     </div>
                 </div>
             </div>

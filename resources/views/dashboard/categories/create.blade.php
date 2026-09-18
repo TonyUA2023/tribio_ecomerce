@@ -6,13 +6,6 @@
 <div class="max-w-3xl" x-data="{
     selectedEmoji: '{{ old('icon', '⭐') }}',
     customEmoji: '',
-    previewUrl: null,
-    previewImage(event) {
-        const file = event.target.files[0];
-        if (file) {
-            this.previewUrl = URL.createObjectURL(file);
-        }
-    },
     emojis: [
         { label: 'Destacados', list: ['⭐', '🔥', '✨', '🏷️', '💎', '🎁'] },
         { label: 'Moda & Ropa', list: ['👕', '👗', '👟', '🎒', '🧢', '🕶️', '💍'] },
@@ -105,28 +98,8 @@
                 <p class="text-xs text-white/50 mt-0.5">Sube una foto que se mostrará como imagen de fondo en la sección de <strong>Categorías destacadas</strong>.</p>
             </div>
 
-            <div class="flex flex-col sm:flex-row items-center gap-5">
-                {{-- Image Preview Box --}}
-                <div class="w-32 h-36 rounded-2xl overflow-hidden bg-white/5 border-2 border-dashed border-white/20 flex items-center justify-center relative shrink-0">
-                    <template x-if="previewUrl">
-                        <img :src="previewUrl" class="w-full h-full object-cover">
-                    </template>
-                    <template x-if="!previewUrl">
-                        <div class="text-center p-2">
-                            <span class="text-3xl opacity-40">🖼️</span>
-                            <span class="block text-[10px] text-white/40 mt-1">Sin foto</span>
-                        </div>
-                    </template>
-                </div>
-
-                {{-- Upload Button & Help --}}
-                <div class="flex-1 space-y-2 w-full">
-                    <label class="input-label">Seleccionar imagen (JPG, PNG, WEBP)</label>
-                    <input type="file" name="image" accept="image/*" @change="previewImage($event)"
-                           class="input-field py-2 text-xs">
-                    <p class="text-[11px] text-white/40">Recomendado: Imágenes verticales o cuadradas de al menos 400x500px para una mejor definición visual.</p>
-                </div>
-            </div>
+            <x-image-picker :extra-formats="true" name="image" label="Foto de la categoría" save-label="Guardar categoría" />
+            <p class="text-xs text-slate-500">Recomendado: una foto vertical o cuadrada de al menos 400 × 500 píxeles.</p>
         </div>
 
         {{-- Visibilidad y Opciones --}}

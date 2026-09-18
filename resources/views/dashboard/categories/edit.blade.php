@@ -6,15 +6,6 @@
 <div class="max-w-3xl" x-data="{
     selectedEmoji: '{{ old('icon', $category->icon ?? '⭐') }}',
     customEmoji: '',
-    previewUrl: '{{ $category->image_path ? Storage::disk('public')->url($category->image_path) : '' }}',
-    removeImage: false,
-    previewImage(event) {
-        const file = event.target.files[0];
-        if (file) {
-            this.previewUrl = URL.createObjectURL(file);
-            this.removeImage = false;
-        }
-    },
     emojis: [
         { label: 'Destacados', list: ['⭐', '🔥', '✨', '🏷️', '💎', '🎁'] },
         { label: 'Moda & Ropa', list: ['👕', '👗', '👟', '🎒', '🧢', '🕶️', '💍'] },
@@ -108,40 +99,8 @@
                 <p class="text-xs text-white/50 mt-0.5">Sube una foto que se mostrará como imagen de fondo en la sección de <strong>Categorías destacadas</strong>.</p>
             </div>
 
-            <div class="flex flex-col sm:flex-row items-center gap-5">
-                {{-- Image Preview Box --}}
-                <div class="w-32 h-36 rounded-2xl overflow-hidden bg-white/5 border-2 border-dashed border-white/20 flex items-center justify-center relative shrink-0">
-                    <template x-if="previewUrl && !removeImage">
-                        <img :src="previewUrl" class="w-full h-full object-cover">
-                    </template>
-                    <template x-if="!previewUrl || removeImage">
-                        <div class="text-center p-2">
-                            <span class="text-3xl opacity-40">🖼️</span>
-                            <span class="block text-[10px] text-white/40 mt-1">Sin foto</span>
-                        </div>
-                    </template>
-                </div>
-
-                {{-- Upload Button & Options --}}
-                <div class="flex-1 space-y-3 w-full">
-                    <div>
-                        <label class="input-label">Cambiar imagen (JPG, PNG, WEBP)</label>
-                        <input type="file" name="image" accept="image/*" @change="previewImage($event)"
-                               class="input-field py-2 text-xs">
-                    </div>
-
-                    @if($category->image_path)
-                    <div class="pt-1">
-                        <label class="flex items-center gap-2 cursor-pointer text-xs text-red-400 hover:text-red-300">
-                            <input type="checkbox" name="remove_image" value="1" x-model="removeImage" class="accent-red-500 rounded">
-                            <span>Quitar foto actual de esta categoría</span>
-                        </label>
-                    </div>
-                    @endif
-
-                    <p class="text-[11px] text-white/40">Recomendado: Imágenes verticales o cuadradas de al menos 400x500px para una mejor definición visual.</p>
-                </div>
-            </div>
+            <x-image-picker :extra-formats="true" name="image" label="Foto de la categoría" :current="$category->image_path ? Storage::disk('public')->url($category->image_path) : null" :removable="true" save-label="Guardar cambios" />
+            <p class="text-xs text-slate-500">Recomendado: una foto vertical o cuadrada de al menos 400 × 500 píxeles.</p>
         </div>
 
         {{-- Visibilidad y Opciones --}}

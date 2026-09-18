@@ -181,7 +181,8 @@ Route::prefix('customer')->name('customer.')->group(function () {
     Route::post('/check-email', [\App\Http\Controllers\CustomerPortalController::class, 'checkEmail'])->name('check-email');
     Route::get('/current', [\App\Http\Controllers\CustomerPortalController::class, 'current'])->name('current');
     Route::post('/login', [\App\Http\Controllers\CustomerPortalController::class, 'login'])->name('login');
-    Route::post('/register', [\App\Http\Controllers\CustomerPortalController::class, 'register'])->name('register');
+    Route::post('/register/send-otp', [\App\Http\Controllers\CustomerPortalController::class, 'sendOtp'])->name('register.send_otp');
+    Route::post('/register/verify', [\App\Http\Controllers\CustomerPortalController::class, 'verifyAndRegister'])->name('register.verify');
     Route::post('/logout', [\App\Http\Controllers\CustomerPortalController::class, 'logout'])->name('logout');
     Route::get('/orders', [\App\Http\Controllers\CustomerPortalController::class, 'orders'])->name('orders');
     Route::match(['get', 'post'], '/track-order', [\App\Http\Controllers\CustomerPortalController::class, 'trackOrder'])->name('track-order');

@@ -17,7 +17,7 @@
     closeMenu() { this.mobileOpen = false; this.$nextTick(() => this.$refs.menuToggle.focus()); },
     toggleMenu() {
         if (window.matchMedia('(min-width: 1024px)').matches) { this.collapsed = !this.collapsed; }
-        else { this.mobileOpen = !this.mobileOpen; if (this.mobileOpen) this.$nextTick(() => this.$refs.closeNavigation.focus()); }
+        else { this.mobileOpen = !this.mobileOpen; if (this.mobileOpen) this.$nextTick(() => requestAnimationFrame(() => this.$refs.closeNavigation.focus())); }
     },
     trapNavigation(event) {
         if (!this.mobileOpen || window.matchMedia('(min-width: 1024px)').matches) return;

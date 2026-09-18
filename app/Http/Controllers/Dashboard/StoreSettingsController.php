@@ -59,7 +59,7 @@ class StoreSettingsController extends Controller
             'meta_title'     => 'nullable|string|max:70',
             'meta_description'=> 'nullable|string|max:160',
             'distributors'   => 'nullable|array',
-            'checkout_mode'  => 'required|string|in:whatsapp,card',
+            'checkout_mode'  => 'required|string|in:whatsapp,card,mixed',
             'payment_gateway'=> 'nullable|string|in:culqi,mercado_pago',
             'gateway_public_key' => 'nullable|string|max:255',
             'gateway_private_key'=> 'nullable|string|max:255',

@@ -5,6 +5,7 @@
 <form method="POST" action="{{ route('dashboard.productos.store') }}" enctype="multipart/form-data" class="space-y-6">
     @csrf
 
+    <a href="#product-images" class="btn-secondary"><x-dashboard-icon name="image"/> Ir a las fotos del producto</a>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {{-- Columna Izquierda (2/3) --}}
         <div class="lg:col-span-2 space-y-6">
@@ -434,6 +435,22 @@
 
         {{-- Columna Derecha (1/3) --}}
         <div class="lg:col-span-1 space-y-6">
+            {{-- Imagen --}}
+            <div id="product-images" class="glass-card p-6 space-y-6" tabindex="-1">
+                <x-image-picker name="image" label="Imagen principal del producto" save-label="Guardar producto" />
+
+                <div class="pt-5 border-t border-white/10">
+                    <h3 class="text-white font-bold mb-1 text-sm uppercase tracking-wider opacity-60">Fotos Secundarias (Galería)</h3>
+                    <p class="text-xs text-slate-400 mb-3">Sube imágenes adicionales desde distintos ángulos para la galería.</p>
+                    <div>
+                        <label class="input-label">Agregar fotos secundarias</label>
+                        <x-image-picker name="gallery[]" label="Fotos nuevas de la galería" :multiple="true" save-label="Guardar producto" />
+                        <p class="text-[11px] text-slate-400 mt-1">Puedes seleccionar varias fotos a la vez (PNG, JPG, WEBP).</p>
+                    </div>
+                </div>
+            </div>
+
+
             {{-- Estado y Visibilidad --}}
             <div class="glass-card p-6">
                 <h3 class="text-white font-bold mb-4 text-sm uppercase tracking-wider opacity-60">Estado y Visibilidad</h3>
@@ -591,27 +608,6 @@
                             </option>
                             @endforeach
                         </select>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Imagen --}}
-            <div class="glass-card p-6 space-y-6">
-                <div>
-                    <h3 class="text-white font-bold mb-3 text-sm uppercase tracking-wider opacity-60">Imagen Principal</h3>
-                    <div>
-                        <label class="input-label">Subir foto principal</label>
-                        <input type="file" name="image" accept="image/*" class="input-field py-2">
-                    </div>
-                </div>
-
-                <div class="pt-5 border-t border-white/10">
-                    <h3 class="text-white font-bold mb-1 text-sm uppercase tracking-wider opacity-60">Fotos Secundarias (Galería)</h3>
-                    <p class="text-xs text-slate-400 mb-3">Sube imágenes adicionales desde distintos ángulos para la galería.</p>
-                    <div>
-                        <label class="input-label">Agregar fotos secundarias</label>
-                        <input type="file" name="gallery[]" multiple accept="image/*" class="input-field py-2">
-                        <p class="text-[11px] text-slate-400 mt-1">Puedes seleccionar varias fotos a la vez (PNG, JPG, WEBP).</p>
                     </div>
                 </div>
             </div>

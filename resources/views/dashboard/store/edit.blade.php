@@ -317,13 +317,14 @@
                     <div>
                         <label class="input-label">Modo de Venta / Checkout</label>
                         <select name="checkout_mode" x-model="checkoutMode" class="input-field">
-                            <option value="whatsapp">Vender por WhatsApp (Redirección Directa)</option>
-                            <option value="card">Vender por Tarjeta (Pasarela de Pago)</option>
+                            <option value="whatsapp">Solo WhatsApp (Redirección Directa)</option>
+                            <option value="card">Solo Tarjeta (Pasarela de Pago)</option>
+                            <option value="mixed">Ambos (Tarjeta + WhatsApp)</option>
                         </select>
                     </div>
 
-                    {{-- Opciones de Pasarela (Solo visibles si el checkout_mode es card) --}}
-                    <div x-show="checkoutMode === 'card'" class="space-y-4 bg-white/3 border border-white/5 p-4 rounded-xl" style="display: none;">
+                    {{-- Opciones de Pasarela (Solo visibles si el checkout_mode es card o mixed) --}}
+                    <div x-show="checkoutMode === 'card' || checkoutMode === 'mixed'" class="space-y-4 bg-white/3 border border-white/5 p-4 rounded-xl" style="display: none;">
                         <div>
                             <label class="input-label">Pasarela de Pago Habilitada</label>
                             <select name="payment_gateway" x-model="gateway" class="input-field">
@@ -462,30 +463,10 @@
         <p class="text-xs text-white/50 mb-6">Personaliza la apariencia visual de tu tienda.</p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <form method="POST" action="{{ route('dashboard.store.logo') }}" enctype="multipart/form-data" class="space-y-4 bg-white/3 p-6 rounded-xl border border-white/5">@csrf
-                <div class="flex items-center gap-4">
-                    <div class="w-20 h-20 rounded-xl bg-black/30 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
-                        @if($store?->logo_path)
-                            <img src="{{ $store->logo_url }}" class="w-full h-full object-contain">
-                        @else
-                            <svg class="w-8 h-8 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                        @endif
-                    </div>
-                    <div class="flex-1">
-                        <label class="input-label">Logo (PNG recomendado)</label>
-                        <input type="file" name="logo" accept="image/*" class="input-field py-2 text-xs">
-                    </div>
-                </div>
-                <button type="submit" class="btn-secondary w-full justify-center">Subir logo</button>
+                <x-image-picker name="logo" label="Logo de tu tienda" :current="$store?->logo_path ? $store->logo_url : null" :max-mb="2" save-label="Guardar logo" />
             </form>
             <form method="POST" action="{{ route('dashboard.store.cover') }}" enctype="multipart/form-data" class="space-y-4 bg-white/3 p-6 rounded-xl border border-white/5">@csrf
-                <div class="space-y-3">
-                    @if($store?->cover_path)
-                        <img src="{{ $store->cover_url }}" class="h-24 w-full object-cover rounded-xl border border-white/10">
-                    @endif
-                    <label class="input-label">Imagen de portada</label>
-                    <input type="file" name="cover" accept="image/*" class="input-field py-2 text-xs">
-                </div>
-                <button type="submit" class="btn-secondary w-full justify-center">Subir portada</button>
+                <x-image-picker name="cover" label="Portada de tu tienda" :current="$store?->cover_path ? $store->cover_url : null" :max-mb="5" :wide="true" save-label="Guardar portada" />
             </form>
         </div>
     </div>

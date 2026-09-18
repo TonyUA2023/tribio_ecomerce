@@ -19,9 +19,17 @@
         showAddressForm: false,
         newAddress: { id: null, type: 'casa', address: '', city: '', state: '', country: '{{ \App\Helpers\CurrencyHelper::currentCountry() }}', zipcode: '', reference: '', phone: '', is_default: false },
         fromCheckout: false,
+        // API Address & Verification
+        countriesList: [],
+        statesList: [],
+        addressSuggestions: [],
+        addressSearchTimer: null,
+        verifyStep: false,
+        otpToken: '',
 
         init() {
             this.checkSession();
+            this.fetchCountries();
             window.addEventListener('open-customer-modal', (e) => {
                 this.isOpen = true;
                 if (e.detail && e.detail.tab) {
@@ -122,23 +130,93 @@
             }
         },
 
+        async fetchCountries() {
+            try {
+                const res = await fetch('https://countriesnow.space/api/v0.1/countries/states');
+                const data = await res.json();
+                if(!data.error) {
+                    this.countriesList = data.data;
+                    this.updateStates(this.registerData.country);
+                }
+            } catch(e) {}
+        },
+        updateStates(countryIso2) {
+            const country = this.countriesList.find(c => c.iso2 === countryIso2 || c.name === countryIso2);
+            if(country) {
+                this.statesList = country.states;
+            } else {
+                this.statesList = [];
+            }
+        },
+        searchAddress(query) {
+            if(!query || query.length < 4) {
+                this.addressSuggestions = [];
+                return;
+            }
+            clearTimeout(this.addressSearchTimer);
+            this.addressSearchTimer = setTimeout(async () => {
+                try {
+                    const countryParam = this.registerData.country ? `&countrycodes=${this.registerData.country}` : '';
+                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}${countryParam}&addressdetails=1&limit=5`);
+                    this.addressSuggestions = await res.json();
+                } catch(e) {}
+            }, 500);
+        },
+        selectAddress(item) {
+            this.registerData.address = item.display_name;
+            if(item.address) {
+                if(item.address.city || item.address.town || item.address.village) {
+                    this.registerData.city = item.address.city || item.address.town || item.address.village;
+                }
+                if(item.address.state) {
+                    this.registerData.state = item.address.state;
+                }
+            }
+            this.addressSuggestions = [];
+        },
         async doRegister() {
             this.errorMessage = '';
             this.successMessage = '';
             this.loading = true;
             try {
-                const res = await fetch('/customer/register', {
+                const res = await fetch('/customer/register/send-otp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify(this.registerData)
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
+                    this.verifyStep = true;
+                    this.successMessage = data.message;
+                } else {
+                    this.errorMessage = data.message || 'Error al procesar el registro.';
+                }
+            } catch (e) {
+                this.errorMessage = 'Error de conexión con el servidor.';
+            } finally {
+                this.loading = false;
+            }
+        },
+        async verifyOtp() {
+            this.errorMessage = '';
+            this.successMessage = '';
+            this.loading = true;
+            try {
+                const payload = { ...this.registerData, token: this.otpToken };
+                const res = await fetch('/customer/register/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    this.verifyStep = false;
+                    this.otpToken = '';
                     this.isLoggedIn = true;
                     this.user = data.user;
                     this.addresses = data.addresses || [];
                     this.activeTab = 'orders';
-                    this.successMessage = data.message;
+                    this.successMessage = '¡Felicidades, tu cuenta fue creada exitosamente!';
                     window.dispatchEvent(new CustomEvent('customer-authenticated', { detail: data }));
                     this.loadOrders();
                     if (this.fromCheckout) {
@@ -150,11 +228,7 @@
                         }, 750);
                     }
                 } else {
-                    let msg = data.message || 'Error en el registro.';
-                    if (data.errors) {
-                        msg = Object.values(data.errors).flat().join(' ');
-                    }
-                    this.errorMessage = msg;
+                    this.errorMessage = data.message || 'Error al validar el código.';
                 }
             } catch (e) {
                 this.errorMessage = 'Error de conexión con el servidor.';
@@ -421,87 +495,143 @@
 
             {{-- 2. TAB: CREAR CUENTA UNIVERSAL --}}
             <template x-if="!isLoggedIn && activeTab === 'register'">
-                <form @submit.prevent="doRegister" class="space-y-4 max-w-lg mx-auto py-1">
-                    <div class="text-center mb-4">
-                        <span class="inline-block px-3 py-1 bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold rounded-full mb-2">
-                            🚀 1 Cuenta para todas tus compras
-                        </span>
-                        <h3 class="font-bold text-gray-900 text-xl">Crear Cuenta Comprador Tribio</h3>
-                        <p class="text-xs text-gray-500 mt-1">Regístrate una sola vez y disfruta de compras en 1-click y seguimiento en tiempo real.</p>
-                    </div>
+                <div x-show="!verifyStep">
+                    <form @submit.prevent="doRegister" class="space-y-4">
+                        <div class="text-center">
+                            <span class="inline-block px-3 py-1 bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold rounded-full mb-2">
+                                🚀 1 Cuenta para todas tus compras
+                            </span>
+                            <h3 class="font-bold text-gray-900 text-xl">Crear Cuenta Comprador Tribio</h3>
+                            <p class="text-xs text-gray-500 mt-1">Regístrate una sola vez y disfruta de compras en 1-click y seguimiento en tiempo real.</p>
+                        </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-600 mb-1">Nombre Completo *</label>
-                            <input type="text" x-model="registerData.name" required placeholder="Ej. Juan Pérez"
-                                   class="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-2 text-sm focus:bg-white focus:border-[#C8A68B] outline-none transition">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-600 mb-1">Teléfono / WhatsApp</label>
-                            <input type="tel" x-model="registerData.phone" placeholder="+51 987 654 321"
-                                   class="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-2 text-sm focus:bg-white focus:border-[#C8A68B] outline-none transition">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-600 mb-1">Correo Electrónico *</label>
-                            <input type="email" x-model="registerData.email" required placeholder="correo@ejemplo.com"
-                                   class="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-2 text-sm focus:bg-white focus:border-[#C8A68B] outline-none transition">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-600 mb-1">Contraseña *</label>
-                            <input type="password" x-model="registerData.password" required minlength="6" placeholder="Mínimo 6 caracteres"
-                                   class="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-2 text-sm focus:bg-white focus:border-[#C8A68B] outline-none transition">
-                        </div>
-                    </div>
-
-                    {{-- Dirección opcional inicial --}}
-                    <div class="p-3 bg-stone-50 rounded-2xl border border-stone-200/70 space-y-3">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold text-gray-700">📍 Tu Dirección Principal (Opcional)</span>
-                            <div class="flex gap-1">
-                                <button type="button" @click="registerData.type = 'casa'"
-                                       :class="registerData.type === 'casa' ? 'bg-[#1A1A1A] text-white' : 'bg-white text-gray-600 border border-stone-200'"
-                                       class="px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition">
-                                    🏠 Casa
-                                </button>
-                                <button type="button" @click="registerData.type = 'trabajo'"
-                                       :class="registerData.type === 'trabajo' ? 'bg-[#1A1A1A] text-white' : 'bg-white text-gray-600 border border-stone-200'"
-                                       class="px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition">
-                                    💼 Trabajo
-                                </button>
-                                <button type="button" @click="registerData.type = 'otro'"
-                                       :class="registerData.type === 'otro' ? 'bg-[#1A1A1A] text-white' : 'bg-white text-gray-600 border border-stone-200'"
-                                       class="px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition">
-                                    📍 Otro
-                                </button>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-1">Nombre Completo *</label>
+                                <input type="text" x-model="registerData.name" required placeholder="Ej. Juan Pérez"
+                                       class="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-2 text-sm focus:bg-white focus:border-[#C8A68B] outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-1">Teléfono / WhatsApp</label>
+                                <input type="tel" x-model="registerData.phone" placeholder="+51 987 654 321"
+                                       class="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-2 text-sm focus:bg-white focus:border-[#C8A68B] outline-none transition">
                             </div>
                         </div>
 
-                        <input type="text" x-model="registerData.address" placeholder="Calle, Av., Número o Dpto"
-                               class="w-full bg-white border border-stone-300 rounded-xl px-3.5 py-2 text-xs focus:border-[#C8A68B] outline-none">
-
-                        <div class="grid grid-cols-2 gap-2">
-                            <input type="text" x-model="registerData.city" placeholder="Ciudad (Ej. Lima)"
-                                   class="w-full bg-white border border-stone-300 rounded-xl px-3 py-2 text-xs focus:border-[#C8A68B] outline-none">
-                            <input type="text" x-model="registerData.state" placeholder="Departamento / Estado"
-                                   class="w-full bg-white border border-stone-300 rounded-xl px-3 py-2 text-xs focus:border-[#C8A68B] outline-none">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-1">Correo Electrónico *</label>
+                                <input type="email" x-model="registerData.email" required placeholder="correo@ejemplo.com"
+                                       class="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-2 text-sm focus:bg-white focus:border-[#C8A68B] outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-1">Contraseña *</label>
+                                <input type="password" x-model="registerData.password" required minlength="6" placeholder="Mínimo 6 caracteres"
+                                       class="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-2 text-sm focus:bg-white focus:border-[#C8A68B] outline-none transition">
+                            </div>
                         </div>
-                    </div>
 
-                    <button type="submit" :disabled="loading"
-                            class="w-full py-3 bg-[#1A1A1A] hover:bg-[#C8A68B] text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50">
-                        <span x-show="loading" class="animate-spin">⏳</span>
-                        <span x-text="loading ? 'Creando cuenta...' : 'Completar Registro Universal'"></span>
-                    </button>
+                        {{-- Dirección opcional inicial --}}
+                        <div class="p-3 bg-stone-50 rounded-2xl border border-stone-200/70 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-gray-700">📍 Tu Dirección Principal (Opcional)</span>
+                                <div class="flex gap-1">
+                                    <button type="button" @click="registerData.type = 'casa'"
+                                           :class="registerData.type === 'casa' ? 'bg-[#1A1A1A] text-white' : 'bg-white text-gray-600 border border-stone-200'"
+                                           class="px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition">
+                                        🏠 Casa
+                                    </button>
+                                    <button type="button" @click="registerData.type = 'trabajo'"
+                                           :class="registerData.type === 'trabajo' ? 'bg-[#1A1A1A] text-white' : 'bg-white text-gray-600 border border-stone-200'"
+                                           class="px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition">
+                                        💼 Trabajo
+                                    </button>
+                                    <button type="button" @click="registerData.type = 'otro'"
+                                           :class="registerData.type === 'otro' ? 'bg-[#1A1A1A] text-white' : 'bg-white text-gray-600 border border-stone-200'"
+                                           class="px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition">
+                                        📍 Otro
+                                    </button>
+                                </div>
+                            </div>
 
-                    <div class="text-center">
-                        <p class="text-xs text-gray-500">¿Ya estás registrado? 
-                            <button type="button" @click="activeTab = 'login'" class="font-bold text-[#C8A68B] hover:underline">Iniciar sesión</button>
+                            <div class="grid grid-cols-2 gap-2">
+                                <select x-model="registerData.country" @change="updateStates($event.target.value)" class="w-full bg-white border border-stone-300 rounded-xl px-3 py-2 text-xs focus:border-[#C8A68B] outline-none">
+                                    <template x-for="c in countriesList" :key="c.iso2">
+                                        <option :value="c.iso2" x-text="c.name" :selected="c.iso2 === registerData.country"></option>
+                                    </template>
+                                </select>
+                                <select x-model="registerData.state" class="w-full bg-white border border-stone-300 rounded-xl px-3 py-2 text-xs focus:border-[#C8A68B] outline-none">
+                                    <option value="">Selecciona Departamento/Estado</option>
+                                    <template x-for="s in statesList" :key="s.state_code">
+                                        <option :value="s.name" x-text="s.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            <div class="relative">
+                                <input type="text" x-model="registerData.address" @input="searchAddress($event.target.value)" placeholder="Calle, Av., Número o Dpto (Autocompletado)"
+                                       class="w-full bg-white border border-stone-300 rounded-xl px-3.5 py-2 text-xs focus:border-[#C8A68B] outline-none">
+                                <div x-show="addressSuggestions.length > 0" class="absolute z-50 w-full bg-white border border-stone-200 mt-1 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                                    <template x-for="item in addressSuggestions" :key="item.place_id">
+                                        <div @click="selectAddress(item)" class="p-2.5 text-xs border-b border-stone-100 cursor-pointer hover:bg-stone-50">
+                                            <span x-text="item.display_name" class="text-gray-700"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div>
+                                <input type="text" x-model="registerData.city" placeholder="Ciudad / Provincia (Ej. Lima)"
+                                       class="w-full bg-white border border-stone-300 rounded-xl px-3 py-2 text-xs focus:border-[#C8A68B] outline-none">
+                            </div>
+                        </div>
+
+                        <button type="submit" :disabled="loading"
+                                class="w-full py-3 bg-[#1A1A1A] hover:bg-[#C8A68B] text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50">
+                            <span x-show="loading" class="animate-spin">⏳</span>
+                            <span x-text="loading ? 'Enviando...' : 'Completar Registro'"></span>
+                        </button>
+
+                        <div class="text-center">
+                            <p class="text-xs text-gray-500">¿Ya estás registrado? 
+                                <button type="button" @click="activeTab = 'login'" class="font-bold text-[#C8A68B] hover:underline">Iniciar sesión</button>
+                            </p>
+                        </div>
+                    </form>
+                </div>
+
+                {{-- Paso de Verificación OTP --}}
+                <div x-show="verifyStep" class="py-6 space-y-6" style="display: none;">
+                    <div class="text-center space-y-2">
+                        <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto text-3xl mb-4">
+                            ✉️
+                        </div>
+                        <h3 class="font-bold text-gray-900 text-xl">Verifica tu Correo</h3>
+                        <p class="text-sm text-gray-500 max-w-sm mx-auto">
+                            Hemos enviado un código de seguridad de 6 dígitos a <br><strong class="text-gray-800" x-text="registerData.email"></strong>.
                         </p>
                     </div>
-                </form>
+
+                    <form @submit.prevent="verifyOtp" class="max-w-xs mx-auto space-y-4">
+                        <div>
+                            <input type="text" x-model="otpToken" maxlength="6" required placeholder="000000" pattern="\d*"
+                                   class="w-full text-center text-3xl tracking-[0.5em] font-mono bg-stone-50 border border-stone-300 rounded-xl px-4 py-3 focus:bg-white focus:border-[#C8A68B] outline-none transition">
+                            <p class="text-center text-[10px] text-gray-400 mt-2">Revisa tu bandeja de entrada o spam.</p>
+                        </div>
+
+                        <button type="submit" :disabled="loading || otpToken.length !== 6"
+                                class="w-full py-3 bg-[#1A1A1A] hover:bg-[#C8A68B] text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50">
+                            <span x-show="loading" class="animate-spin">⏳</span>
+                            <span x-text="loading ? 'Verificando...' : 'Verificar y Crear Cuenta'"></span>
+                        </button>
+
+                        <div class="text-center">
+                            <button type="button" @click="verifyStep = false" class="text-xs font-bold text-[#C8A68B] hover:underline">
+                                ← Volver y editar correo
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </template>
 
             {{-- 3. TAB: MIS PEDIDOS / ESTADO DE PAQUETES (LOGGED IN) --}}
