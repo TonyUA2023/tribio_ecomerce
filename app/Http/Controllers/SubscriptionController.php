@@ -2,250 +2,264 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use App\Models\Store;
+use App\Models\User;
+use App\Services\CulqiService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Auth;
 
 class SubscriptionController extends Controller
 {
+    public function __construct(protected CulqiService $culqi)
+    {
+    }
+
+    /**
+     * Step 1 (pricing modal on the home page): register the account + draft store
+     * for the chosen plan, then send the owner to the cart/payment page. No charge
+     * happens here — Culqi only sees a card once the owner confirms on `pay()`.
+     */
     public function checkout(Request $request)
     {
         if (!$request->has('phone') && $request->has('whatsapp_phone')) {
             $request->merge(['phone' => $request->whatsapp_phone]);
         }
 
-        $request->validate([
+        $planKey = $request->input('plan_key');
+
+        // Tribio Pass unification: someone already logged in (e.g. a customer with
+        // purchase history in other stores) upgrades their own account instead of
+        // being forced to register a disconnected second identity.
+        $existingUser = Auth::check() && !Auth::user()->isSuperAdmin() && !Auth::user()->hasStore()
+            ? Auth::user()
+            : null;
+
+        $rules = [
             'plan_key'       => 'required|string|in:basic,professional,enterprise',
-            'name'           => 'required|string|max:255',
-            'email'          => 'required|email|unique:users,email',
-            'password'       => 'required|min:8|confirmed',
-            'phone'          => 'required|string|max:20',
             'store_name'     => 'required|string|max:255',
             'store_category' => 'required|string',
-            'store_slug'     => 'required|string|alpha_dash|unique:stores,slug|max:60',
+            'store_slug'     => 'required|string|alpha_dash|max:60|unique:stores,slug',
             'whatsapp_phone' => 'nullable|string|max:20',
-        ], [
-            'store_slug.unique' => 'Esta dirección de tienda ya está en uso.',
-            'email.unique'      => 'Este correo electrónico ya está registrado.',
-            'password.confirmed'=> 'La confirmación de la contraseña no coincide.',
-        ]);
+        ];
 
-        $planKey = $request->plan_key;
-        $planConfig = config("tribio.plans.{$planKey}");
-        
-        if (!$planConfig) {
+        $messages = [
+            'store_slug.unique' => 'Esta dirección de tienda ya está en uso.',
+            'email.unique'      => 'Este correo electrónico ya está registrado. Inicia sesión con tu Tribio Pass para continuar.',
+            'password.confirmed'=> 'La confirmación de la contraseña no coincide.',
+        ];
+
+        if ($existingUser) {
+            $request->validate($rules, $messages);
+        } else {
+            $request->validate(array_merge($rules, [
+                'name'     => 'required|string|max:255',
+                'email'    => 'required|email|unique:users,email',
+                'password' => 'required|min:8|confirmed',
+                'phone'    => 'required|string|max:20',
+            ]), $messages);
+        }
+
+        if (!config("tribio.plans.{$planKey}")) {
             return back()->withErrors(['plan_key' => 'El plan seleccionado no es válido.']);
         }
 
-        $planPrice = (float) $planConfig['price'];
-        $planName = $planConfig['label'];
-
-        // Usamos una transacción de base de datos
-        return DB::transaction(function () use ($request, $planKey, $planPrice, $planName) {
-            // 1. Crear el usuario como dueño de tienda
-            $user = User::create([
+        $store = DB::transaction(function () use ($request, $planKey, $existingUser) {
+            $user = $existingUser ?? User::create([
                 'name'     => $request->name,
                 'email'    => $request->email,
                 'password' => Hash::make($request->password),
-                'role'     => 'store_owner',
+                'role'     => User::ROLE_STORE_OWNER,
                 'phone'    => $request->phone,
             ]);
 
-            // 2. Crear la tienda en estado "draft" (inactiva hasta que pague)
-            $store = Store::create([
+            return Store::create([
                 'user_id'        => $user->id,
                 'name'           => $request->store_name,
                 'slug'           => $request->store_slug,
                 'category'       => $request->store_category,
-                'template_name'  => 'minimal-light', // Plantilla inicial por defecto
+                'template_name'  => 'minimal-light',
                 'whatsapp_phone' => $request->whatsapp_phone,
-                'accent_color'   => '#0284c7', // Celeste por defecto
-                'status'         => 'draft', // Draft hasta que el pago se confirme
+                'accent_color'   => '#0284c7',
+                'status'         => 'draft', // draft hasta que Culqi confirme el pago
                 'plan'           => $planKey,
-                'plan_expires_at'=> null, // Se establece al confirmar el pago
+                'plan_expires_at'=> null,
             ]);
-
-            // 3. Crear Preferencia de Mercado Pago
-            $accessToken = config('services.mercadopago.access_token');
-            $notificationUrl = route('plan.webhook');
-
-            // Mercado Pago exige HTTPS para la URL de notificación.
-            // Si la URL local es HTTP, Mercado Pago podría rechazar la preferencia.
-            // Evitamos enviar localhost o 127.0.0.1 a menos que sea HTTPS (por ejemplo, con ngrok)
-            if (str_starts_with($notificationUrl, 'http://')) {
-                if (str_contains($notificationUrl, 'localhost') || str_contains($notificationUrl, '127.0.0.1')) {
-                    $notificationUrl = null;
-                } else {
-                    $notificationUrl = str_replace('http://', 'https://', $notificationUrl);
-                }
-            }
-
-            try {
-                $preferenceData = [
-                    'items' => [
-                        [
-                            'title'       => "Suscripción Tribio - Plan {$planName}",
-                            'quantity'    => 1,
-                            'unit_price'  => $planPrice,
-                            'currency_id' => 'PEN',
-                        ]
-                    ],
-                    'back_urls' => [
-                        'success' => route('plan.callback', ['status' => 'success', 'store_id' => $store->id]),
-                        'failure' => route('plan.callback', ['status' => 'failure', 'store_id' => $store->id]),
-                        'pending' => route('plan.callback', ['status' => 'pending', 'store_id' => $store->id]),
-                    ],
-                    'auto_return'        => 'approved',
-                    'external_reference' => (string) $store->id,
-                ];
-
-                if ($notificationUrl) {
-                    $preferenceData['notification_url'] = $notificationUrl;
-                }
-
-                $response = Http::withHeaders([
-                    'Authorization' => "Bearer {$accessToken}",
-                    'Content-Type'  => 'application/json',
-                ])->post('https://api.mercadopago.com/v1/preferences', $preferenceData);
-
-                if ($response->successful()) {
-                    $preference = $response->json();
-                    
-                    // Redirigir al flujo de pago de Mercado Pago (preferimos sandbox_init_point en local/test o init_point)
-                    $checkoutUrl = app()->environment('local') 
-                        ? ($preference['sandbox_init_point'] ?? $preference['init_point'])
-                        : $preference['init_point'];
-
-                    return redirect()->away($checkoutUrl);
-                }
-
-                Log::error('Mercado Pago Preference API error', [
-                    'status' => $response->status(),
-                    'body'   => $response->body()
-                ]);
-
-                throw new \Exception('No se pudo crear la preferencia de pago en Mercado Pago.');
-
-            } catch (\Exception $e) {
-                Log::error('Mercado Pago checkout exception', [
-                    'message' => $e->getMessage()
-                ]);
-
-                // Rollback manual de la transacción al lanzar la excepción
-                throw $e;
-            }
         });
+
+        Auth::login($store->user, true);
+
+        return redirect()->route('plan.pay', $store);
     }
 
-    public function callback(Request $request)
+    /**
+     * The "cart": order summary for the chosen plan + embedded Culqi card form.
+     * Nothing is charged until the owner submits the card via charge().
+     */
+    public function pay(Store $store)
     {
-        $status = $request->input('status');
-        $storeId = $request->input('store_id');
+        abort_unless(Auth::check() && Auth::id() === $store->user_id, 403);
 
-        $store = Store::findOrFail($storeId);
-        $user = $store->user;
-
-        // Si la tienda ya está activa (por ejemplo, el webhook de Mercado Pago ya procesó el pago)
         if ($store->status === 'active') {
-            Auth::login($user);
             return redirect()->route('dashboard.index')
-                ->with('success', "¡Excelente! Tu suscripción al Plan " . ucfirst($store->plan) . " está activa. ¡Bienvenido de vuelta!");
+                ->with('success', 'Tu tienda ya está activa. ¡Bienvenido de vuelta!');
         }
 
-        if ($status === 'success' || $request->input('collection_status') === 'approved') {
-            // El pago fue aprobado
-            $store->update([
-                'status'          => 'active',
-                'plan_expires_at' => now()->addDays(30), // Suscripción mensual de 30 días
+        $planConfig = config("tribio.plans.{$store->plan}");
+        abort_if(!$planConfig, 404);
+
+        if (!$this->culqi->isConfigured()) {
+            return view('public.plan-pay', [
+                'store'      => $store,
+                'plan'       => $planConfig,
+                'culqiReady' => false,
             ]);
-
-            // Iniciar sesión del usuario automáticamente
-            Auth::login($user);
-
-            return redirect()->route('dashboard.index')
-                ->with('success', "¡Excelente! Tu pago ha sido procesado con éxito. Bienvenido al Plan " . ucfirst($store->plan) . ".");
         }
 
-        // Si falló o fue cancelado, eliminamos la tienda y usuario "draft" temporales para mantener limpia la BD
-        $store->forceDelete();
-        $user->forceDelete();
-
-        return redirect()->route('home')
-            ->with('error', 'El pago fue cancelado o rechazado. Por favor, intenta registrarte nuevamente.');
+        return view('public.plan-pay', [
+            'store'         => $store,
+            'plan'          => $planConfig,
+            'culqiReady'    => true,
+            'culqiPublicKey'=> $this->culqi->publicKey(),
+        ]);
     }
 
-    public function webhook(Request $request)
+    /**
+     * Receives the Culqi card token from the cart page and turns it into a live
+     * recurring subscription: customer -> card -> plan (cached) -> subscription.
+     */
+    public function charge(Request $request, Store $store)
     {
-        Log::info('Mercado Pago Webhook payload recibido:', $request->all());
+        abort_unless(Auth::check() && Auth::id() === $store->user_id, 403);
 
-        // El webhook puede venir con 'type' => 'payment' y 'data.id'
-        // O como IPN con 'topic' => 'payment' e 'id'
-        $paymentId = null;
-
-        if ($request->input('type') === 'payment') {
-            $paymentId = $request->input('data.id') ?? $request->input('data_id');
-        } elseif ($request->input('topic') === 'payment') {
-            $paymentId = $request->input('id');
+        if ($store->status === 'active') {
+            return response()->json(['success' => true, 'redirect' => route('dashboard.index')]);
         }
 
-        // Si no se encuentra de esas formas, verificamos si 'id' viene en la raíz para Webhooks heredados
-        if (!$paymentId && $request->has('id') && $request->input('type') === null) {
-            $paymentId = $request->input('id');
-        }
+        $request->validate([
+            'culqi_token'  => 'required|string',
+            'address'      => 'required|string|max:100|min:5',
+            'address_city' => 'required|string|max:30|min:2',
+        ]);
 
-        if (!$paymentId) {
-            Log::warning('Mercado Pago Webhook: No se encontró payment ID en el payload.');
-            return response()->json(['message' => 'No payment ID found'], 200);
-        }
+        $planConfig = config("tribio.plans.{$store->plan}");
+        abort_if(!$planConfig, 404);
 
-        $accessToken = config('services.mercadopago.access_token');
+        $user = $store->user;
+        [$firstName, $lastName] = $this->splitName($user->name);
 
         try {
-            $response = Http::withHeaders([
-                'Authorization' => "Bearer {$accessToken}",
-            ])->get("https://api.mercadopago.com/v1/payments/{$paymentId}");
-
-            if ($response->successful()) {
-                $payment = $response->json();
-                $storeId = $payment['external_reference'] ?? null;
-                $status = $payment['status'] ?? '';
-
-                Log::info("Mercado Pago Webhook pago consultado:", [
-                    'payment_id' => $paymentId,
-                    'store_id'   => $storeId,
-                    'status'     => $status
-                ]);
-
-                if ($storeId && $status === 'approved') {
-                    $store = Store::find($storeId);
-                    if ($store && $store->status === 'draft') {
-                        $store->update([
-                            'status'          => 'active',
-                            'plan_expires_at' => now()->addDays(30),
-                        ]);
-                        Log::info("Tienda {$storeId} activada con éxito a través del webhook (Pago: {$paymentId}).");
-                    }
-                }
-            } else {
-                Log::error('Error al consultar detalles de pago en Mercado Pago', [
-                    'payment_id' => $paymentId,
-                    'status'     => $response->status(),
-                    'body'       => $response->body(),
-                ]);
-            }
-        } catch (\Exception $e) {
-            Log::error('Excepción al procesar webhook de Mercado Pago', [
-                'message' => $e->getMessage(),
-                'trace'   => $e->getTraceAsString(),
+            $customer = $this->culqi->createCustomer([
+                'address'      => $request->address,
+                'address_city' => $request->address_city,
+                'country_code' => 'PE',
+                'email'        => $user->email,
+                'first_name'   => $firstName,
+                'last_name'    => $lastName,
+                'phone_number' => preg_replace('/[^0-9]/', '', $user->phone ?? '999999999') ?: '999999999',
             ]);
+
+            $card = $this->culqi->createCard($customer['id'], $request->culqi_token);
+            $plan = $this->culqi->getOrCreatePlan($store->plan);
+            $subscription = $this->culqi->createSubscription($card['id'], $plan['id']);
+
+            $store->update([
+                'status'                 => 'active',
+                'plan_expires_at'        => now()->addMonth(),
+                'culqi_customer_id'      => $customer['id'],
+                'culqi_card_id'          => $card['id'],
+                'culqi_subscription_id'  => $subscription['id'],
+            ]);
+
+            Log::info('Culqi: suscripción creada', [
+                'store_id'        => $store->id,
+                'subscription_id' => $subscription['id'],
+                'plan'            => $store->plan,
+            ]);
+
+            return response()->json([
+                'success'  => true,
+                'redirect' => route('dashboard.index'),
+                'message'  => "¡Pago procesado con éxito! Bienvenido al Plan " . ucfirst($planConfig['label']) . ".",
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Culqi: fallo al procesar la suscripción', [
+                'store_id' => $store->id,
+                'message'  => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage() ?: 'No se pudo procesar el pago. Verifica los datos de tu tarjeta e intenta nuevamente.',
+            ], 422);
+        }
+    }
+
+    /**
+     * Public Culqi webhook (configured in CulqiPanel > Eventos > Webhooks). We never trust
+     * the payload's amounts/state directly — only use it as a signal to re-fetch the
+     * subscription from Culqi's API and sync from that authoritative response, the same
+     * defensive pattern already used for the Mercado Pago storefront webhook.
+     */
+    public function webhook(Request $request)
+    {
+        $payload = $request->all();
+        Log::info('Culqi Webhook recibido:', $payload);
+
+        $type = $payload['type'] ?? null;
+        $data = $payload['data'] ?? [];
+        $subscriptionId = $data['subscription_id'] ?? $data['id'] ?? null;
+
+        if (!$subscriptionId || !str_starts_with((string) $type, 'subscription.')) {
+            return response()->json(['status' => 'ignored'], 200);
         }
 
-        // Mercado Pago requiere una respuesta 200 OK para confirmar recepción
+        $store = Store::where('culqi_subscription_id', $subscriptionId)->first();
+        if (!$store) {
+            Log::warning('Culqi Webhook: no se encontró tienda para la suscripción.', ['subscription_id' => $subscriptionId]);
+            return response()->json(['status' => 'ok'], 200);
+        }
+
+        $subscription = $this->culqi->getSubscription($subscriptionId);
+        if (!$subscription) {
+            return response()->json(['status' => 'ok'], 200);
+        }
+
+        match (true) {
+            $type === 'subscription.charge.succeeded' => $store->update([
+                'status'          => 'active',
+                'plan_expires_at' => now()->addMonth(),
+            ]),
+            $type === 'subscription.cancel.succeeded' || ($subscription['state'] ?? null) === 'canceled' => $store->update([
+                'status' => 'cancelled',
+            ]),
+            default => null,
+        };
+
         return response()->json(['status' => 'ok'], 200);
+    }
+
+    /**
+     * Splits a single "name" field into Culqi's required first/last name shape
+     * (letters and spaces only, at least 2 characters each).
+     */
+    private function splitName(string $fullName): array
+    {
+        $clean = trim(preg_replace('/[^\p{L}\s]/u', '', $fullName));
+        $parts = preg_split('/\s+/', $clean, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        if (count($parts) < 2) {
+            return [$parts[0] ?? 'Cliente', 'Tribio'];
+        }
+
+        $first = array_shift($parts);
+        $last = implode(' ', $parts);
+
+        return [
+            strlen($first) < 2 ? str_pad($first, 2, $first) : $first,
+            strlen($last) < 2 ? str_pad($last, 2, $last) : $last,
+        ];
     }
 }

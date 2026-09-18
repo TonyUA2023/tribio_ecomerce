@@ -23,6 +23,7 @@ class Store extends Model
         'total_views', 'total_orders', 'total_revenue',
         'checkout_mode', 'payment_gateway', 'gateway_public_key', 'gateway_private_key', 'gateway_access_token',
         'mp_access_token', 'mp_public_key', 'contact_email', 'contact_phone',
+        'culqi_customer_id', 'culqi_card_id', 'culqi_subscription_id',
         'is_express_shipping_enabled', 'express_shipping_cost',
         'is_multilanguage_enabled', 'hero_badge', 'hero_title', 'hero_subtitle',
         'enabled_countries', 'national_shipping_cost', 'country_shipping_costs'

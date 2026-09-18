@@ -29,7 +29,13 @@ class LoginController extends Controller
                 return redirect()->route('admin.dashboard');
             }
 
-            return redirect()->route('dashboard.index');
+            // Tribio Pass: this form authenticates any account (store owner or buyer).
+            // Route by capability rather than assuming everyone owns a store.
+            if ($user->hasStore()) {
+                return redirect()->route('dashboard.index');
+            }
+
+            return redirect()->route('tribio-pass');
         }
 
         return back()->withErrors([

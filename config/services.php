@@ -40,6 +40,15 @@ return [
         'public_key'   => env('MERCADO_PAGO_PUBLIC_KEY', 'TEST-238d2f59-a292-4217-bc1a-64152df6e5ab'),
     ],
 
+    // Culqi — used for Tribio's own subscription billing (charging store owners their
+    // monthly plan fee). Unrelated to `stores.gateway_*`, which is a store's own checkout
+    // gateway for charging its customers. Get these from CulqiPanel > Desarrollo > API Keys
+    // after creating a Culqi account (a personal DNI is enough to register, no RUC required).
+    'culqi' => [
+        'public_key' => env('CULQI_PUBLIC_KEY'),
+        'secret_key' => env('CULQI_SECRET_KEY'),
+    ],
+
     'brevo' => [
         'api_key' => env('BREVO_API_KEY'),
     ],

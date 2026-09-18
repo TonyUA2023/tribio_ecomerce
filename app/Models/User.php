@@ -59,6 +59,28 @@ class User extends Authenticatable
         return $this->isCliente();
     }
 
+    // ─── Tribio Pass capabilities ──────────────────────────────────
+    // `role` alone used to gate access exclusively (a store owner could never
+    // shop, a cliente could never own a store). Tribio Pass unifies identity:
+    // capability checks below decide what a logged-in account can reach,
+    // independent of the legacy `role` value. See the vault ADR on this.
+    public function hasStore(): bool
+    {
+        return $this->store()->exists();
+    }
+
+    public function hasPurchaseHistory(): bool
+    {
+        return Order::where('user_id', $this->id)
+            ->orWhere('customer_email', $this->email)
+            ->exists();
+    }
+
+    public function canUseCustomerPortal(): bool
+    {
+        return !$this->isSuperAdmin();
+    }
+
     // ─── Relationships ───────────────────────────────────────────
     public function store()
     {

@@ -39,11 +39,16 @@
                     @auth
                         @if(Auth::user()->isSuperAdmin())
                             <a href="{{ route('admin.dashboard') }}" class="btn-primary">Panel Admin</a>
-                        @else
+                        @elseif(Auth::user()->hasStore())
+                            <a href="{{ route('tribio-pass') }}" class="text-slate-600 hover:text-slate-900 text-sm font-semibold transition-colors hidden sm:inline">🛍️ Mis Compras</a>
                             <a href="{{ route('dashboard.index') }}" class="btn-primary">Mi Dashboard</a>
+                        @else
+                            <a href="{{ route('home') }}#precios" class="text-slate-600 hover:text-slate-900 text-sm font-semibold transition-colors hidden sm:inline">Abrir mi negocio</a>
+                            <a href="{{ route('tribio-pass') }}" class="btn-primary">🪪 Mi Tribio Pass</a>
                         @endif
                     @else
-                        <a href="{{ route('login') }}" class="text-slate-600 hover:text-slate-900 text-sm font-semibold transition-colors">Ingresar</a>
+                        <a href="{{ route('login') }}" class="text-slate-600 hover:text-slate-900 text-sm font-semibold transition-colors hidden sm:inline">Ingresar</a>
+                        <a href="{{ route('tribio-pass') }}" class="text-slate-600 hover:text-slate-900 text-sm font-semibold transition-colors">🪪 Tribio Pass</a>
                         <a href="{{ route('register') }}" class="btn-primary">Crear mi tienda</a>
                     @endauth
                 </div>
@@ -107,13 +112,18 @@
                     <h4 class="text-slate-900 font-semibold mb-4 text-sm uppercase tracking-wider">Contacto</h4>
                     <ul class="space-y-2">
                         <li><a href="https://wa.me/51902699916" class="text-slate-500 hover:text-slate-900 text-sm transition-colors">+51 902 699 916</a></li>
-                        <li><span class="text-slate-400 text-sm">Tribio © {{ date('Y') }}</span></li>
+                        <li><a href="{{ route('tribio-pass') }}" class="text-slate-500 hover:text-slate-900 text-sm transition-colors">🪪 Tribio Pass</a></li>
                     </ul>
                 </div>
             </div>
 
-            <div class="border-t border-slate-200 mt-12 pt-8 text-center">
-                <p class="text-slate-400 text-xs">© {{ date('Y') }} Tribio. Todos los derechos reservados. Hecho con ❤️ para emprendedores.</p>
+            <div class="border-t border-slate-200 mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <p class="text-slate-400 text-xs text-center sm:text-left">© {{ date('Y') }} Tribio. Todos los derechos reservados. Hecho con ❤️ para emprendedores.</p>
+                <div class="flex items-center gap-5">
+                    <a href="{{ route('legal.terms') }}" class="text-slate-400 hover:text-slate-700 text-xs transition-colors">Términos</a>
+                    <a href="{{ route('legal.privacy') }}" class="text-slate-400 hover:text-slate-700 text-xs transition-colors">Privacidad</a>
+                    <a href="{{ route('legal.refunds') }}" class="text-slate-400 hover:text-slate-700 text-xs transition-colors">Reembolsos</a>
+                </div>
             </div>
         </div>
     </footer>

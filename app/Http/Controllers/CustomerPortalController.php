@@ -41,8 +41,9 @@ class CustomerPortalController extends Controller
 
         $user = Auth::user();
 
-        // Validar estrictamente rol cliente: dueños de tienda o super admin no son compradores de tienda
-        if (!$user->isCliente()) {
+        // Tribio Pass: any account can shop, including store owners buying from other
+        // stores. Only platform staff (super_admin) is excluded from the buyer portal.
+        if (!$user->canUseCustomerPortal()) {
             return response()->json([
                 'authenticated' => false,
                 'is_staff'      => true,
@@ -55,11 +56,12 @@ class CustomerPortalController extends Controller
         return response()->json([
             'authenticated' => true,
             'user' => [
-                'id'    => $user->id,
-                'name'  => $user->name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'role'  => $user->role,
+                'id'        => $user->id,
+                'name'      => $user->name,
+                'email'     => $user->email,
+                'phone'     => $user->phone,
+                'role'      => $user->role,
+                'has_store' => $user->hasStore(),
             ],
             'addresses' => $user->customerAddresses()->get(),
         ]);
@@ -83,23 +85,23 @@ class CustomerPortalController extends Controller
         if (Auth::attempt($credentials, true)) {
             $user = Auth::user();
 
-            // Asegurar que sea rol cliente para el portal de compras
-            if (!$user->isCliente()) {
+            if (!$user->canUseCustomerPortal()) {
                 Auth::logout();
                 return response()->json([
                     'success' => false,
-                    'message' => 'Esta cuenta pertenece a la administración de la tienda. Para realizar compras y usar Tribio Pass ingresa con tu cuenta de cliente.',
+                    'message' => 'Esta cuenta pertenece a la administración de la plataforma.',
                 ], 403);
             }
 
             return response()->json([
                 'success'   => true,
                 'user'      => [
-                    'id'    => $user->id,
-                    'name'  => $user->name,
-                    'email' => $user->email,
-                    'phone' => $user->phone,
-                    'role'  => $user->role,
+                    'id'        => $user->id,
+                    'name'      => $user->name,
+                    'email'     => $user->email,
+                    'phone'     => $user->phone,
+                    'role'      => $user->role,
+                    'has_store' => $user->hasStore(),
                 ],
                 'addresses' => $user->customerAddresses()->get(),
                 'message'   => '¡Bienvenido de vuelta, ' . $user->name . '!',
@@ -274,7 +276,7 @@ class CustomerPortalController extends Controller
      */
     public function orders()
     {
-        if (!Auth::check() || !Auth::user()->isCliente()) {
+        if (!Auth::check() || !Auth::user()->canUseCustomerPortal()) {
             return response()->json(['success' => false, 'message' => 'No autenticado como cliente.', 'orders' => []], 401);
         }
 
@@ -372,7 +374,7 @@ class CustomerPortalController extends Controller
      */
     public function addresses()
     {
-        if (!Auth::check() || !Auth::user()->isCliente()) {
+        if (!Auth::check() || !Auth::user()->canUseCustomerPortal()) {
             return response()->json(['success' => false, 'message' => 'No autenticado como cliente.', 'addresses' => []], 401);
         }
 
@@ -387,7 +389,7 @@ class CustomerPortalController extends Controller
      */
     public function saveAddress(Request $request)
     {
-        if (!Auth::check() || !Auth::user()->isCliente()) {
+        if (!Auth::check() || !Auth::user()->canUseCustomerPortal()) {
             return response()->json(['success' => false, 'message' => 'No autenticado como cliente.'], 401);
         }
 
@@ -439,7 +441,7 @@ class CustomerPortalController extends Controller
      */
     public function deleteAddress($id)
     {
-        if (!Auth::check() || !Auth::user()->isCliente()) {
+        if (!Auth::check() || !Auth::user()->canUseCustomerPortal()) {
             return response()->json(['success' => false, 'message' => 'No autenticado como cliente.'], 401);
         }
 

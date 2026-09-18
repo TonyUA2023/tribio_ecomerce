@@ -25,9 +25,16 @@ use App\Http\Controllers\Dashboard\StoreBuilderController;
 Route::get('/', [PublicController::class, 'home'])->name('home');
 Route::get('/buscar', [PublicController::class, 'search'])->name('search');
 Route::get('/negocios', [PublicController::class, 'directory'])->name('directory');
+Route::get('/terminos-y-condiciones', [PublicController::class, 'terms'])->name('legal.terms');
+Route::get('/privacidad', [PublicController::class, 'privacy'])->name('legal.privacy');
+Route::get('/reembolsos', [PublicController::class, 'refunds'])->name('legal.refunds');
 Route::post('/plan/checkout', [SubscriptionController::class, 'checkout'])->name('plan.checkout');
-Route::get('/plan/callback', [SubscriptionController::class, 'callback'])->name('plan.callback');
+Route::get('/plan/{store}/pagar', [SubscriptionController::class, 'pay'])->middleware('auth')->name('plan.pay');
+Route::post('/plan/{store}/cobrar', [SubscriptionController::class, 'charge'])->middleware('auth')->name('plan.charge');
 Route::post('/plan/webhook', [SubscriptionController::class, 'webhook'])->name('plan.webhook');
+
+// ────────── TRIBIO PASS (portal unificado comprador + negocio) ──────────
+Route::get('/tribio-pass', [\App\Http\Controllers\TribioPassController::class, 'index'])->name('tribio-pass');
 
 // ═══════════════════════════════════════════════════════════════
 //  AUTENTICACIÓN

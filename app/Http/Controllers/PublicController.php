@@ -46,4 +46,19 @@ class PublicController extends Controller
 
         return view('public.directory', compact('stores'));
     }
+
+    public function terms()
+    {
+        return view('public.legal.terms');
+    }
+
+    public function privacy()
+    {
+        return view('public.legal.privacy');
+    }
+
+    public function refunds()
+    {
+        return view('public.legal.refunds');
+    }
 }
