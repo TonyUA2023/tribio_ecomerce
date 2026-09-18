@@ -256,7 +256,24 @@
              const settings = {
                  initialization: { amount: this.cartTotal },
                  customization: {
-                     visual: { style: { theme: 'flat', customVariables: { formPadding: '0px' } } },
+                     visual: {
+                         style: {
+                             theme: 'flat',
+                             customVariables: {
+                                 formBackgroundColor: '#ffffff',
+                                 baseColor: '{{ $payAccent }}',
+                                 borderRadiusSmall: '8px',
+                                 borderRadiusMedium: '12px',
+                                 borderRadiusLarge: '14px',
+                                 formPadding: '20px',
+                                 inputVerticalPadding: '14px',
+                                 fontSizeExtraSmall: '12px',
+                                 fontSizeSmall: '13px',
+                                 fontSizeMedium: '14px',
+                                 fontSizeLarge: '16px'
+                             }
+                         }
+                     },
                      paymentMethods: { creditCard: 'all', debitCard: 'all', maxInstallments: 1 }
                  },
                  callbacks: {
@@ -539,16 +556,9 @@
                         </div>
                     </div>
 
-                    <div class="bg-white border border-[var(--pay-border)] rounded-2xl overflow-hidden">
-                        <div class="bg-[var(--pay-surface-muted)] border-b border-[var(--pay-border)] px-4 py-3 flex items-center justify-between">
-                            <span class="font-bold text-sm text-[var(--pay-text)] flex items-center gap-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M2 10h20"/></svg>
-                                Detalles de pago
-                            </span>
-                        </div>
-                        <div class="p-0 sm:p-2">
-                            <div id="paymentBrick_container" class="w-full"></div>
-                        </div>
+                    <div>
+                        <label class="block text-xs font-bold text-[var(--pay-text)] uppercase tracking-wider mb-2">Detalles de pago</label>
+                        <div id="paymentBrick_container" class="w-full"></div>
                     </div>
 
                     <div class="pay-trust-strip justify-center">
