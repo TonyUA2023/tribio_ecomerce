@@ -618,10 +618,57 @@
                     </div>
                 </div>
             </template>
+            <template x-if="checkoutStep === 3">
+                <div class="flex flex-col gap-4 pb-4">
+                    <!-- Botón Volver -->
+                    <button @click="checkoutStep = 2" class="self-start flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-[#C8A68B] transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                        Volver a Datos de Envío
+                    </button>
+
+                    <!-- Resumen del Pago -->
+                    <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 shadow-sm">
+                        <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Resumen de tu compra</h4>
+                        
+                        <div class="flex justify-between items-center mb-2 text-gray-600 text-sm">
+                            <span>{{ \App\Helpers\TranslationHelper::trans('subtotal', 'Subtotal') }}:</span>
+                            <span x-text="formatMoney(cartTotal - shippingCost - (customer.express_shipping ? expressCost : 0))"></span>
+                        </div>
+                        
+                        <template x-if="shippingCost > 0">
+                            <div class="flex justify-between items-center mb-2 text-gray-600 text-sm">
+                                <span>{{ \App\Helpers\TranslationHelper::trans('shipping', 'Envío') }}:</span>
+                                <span x-text="'+ ' + formatMoney(shippingCost)"></span>
+                            </div>
+                        </template>
+
+                        <div class="flex justify-between items-center text-gray-900 border-t border-gray-200 pt-3 mt-1">
+                            <span class="font-bold text-base">Total a pagar:</span>
+                            <span class="font-black text-2xl text-[#1A1A1A]" x-text="formatMoney(cartTotal)"></span>
+                        </div>
+                    </div>
+
+                    <!-- Contenedor del Brick de Mercado Pago -->
+                    <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                        <div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+                            <span class="font-bold text-sm text-gray-700">💳 Detalles de Pago</span>
+                            <img src="https://logospng.org/download/mercado-pago/logo-mercado-pago-icono-1024.png" class="h-4 opacity-80" alt="Mercado Pago" />
+                        </div>
+                        <div class="p-2">
+                            <div id="paymentBrick_container" class="w-full"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-center gap-1.5 text-[11px] text-gray-400 mt-2">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        <span>Pagos 100% seguros y encriptados</span>
+                    </div>
+                </div>
+            </template>
         </div>
         
         <template x-if="cartItems.length > 0">
-            <div class="p-5 border-t border-gray-100 bg-gray-50">
+            <div x-show="checkoutStep !== 3" class="p-5 border-t border-gray-100 bg-gray-50">
                 <div class="flex justify-between items-center mb-2 text-gray-600 text-sm">
                     <span>{{ \App\Helpers\TranslationHelper::trans('subtotal', 'Subtotal') }}:</span>
                     <span x-text="formatMoney(cartTotal - shippingCost - (customer.express_shipping ? expressCost : 0))"></span>
@@ -660,16 +707,6 @@
                                 <span x-text="paymentMethod === 'mercadopago' ? '{{ \App\Helpers\TranslationHelper::isEn() ? '💳 Continue to Payment' : '💳 Continuar al Pago' }}' : '{{ \App\Helpers\TranslationHelper::isEn() ? 'Confirm Order' : 'Confirmar Pedido' }}'"></span>
                             </button>
                         </template>
-                    </div>
-                </template>
-
-                <template x-if="checkoutStep === 3">
-                    <div class="flex flex-col gap-3">
-                        <button @click="checkoutStep = 2" class="self-start text-xs font-bold text-gray-500 hover:text-gray-800 transition">
-                            ← Volver
-                        </button>
-                        <div id="paymentBrick_container" class="w-full bg-white rounded-xl"></div>
-                        <p class="text-[10px] text-center text-gray-400 mt-2">🛡️ Pagos seguros procesados por Mercado Pago</p>
                     </div>
                 </template>
             </div>
