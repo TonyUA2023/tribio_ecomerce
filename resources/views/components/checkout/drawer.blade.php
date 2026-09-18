@@ -33,7 +33,7 @@
              express_shipping: false,
              create_account: false,
              password: '',
-             payment_method: '{{ ($store->checkout_mode === 'card' || ($store->checkout_mode === 'mixed' && !empty($store->mp_access_token))) ? 'mercadopago' : 'whatsapp' }}'
+             payment_method: '{{ ($store->checkout_mode === 'card' || ($store->checkout_mode === 'mixed' && !empty($store->mp_access_token))) ? 'card' : 'whatsapp' }}'
          },
          customerLoggedIn: false,
          customerUser: null,
@@ -54,9 +54,19 @@
          shippingCost: 0,
          hasMercadoPago: {{ $hasMpCapable ? 'true' : 'false' }},
          hasWhatsapp: {{ in_array($store->checkout_mode, ['whatsapp', 'mixed']) ? 'true' : 'false' }},
-         paymentMethod: '{{ ($store->checkout_mode === 'card' || ($store->checkout_mode === 'mixed' && !empty($store->mp_access_token))) ? 'mercadopago' : 'whatsapp' }}',
+         paymentMethod: '{{ ($store->checkout_mode === 'card' || ($store->checkout_mode === 'mixed' && !empty($store->mp_access_token))) ? 'card' : 'whatsapp' }}',
          hasActiveToken: {{ (!empty($store->mp_access_token) || !empty($store->gateway_access_token)) ? 'true' : 'false' }},
          cartItems: window.TribioCart ? window.TribioCart.items : [],
+         // Tarjeta embebida: se tokeniza con MercadoPago.js dentro del propio drawer, sin
+         // redirigir a otra página. Yape/PagoEfectivo/banca no se pueden representar como
+         // campos de formulario, así que esos siguen usando la redirección (payment_method
+         // 'mercadopago_other', sin mp_form_data — ver Mercado-Pago-Checkout-Flow en la bóveda).
+         cardForm: {
+             number: '', name: '', expiry: '', cvv: '',
+             idType: 'DNI', idNumber: '',
+             paymentMethodId: null, issuerId: null, brandLabel: '',
+             identificationTypes: [],
+         },
          formatMoney(amount) {
              const isInt = ['COP', 'CLP', 'ARS'].includes(this.currentCurrency);
              const num = Number(amount || 0);
@@ -66,7 +76,91 @@
              this.customer.country = '{{ \App\Helpers\CurrencyHelper::currentCountry() }}';
              this.updateShipping();
              this.checkCurrentCustomer();
+             if (this.hasMercadoPago) this.ensureMercadoPagoJs();
              window.addEventListener('open-cart-drawer', () => { this.cartOpen = true; });
+         },
+         async ensureMercadoPagoJs() {
+             if (window.mpInstance || typeof window.MercadoPago === 'undefined') return;
+             window.mpInstance = new window.MercadoPago('{{ $store->mp_public_key ?? $store->gateway_public_key }}', { locale: 'es-PE' });
+             try {
+                 const types = await window.mpInstance.getIdentificationTypes();
+                 this.cardForm.identificationTypes = types || [];
+                 if (types && types.length && !types.find(t => t.id === this.cardForm.idType)) {
+                     this.cardForm.idType = types[0].id;
+                 }
+             } catch (e) { console.error('MercadoPago getIdentificationTypes:', e); }
+         },
+         formatCardNumber() {
+             const digits = this.cardForm.number.replace(/\D/g, '').slice(0, 19);
+             this.cardForm.number = digits.replace(/(.{4})/g, '$1 ').trim();
+             this.detectCardBrand();
+         },
+         formatExpiry() {
+             let v = this.cardForm.expiry.replace(/\D/g, '').slice(0, 4);
+             if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2);
+             this.cardForm.expiry = v;
+         },
+         async detectCardBrand() {
+             const bin = this.cardForm.number.replace(/\s/g, '').slice(0, 6);
+             this.cardForm.paymentMethodId = null;
+             this.cardForm.brandLabel = '';
+             if (bin.length < 6 || !window.mpInstance) return;
+             try {
+                 const result = await window.mpInstance.getPaymentMethods({ bin });
+                 const pm = result?.results?.[0];
+                 if (pm) {
+                     this.cardForm.paymentMethodId = pm.id;
+                     this.cardForm.issuerId = pm.issuer?.id || null;
+                     this.cardForm.brandLabel = pm.name || '';
+                 }
+             } catch (e) { /* se revalida al enviar; no interrumpe la escritura */ }
+         },
+         async submitCardPayment() {
+             this.errors = {};
+             if (!this.customerLoggedIn) { this.openTribioPass('register'); return; }
+             if (!this.validateStep2()) return;
+             if (!window.mpInstance) {
+                 this.errors.payment = 'No se pudo cargar Mercado Pago. Recarga la página e intenta de nuevo.';
+                 return;
+             }
+             const cardNumber = this.cardForm.number.replace(/\s/g, '');
+             const [expMonth, expYearRaw] = (this.cardForm.expiry || '').split('/');
+             const expYear = expYearRaw && expYearRaw.length === 2 ? ('20' + expYearRaw) : expYearRaw;
+             if (!cardNumber || !this.cardForm.name.trim() || !expMonth || !expYear || !this.cardForm.cvv || !this.cardForm.idNumber.trim()) {
+                 this.errors.payment = 'Completa todos los datos de la tarjeta.';
+                 return;
+             }
+             this.submitting = true;
+             try {
+                 if (!this.cardForm.paymentMethodId) { await this.detectCardBrand(); }
+                 const tokenResp = await window.mpInstance.createCardToken({
+                     cardNumber,
+                     cardholderName: this.cardForm.name.trim(),
+                     cardExpirationMonth: expMonth,
+                     cardExpirationYear: expYear,
+                     securityCode: this.cardForm.cvv,
+                     identificationType: this.cardForm.idType,
+                     identificationNumber: this.cardForm.idNumber.trim(),
+                 });
+                 if (!tokenResp || !tokenResp.id) throw new Error('No se pudo generar el token de la tarjeta.');
+                 this.customer.payment_method = 'mercadopago';
+                 this.customer.mp_form_data = {
+                     token: tokenResp.id,
+                     payment_method_id: this.cardForm.paymentMethodId,
+                     issuer_id: this.cardForm.issuerId,
+                     installments: 1,
+                     payer: {
+                         email: this.customer.email,
+                         identification: { type: this.cardForm.idType, number: this.cardForm.idNumber.trim() }
+                     }
+                 };
+                 await window.TribioCart.checkout(this.storeSlug, this.customer);
+             } catch (e) {
+                 console.error(e);
+                 this.errors.payment = (e && e.message) ? e.message : 'No se pudo procesar tu tarjeta. Verifica los datos e intenta de nuevo.';
+             } finally {
+                 this.submitting = false;
+             }
          },
          get cartTotal() {
              let total = this.cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
@@ -229,77 +323,25 @@
                  return;
              }
              if (!this.validateStep2()) return;
-             if (this.paymentMethod === 'mercadopago' && !this.hasActiveToken) {
-                 this.errors.payment = 'La tienda tiene habilitado el pago con tarjeta pero aún no ha configurado sus credenciales de Mercado Pago. Selecciona WhatsApp / Pago Directo.';
+             if ((this.paymentMethod === 'card' || this.paymentMethod === 'mercadopago_other') && !this.hasActiveToken) {
+                 this.errors.payment = 'La tienda tiene habilitado el pago con Mercado Pago pero aún no ha configurado sus credenciales. Selecciona WhatsApp / Pago Directo.';
                  return;
              }
-             this.customer.payment_method = this.paymentMethod;
 
-             if (this.paymentMethod === 'mercadopago') {
-                 this.checkoutStep = 3;
-                 this.$nextTick(() => { this.initPaymentBrick(); });
-             } else {
-                 if (window.TribioCart) {
-                     this.submitting = true;
-                     window.TribioCart.checkout(this.storeSlug, this.customer).finally(() => { this.submitting = false; });
-                 }
-             }
-         },
-         async initPaymentBrick() {
-             if (this.brickController) this.brickController.unmount();
-             if (!window.MercadoPago) {
-                 this.errors.payment = 'Error al cargar Mercado Pago. Intenta de nuevo.';
+             if (this.paymentMethod === 'card') {
+                 // Tarjeta embebida: se tokeniza y se cobra sin salir de la tienda.
+                 this.submitCardPayment();
                  return;
              }
-             const mp = new window.MercadoPago('{{ $store->mp_public_key ?? $store->gateway_public_key }}', { locale: 'es-PE' });
-             const bricksBuilder = mp.bricks();
-             const settings = {
-                 initialization: { amount: this.cartTotal },
-                 customization: {
-                     visual: {
-                         style: {
-                             theme: 'flat',
-                             customVariables: {
-                                 formBackgroundColor: '#ffffff',
-                                 baseColor: '{{ $payAccent }}',
-                                 borderRadiusSmall: '8px',
-                                 borderRadiusMedium: '12px',
-                                 borderRadiusLarge: '14px',
-                                 formPadding: '20px',
-                                 inputVerticalPadding: '14px',
-                                 fontSizeExtraSmall: '12px',
-                                 fontSizeSmall: '13px',
-                                 fontSizeMedium: '14px',
-                                 fontSizeLarge: '16px'
-                             }
-                         }
-                     },
-                     paymentMethods: {
-                        creditCard: 'all',
-                        debitCard: 'all',
-                        ticket: 'all',
-                        bankTransfer: 'all',
-                        wallet_purchase: 'all',
-                        maxInstallments: 1
-                    }
-                 },
-                 callbacks: {
-                     onReady: () => {},
-                     onSubmit: (formData) => {
-                         this.submitting = true;
-                         return new Promise((resolve, reject) => {
-                             this.customer.payment_method = 'mercadopago';
-                             this.customer.mp_form_data = formData;
-                             window.TribioCart.checkout(this.storeSlug, this.customer)
-                                 .then(() => resolve())
-                                 .catch(() => reject())
-                                 .finally(() => { this.submitting = false; });
-                         });
-                     },
-                     onError: (error) => { console.error(error); }
-                 }
-             };
-             this.brickController = await bricksBuilder.create('payment', 'paymentBrick_container', settings);
+
+             // 'mercadopago_other' (Yape/PagoEfectivo/banca): el backend responde con
+             // `payment_url` (Checkout Pro) y `TribioCart.checkout()` redirige ahí. 'whatsapp'
+             // no toca Mercado Pago en absoluto.
+             this.customer.payment_method = this.paymentMethod === 'mercadopago_other' ? 'mercadopago' : this.paymentMethod;
+             if (window.TribioCart) {
+                 this.submitting = true;
+                 window.TribioCart.checkout(this.storeSlug, this.customer).finally(() => { this.submitting = false; });
+             }
          }
      }"
      @cart-updated.window="cartItems = $event.detail"
@@ -316,38 +358,31 @@
     <div x-show="cartOpen"
          x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full sm:translate-x-full" x-transition:enter-end="translate-x-0"
          x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full"
-         :class="checkoutStep === 3 ? 'pay-drawer-panel--wide' : ''"
          class="relative pay-drawer-panel h-full flex flex-col bg-white border-l border-[var(--pay-border)] shadow-2xl">
 
         {{-- Header --}}
         <div class="flex items-center justify-between p-4 sm:p-5 border-b border-[var(--pay-border)]">
-            <h3 class="text-[var(--pay-text)] font-bold text-lg" x-text="checkoutStep === 1 ? '{{ \App\Helpers\TranslationHelper::trans('your_cart', 'Mi carrito') }}' : (checkoutStep === 2 ? '{{ \App\Helpers\TranslationHelper::trans('checkout', 'Finalizar Compra') }}' : 'Pago seguro')"></h3>
+            <h3 class="text-[var(--pay-text)] font-bold text-lg" x-text="checkoutStep === 1 ? '{{ \App\Helpers\TranslationHelper::trans('your_cart', 'Mi carrito') }}' : '{{ \App\Helpers\TranslationHelper::trans('checkout', 'Finalizar Compra') }}'"></h3>
             <button @click="cartOpen = false" aria-label="Cerrar" class="text-[var(--pay-text-muted)] hover:text-[var(--pay-text)] transition">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
 
-        {{-- Indicador de pasos --}}
+        {{-- Indicador de pasos: el pago en sí ocurre en Mercado Pago (Checkout Pro),
+             fuera del drawer, así que aquí solo hay 2 pasos propios. --}}
         <div class="px-5 pt-4" x-show="cartItems.length > 0">
             <div class="pay-step-track">
-                <div class="pay-step-track-fill" :style="'width: ' + ((checkoutStep - 1) / 2 * 100) + '%'"></div>
-                <div class="flex flex-col items-center" style="width:33%">
+                <div class="pay-step-track-fill" :style="'width: ' + ((checkoutStep - 1) * 100) + '%'"></div>
+                <div class="flex flex-col items-center" style="width:50%">
                     <div class="pay-step-dot" :class="checkoutStep > 1 ? 'is-done' : 'is-active'">
                         <svg x-show="checkoutStep > 1" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                         <span x-show="checkoutStep <= 1">1</span>
                     </div>
                     <span class="pay-step-label" :class="checkoutStep === 1 ? 'is-active' : ''">Carrito</span>
                 </div>
-                <div class="flex flex-col items-center" style="width:33%">
-                    <div class="pay-step-dot" :class="checkoutStep > 2 ? 'is-done' : (checkoutStep === 2 ? 'is-active' : '')">
-                        <svg x-show="checkoutStep > 2" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                        <span x-show="checkoutStep <= 2">2</span>
-                    </div>
-                    <span class="pay-step-label" :class="checkoutStep === 2 ? 'is-active' : ''">Envío</span>
-                </div>
-                <div class="flex flex-col items-center" style="width:33%">
-                    <div class="pay-step-dot" :class="checkoutStep === 3 ? 'is-active' : ''">3</div>
-                    <span class="pay-step-label" :class="checkoutStep === 3 ? 'is-active' : ''">Pago</span>
+                <div class="flex flex-col items-center" style="width:50%">
+                    <div class="pay-step-dot" :class="checkoutStep === 2 ? 'is-active' : ''">2</div>
+                    <span class="pay-step-label" :class="checkoutStep === 2 ? 'is-active' : ''">Envío y pago</span>
                 </div>
             </div>
         </div>
@@ -501,16 +536,73 @@
                         <label class="block text-xs font-bold text-[var(--pay-text)] uppercase tracking-wider mb-2">Método de pago</label>
                         <div class="space-y-2.5">
                             <template x-if="hasMercadoPago">
-                                <label :class="paymentMethod === 'mercadopago' ? 'border-[var(--pay-accent)] bg-[var(--pay-surface-muted)] ring-1 ring-[var(--pay-accent)]' : 'border-[var(--pay-border)] bg-white'"
+                                <label :class="paymentMethod === 'card' ? 'border-[var(--pay-accent)] bg-[var(--pay-surface-muted)] ring-1 ring-[var(--pay-accent)]' : 'border-[var(--pay-border)] bg-white'"
                                        class="flex flex-col p-3.5 rounded-xl border cursor-pointer transition-all">
                                     <div class="flex items-center gap-2.5">
-                                        <input type="radio" name="payment_method" value="mercadopago" x-model="paymentMethod" class="accent-[var(--pay-accent)] w-4 h-4">
+                                        <input type="radio" name="payment_method" value="card" x-model="paymentMethod" @change="ensureMercadoPagoJs()" class="accent-[var(--pay-accent)] w-4 h-4">
                                         <svg class="w-4 h-4 text-[var(--pay-text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M2 10h20"/></svg>
                                         <span class="font-bold text-sm">Tarjeta débito / crédito</span>
                                     </div>
-                                    <p class="mt-1.5 text-[11px] text-[var(--pay-text-muted)] pl-6">Visa, Mastercard, AMEX o saldo Mercado Pago.</p>
+                                    <p class="mt-1.5 text-[11px] text-[var(--pay-text-muted)] pl-6">Visa, Mastercard, AMEX. Pagas aquí mismo, sin salir de la tienda.</p>
                                 </label>
                             </template>
+
+                            {{-- Formulario de tarjeta embebido: aparece solo al elegir "Tarjeta" --}}
+                            <div x-show="paymentMethod === 'card'" x-cloak class="p-3.5 rounded-xl border border-[var(--pay-border)] bg-white space-y-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-[var(--pay-text-muted)] mb-1">Número de tarjeta</label>
+                                    <div class="relative">
+                                        <input type="text" inputmode="numeric" x-model="cardForm.number" @input="formatCardNumber()" maxlength="23" placeholder="1234 1234 1234 1234"
+                                               class="w-full bg-[var(--pay-surface-muted)] border border-[var(--pay-border)] rounded-lg px-4 py-2.5 text-sm outline-none transition tracking-wider">
+                                        <span x-show="cardForm.brandLabel" x-text="cardForm.brandLabel" class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[var(--pay-text-muted)] uppercase"></span>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-[var(--pay-text-muted)] mb-1">Vencimiento</label>
+                                        <input type="text" inputmode="numeric" x-model="cardForm.expiry" @input="formatExpiry()" maxlength="5" placeholder="MM/AA"
+                                               class="w-full bg-[var(--pay-surface-muted)] border border-[var(--pay-border)] rounded-lg px-4 py-2.5 text-sm outline-none transition">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-[var(--pay-text-muted)] mb-1">Código de seguridad</label>
+                                        <input type="text" inputmode="numeric" x-model="cardForm.cvv" maxlength="4" placeholder="Ej: 123"
+                                               class="w-full bg-[var(--pay-surface-muted)] border border-[var(--pay-border)] rounded-lg px-4 py-2.5 text-sm outline-none transition">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-[var(--pay-text-muted)] mb-1">Nombre del titular (como aparece en la tarjeta)</label>
+                                    <input type="text" x-model="cardForm.name" placeholder="María López"
+                                           class="w-full bg-[var(--pay-surface-muted)] border border-[var(--pay-border)] rounded-lg px-4 py-2.5 text-sm outline-none transition">
+                                </div>
+                                <div class="grid grid-cols-[auto_1fr] gap-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-[var(--pay-text-muted)] mb-1">Documento</label>
+                                        <select x-model="cardForm.idType" class="h-[42px] bg-[var(--pay-surface-muted)] border border-[var(--pay-border)] rounded-lg px-2 text-sm outline-none transition">
+                                            <template x-for="t in (cardForm.identificationTypes.length ? cardForm.identificationTypes : [{id: 'DNI', name: 'DNI'}])" :key="t.id">
+                                                <option :value="t.id" x-text="t.id"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-[var(--pay-text-muted)] mb-1">Número de documento</label>
+                                        <input type="text" inputmode="numeric" x-model="cardForm.idNumber" placeholder="99999999"
+                                               class="w-full bg-[var(--pay-surface-muted)] border border-[var(--pay-border)] rounded-lg px-4 py-2.5 text-sm outline-none transition">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <template x-if="hasMercadoPago">
+                                <label :class="paymentMethod === 'mercadopago_other' ? 'border-[var(--pay-accent)] bg-[var(--pay-surface-muted)] ring-1 ring-[var(--pay-accent)]' : 'border-[var(--pay-border)] bg-white'"
+                                       class="flex flex-col p-3.5 rounded-xl border cursor-pointer transition-all">
+                                    <div class="flex items-center gap-2.5">
+                                        <input type="radio" name="payment_method" value="mercadopago_other" x-model="paymentMethod" class="accent-[var(--pay-accent)] w-4 h-4">
+                                        <svg class="w-4 h-4 text-[var(--pay-text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                        <span class="font-bold text-sm">Yape, PagoEfectivo, banca y más</span>
+                                    </div>
+                                    <p class="mt-1.5 text-[11px] text-[var(--pay-text-muted)] pl-6">Te llevamos a Mercado Pago para completar con estos medios.</p>
+                                </label>
+                            </template>
+
                             <template x-if="hasWhatsapp">
                                 <label :class="paymentMethod === 'whatsapp' ? 'border-[var(--pay-accent)] bg-[var(--pay-surface-muted)] ring-1 ring-[var(--pay-accent)]' : 'border-[var(--pay-border)] bg-white'"
                                        class="flex flex-col p-3.5 rounded-xl border cursor-pointer transition-all">
@@ -519,7 +611,7 @@
                                         <svg class="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1s-.7.9-.9 1.1-.4.2-.7.1a7.5 7.5 0 01-3.6-3.2c-.3-.4 0-.6.2-.8.2-.2.4-.5.6-.7.2-.2.2-.4.1-.6-.1-.3-.9-2.1-1.1-2.5s-.4-.3-.6-.3h-.6c-.2 0-.5.1-.8.4-.3.3-1.1 1.1-1.1 2.6s1.1 3 1.3 3.2c.2.2 2.2 3.4 5.3 4.6 2.6 1 2.6.7 3.1.6.5-.1 1.6-.7 1.8-1.3.2-.6.2-1.1.1-1.2-.1-.1-.2-.2-.4-.3z"/><path d="M12 2a10 10 0 00-8.6 15.1L2 22l4.9-1.3A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .8.8-3-.2-.3A8 8 0 1112 20z"/></svg>
                                         <span class="font-bold text-sm">WhatsApp / Pago directo</span>
                                     </div>
-                                    <p class="mt-1.5 text-[11px] text-[var(--pay-text-muted)] pl-6">Coordina tu compra con el vendedor (Yape/Plin/Efectivo).</p>
+                                    <p class="mt-1.5 text-[11px] text-[var(--pay-text-muted)] pl-6">Coordina tu compra directamente con el vendedor.</p>
                                 </label>
                             </template>
                             <span x-show="errors.payment" x-text="errors.payment" class="pay-field-error-msg"></span>
@@ -538,47 +630,10 @@
                 </div>
             </template>
 
-            {{-- PASO 3: PAGO --}}
-            <template x-if="checkoutStep === 3">
-                <div class="flex flex-col gap-4 pb-4" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
-                    <button @click="checkoutStep = 2" class="self-start flex items-center gap-1.5 text-sm font-bold text-[var(--pay-text-muted)] hover:text-[var(--pay-text)] transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                        Volver a datos de envío
-                    </button>
-
-                    <div class="bg-[var(--pay-surface-muted)] border border-[var(--pay-border)] rounded-2xl p-4">
-                        <h4 class="text-xs font-bold text-[var(--pay-text-muted)] uppercase tracking-wider mb-3">Resumen de tu compra</h4>
-                        <div class="flex justify-between items-center mb-2 text-[var(--pay-text-muted)] text-sm">
-                            <span>Subtotal:</span>
-                            <span x-text="formatMoney(cartTotal - shippingCost - (customer.express_shipping ? expressCost : 0))"></span>
-                        </div>
-                        <template x-if="shippingCost > 0">
-                            <div class="flex justify-between items-center mb-2 text-[var(--pay-text-muted)] text-sm">
-                                <span>Envío:</span>
-                                <span x-text="'+ ' + formatMoney(shippingCost)"></span>
-                            </div>
-                        </template>
-                        <div class="flex justify-between items-center text-[var(--pay-text)] border-t border-[var(--pay-border)] pt-3 mt-1">
-                            <span class="font-bold text-base">Total a pagar:</span>
-                            <span class="font-black text-2xl" x-text="formatMoney(cartTotal)"></span>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-[var(--pay-text)] uppercase tracking-wider mb-2">Detalles de pago</label>
-                        <div id="paymentBrick_container" class="w-full"></div>
-                    </div>
-
-                    <div class="pay-trust-strip justify-center">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                        <span>Pagos 100% seguros y encriptados (SSL 256 bits)</span>
-                    </div>
-                </div>
-            </template>
         </div>
 
         <template x-if="cartItems.length > 0">
-            <div x-show="checkoutStep !== 3" class="p-4 sm:p-5 border-t border-[var(--pay-border)] bg-[var(--pay-surface-muted)]">
+            <div class="p-4 sm:p-5 border-t border-[var(--pay-border)] bg-[var(--pay-surface-muted)]">
                 <div class="flex justify-between items-center mb-2 text-[var(--pay-text-muted)] text-sm">
                     <span>Subtotal:</span>
                     <span x-text="formatMoney(cartTotal - shippingCost - (customer.express_shipping ? expressCost : 0))"></span>
@@ -614,7 +669,7 @@
                         <template x-if="customerLoggedIn">
                             <button id="btnSubmitOrder" @click="submitOrder" :disabled="submitting" style="background: var(--pay-accent);" class="flex-1 py-3 rounded-xl font-bold text-white transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-60 hover:opacity-90">
                                 <span x-show="submitting" class="pay-spinner"></span>
-                                <span x-text="submitting ? 'Procesando...' : (paymentMethod === 'mercadopago' ? 'Continuar al pago' : 'Confirmar pedido')"></span>
+                                <span x-text="submitting ? 'Procesando...' : (paymentMethod === 'card' ? 'Pagar ahora' : (paymentMethod === 'mercadopago_other' ? 'Continuar al pago' : 'Confirmar pedido'))"></span>
                             </button>
                         </template>
                     </div>
@@ -624,5 +679,8 @@
     </div>
 </div>
 @if($hasMpCapable)
+{{-- MercadoPago.js: solo para tokenizar la tarjeta en el navegador (createCardToken,
+     getPaymentMethods, getIdentificationTypes) — el formulario en sí es nuestro, no un
+     widget de Mercado Pago. Nunca enviamos el número/CVV en texto plano a nuestro servidor. --}}
 <script src="https://sdk.mercadopago.com/js/v2"></script>
 @endif

@@ -637,76 +637,96 @@ class StoreController extends Controller
             'whatsapp_url' => $whatsappUrl,
         ];
 
-        // Integración de Mercado Pago (Tarjetas Débito / Crédito 100% Seguras)
+        // Integración de Mercado Pago — dos caminos distintos según lo que el cliente
+        // eligió en el drawer (ver Mercado-Pago-Checkout-Flow en la bóveda del proyecto):
+        //  1) Tarjeta: se tokeniza en el navegador con MercadoPago.js (nunca toca nuestro
+        //     servidor en texto plano) y llega aquí como `mp_form_data.token` — se cobra
+        //     directo vía /v1/payments, sin salir de la tienda.
+        //  2) "Otros medios" (Yape, PagoEfectivo, banca, etc.): no se pueden representar
+        //     como campos de formulario, así que usan Checkout Pro (redirección a la
+        //     página alojada por Mercado Pago) — llegan aquí sin `mp_form_data`.
         $mpToken = $store->mp_access_token ?? $store->gateway_access_token;
         if (($paymentMethod === 'mercadopago' || $store->checkout_mode === 'card') && $mpToken) {
+            $mpFormData = $request->input('mp_form_data');
             try {
                 $client = new \GuzzleHttp\Client(['timeout' => 15]);
-                $mpFormData = $request->input('mp_form_data');
 
-                if ($mpFormData && isset($mpFormData['token'])) {
-                    // --- FLUJO PAYMENT BRICK (Sin redirección) ---
+                if ($mpFormData && !empty($mpFormData['token'])) {
+                    // --- TARJETA EMBEBIDA (sin redirección) ---
                     $paymentBody = [
                         'transaction_amount' => round((float) $total, 2),
-                        'token' => $mpFormData['token'],
-                        'description' => 'Pedido en ' . $store->name . ' - ' . $order->order_number,
-                        'installments' => $mpFormData['installments'] ?? 1,
-                        'payment_method_id' => $mpFormData['payment_method_id'] ?? null,
-                        'issuer_id' => $mpFormData['issuer_id'] ?? null,
-                        'payer' => array_merge([
-                            'email' => $order->customer_email
-                        ], $mpFormData['payer'] ?? [])
+                        'token'              => $mpFormData['token'],
+                        'description'        => 'Pedido en ' . $store->name . ' - ' . $order->order_number,
+                        'installments'       => (int) ($mpFormData['installments'] ?? 1),
+                        'payment_method_id'  => $mpFormData['payment_method_id'] ?? null,
+                        'issuer_id'          => $mpFormData['issuer_id'] ?? null,
+                        'external_reference' => (string) $order->order_number,
+                        'payer'              => array_merge([
+                            'email' => $order->customer_email,
+                        ], $mpFormData['payer'] ?? []),
                     ];
 
                     $mpResponse = $client->post('https://api.mercadopago.com/v1/payments', [
                         'headers' => [
-                            'Authorization' => 'Bearer ' . trim($mpToken),
-                            'Content-Type'  => 'application/json',
-                            'X-Idempotency-Key' => (string) $order->order_number . '_' . time()
+                            'Authorization'      => 'Bearer ' . trim($mpToken),
+                            'Content-Type'       => 'application/json',
+                            'X-Idempotency-Key'  => (string) $order->order_number . '_' . time(),
                         ],
-                        'json' => $paymentBody
+                        'json' => $paymentBody,
                     ]);
 
                     $paymentData = json_decode($mpResponse->getBody()->getContents(), true);
+                    $status = $paymentData['status'] ?? '';
 
-                    if (($paymentData['status'] ?? '') === 'approved') {
+                    if ($status === 'approved') {
                         $order->update([
-                            'status' => 'confirmed',
-                            'payment_status' => 'paid',
-                            'payment_method' => 'mercadopago',
-                            'internal_notes' => trim(($order->internal_notes ?? '') . "\nMercado Pago Payment ID: " . ($paymentData['id'] ?? 'N/A') . " (Pago Aprobado en Brick)")
+                            'status'          => 'confirmed',
+                            'payment_status'  => 'paid',
+                            'payment_method'  => 'mercadopago',
+                            'internal_notes'  => trim(($order->internal_notes ?? '') . "\nMercado Pago Payment ID: " . ($paymentData['id'] ?? 'N/A') . ' (Aprobado — tarjeta embebida)'),
                         ]);
-                        // La url de redirección se mantiene igual (página de confirmación de Tribio)
-                    } else if (($paymentData['status'] ?? '') === 'in_process') {
+                    } elseif (in_array($status, ['in_process', 'pending'], true)) {
                         $order->update([
                             'payment_method' => 'mercadopago',
-                            'internal_notes' => trim(($order->internal_notes ?? '') . "\nMercado Pago Payment ID: " . ($paymentData['id'] ?? 'N/A') . " (Pago en proceso - Brick)")
+                            'internal_notes' => trim(($order->internal_notes ?? '') . "\nMercado Pago Payment ID: " . ($paymentData['id'] ?? 'N/A') . " (En proceso: {$status})"),
                         ]);
                     } else {
-                        // Pago rechazado
-                        $statusDetail = $paymentData['status_detail'] ?? 'Desconocido';
+                        $statusDetail = $paymentData['status_detail'] ?? 'desconocido';
+                        \Log::error('Mercado Pago: pago con tarjeta rechazado.', [
+                            'order_number' => $order->order_number,
+                            'response'     => $paymentData,
+                        ]);
+                        $order->update([
+                            'payment_status' => 'failed',
+                            'internal_notes' => trim(($order->internal_notes ?? '') . "\nPago con tarjeta rechazado: {$statusDetail}"),
+                        ]);
                         return response()->json([
                             'success' => false,
-                            'error' => 'El pago fue rechazado. (' . $statusDetail . ')'
+                            'error'   => 'Tu tarjeta fue rechazada (' . $statusDetail . '). Verifica los datos o intenta con otro método de pago.',
                         ]);
                     }
-
+                    // Aprobado o pendiente: continúa hacia $response normal más abajo —
+                    // el cliente se queda en la tienda, ve la confirmación sin salir.
                 } else {
-                    // --- FLUJO CHECKOUT PRO ANTIGUO (Con redirección) ---
+                    // --- OTROS MEDIOS DE MERCADO PAGO (Checkout Pro, con redirección) ---
+                    // Se arma desde $orderItemsData (ya en memoria, recién usado para crear
+                    // el pedido) y no desde $order->items: el observer de Order ya dejó esa
+                    // relación cacheada como vacía (ver el comentario en OrderObserver::created),
+                    // así que leerla aquí de nuevo mandaría un carrito vacío a Mercado Pago.
                     $items = [];
-                    foreach ($order->items as $orderItem) {
-                        $itemTitle = $orderItem->product_name;
-                        if (!empty($orderItem->variant_title)) {
-                            $itemTitle .= " ({$orderItem->variant_title})";
+                    foreach ($orderItemsData as $orderItem) {
+                        $itemTitle = $orderItem['product_name'];
+                        if (!empty($orderItem['variant_title'])) {
+                            $itemTitle .= " ({$orderItem['variant_title']})";
                         }
                         $items[] = [
                             'title'       => Str::limit($itemTitle, 250),
-                            'quantity'    => (int) $orderItem->quantity,
-                            'unit_price'  => round((float) $orderItem->price, 2),
+                            'quantity'    => (int) $orderItem['quantity'],
+                            'unit_price'  => round((float) $orderItem['price'], 2),
                             'currency_id' => $currency === 'USD' ? 'USD' : 'PEN',
                         ];
                     }
-                    
+
                     if ($shippingCost > 0) {
                         $items[] = [
                             'title'       => 'Costo de Envío',
@@ -718,6 +738,10 @@ class StoreController extends Controller
 
                     $backUrl = route('store.order.confirmation', [$store->slug, $order->id]);
                     $webhookUrl = route('api.mercadopago.webhook', [$store->id]);
+                    // Mercado Pago no acepta `auto_return`/`notification_url` apuntando a una URL
+                    // no pública (ej. localhost/127.0.0.1 en desarrollo local) — rechaza la creación
+                    // de la preference entera con "auto_return invalid" si se envía de todas formas.
+                    $isPubliclyReachable = !str_contains($backUrl, 'localhost') && !str_contains($backUrl, '127.0.0.1');
 
                     $preferenceBody = [
                         'items' => $items,
@@ -736,12 +760,12 @@ class StoreController extends Controller
                             'failure' => $backUrl,
                             'pending' => $backUrl,
                         ],
-                        'auto_return'         => 'approved',
                         'external_reference'  => (string) $order->order_number,
                         'statement_descriptor'=> Str::limit(preg_replace('/[^A-Za-z0-9 ]/', '', $store->name), 22),
                     ];
 
-                    if (!str_contains($webhookUrl, 'localhost') && !str_contains($webhookUrl, '127.0.0.1')) {
+                    if ($isPubliclyReachable) {
+                        $preferenceBody['auto_return'] = 'approved';
                         $preferenceBody['notification_url'] = $webhookUrl;
                     }
 
@@ -763,10 +787,42 @@ class StoreController extends Controller
                             'payment_method' => 'mercadopago',
                             'internal_notes' => 'Mercado Pago Preference ID: ' . ($preference['id'] ?? 'N/A') . ' (' . ($isSandbox ? 'Sandbox/Test' : 'Producción') . ')'
                         ]);
+                    } else {
+                        \Log::error('Mercado Pago: la preference se creó pero no devolvió una URL de pago.', [
+                            'order_number' => $order->order_number,
+                            'preference_response' => $preference,
+                        ]);
+                        $order->update([
+                            'payment_status' => 'failed',
+                            'internal_notes' => trim(($order->internal_notes ?? '') . "\nMercado Pago no devolvió una URL de pago: " . json_encode($preference)),
+                        ]);
+                        return response()->json([
+                            'success' => false,
+                            'error' => 'No se pudo iniciar el pago con Mercado Pago. Intenta de nuevo o elige otro método.',
+                        ]);
                     }
                 }
+            } catch (\GuzzleHttp\Exception\RequestException $e) {
+                $mpErrorBody = $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : $e->getMessage();
+                \Log::error('Mercado Pago Error: ' . $mpErrorBody, ['order_number' => $order->order_number]);
+                $order->update([
+                    'payment_status' => 'failed',
+                    'internal_notes' => trim(($order->internal_notes ?? '') . "\nError Mercado Pago: " . $mpErrorBody),
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No se pudo conectar con Mercado Pago. Intenta de nuevo o elige otro método de pago.',
+                ]);
             } catch (\Exception $e) {
-                \Log::error('Mercado Pago Error: ' . $e->getMessage());
+                \Log::error('Mercado Pago Error: ' . $e->getMessage(), ['order_number' => $order->order_number]);
+                $order->update([
+                    'payment_status' => 'failed',
+                    'internal_notes' => trim(($order->internal_notes ?? '') . "\nError Mercado Pago: " . $e->getMessage()),
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No se pudo iniciar el pago con Mercado Pago. Intenta de nuevo o elige otro método de pago.',
+                ]);
             }
         }
 

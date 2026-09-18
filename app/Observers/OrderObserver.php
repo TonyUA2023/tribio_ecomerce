@@ -17,7 +17,16 @@ class OrderObserver
      */
     public function created(Order $order): void
     {
-        $order->loadMissing(['items', 'store']);
+        // OJO: no cargar 'items' aquí. Este evento se dispara en el instante en que se
+        // inserta la fila del pedido — antes de que StoreController::checkout() llame a
+        // $order->items()->createMany(...) unas líneas más abajo, en la misma petición.
+        // Si cacheamos la relación 'items' aquí, queda vacía para siempre en este objeto
+        // ($order->items ya no vuelve a consultar la base de datos), y cualquier código que
+        // corra después en la misma petición (p. ej. la creación de la preference de Mercado
+        // Pago) ve un pedido sin productos aunque sí se hayan guardado correctamente.
+        // Los correos no se ven afectados: al ir en cola, Laravel recarga el pedido desde
+        // cero cuando el worker los procesa, así que si ya existen los items para entonces.
+        $order->loadMissing('store');
 
         if ($order->customer_email) {
             try {
