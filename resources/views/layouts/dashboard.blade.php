@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') — Tribio</title>
-    @php $dashboardStore = Auth::user()->store; @endphp
+    @php
+        $dashboardStore = Auth::user()->currentStore();
+        $dashboardStores = Auth::user()->stores;
+    @endphp
     <link rel="icon" href="{{ $dashboardStore && $dashboardStore->logo_path ? $dashboardStore->logo_url : asset('favicon.ico') }}">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     @vite(['resources/css/app.css', 'resources/css/dashboard.css', 'resources/js/app.js'])
@@ -38,7 +41,35 @@
             </a>
             <button type="button" class="dash-icon-button dash-close" x-ref="closeNavigation" @click="closeMenu()" aria-label="Cerrar navegación"><x-dashboard-icon name="close"/></button>
         </div>
-        @if($dashboardStore)
+        @if($dashboardStore && $dashboardStores->count() > 1)
+        <div class="dash-store-switch-wrap" x-data="{ storeMenuOpen: false }" @click.outside="storeMenuOpen = false">
+            <button type="button" class="dash-store-switch w-full" @click="storeMenuOpen = !storeMenuOpen" :aria-expanded="storeMenuOpen" title="Cambiar de tienda">
+                <span class="dash-store-avatar">
+                    @if($dashboardStore->logo_path)<img src="{{ $dashboardStore->logo_url }}" alt="">@else<x-dashboard-icon name="store"/>@endif
+                </span>
+                <span class="dash-nav-label min-w-0"><strong>{{ $dashboardStore->name }}</strong><small>{{ $dashboardStores->count() }} tiendas · cambiar</small></span>
+            </button>
+            <div x-show="storeMenuOpen" x-cloak x-transition class="dash-store-switch-menu">
+                @foreach($dashboardStores as $ownedStore)
+                    @if($ownedStore->id === $dashboardStore->id)
+                        <span class="dash-store-switch-item is-active">
+                            <span class="dash-store-avatar">@if($ownedStore->logo_path)<img src="{{ $ownedStore->logo_url }}" alt="">@else<x-dashboard-icon name="store"/>@endif</span>
+                            {{ $ownedStore->name }}
+                        </span>
+                    @else
+                        <form method="POST" action="{{ route('dashboard.store.switch', $ownedStore) }}">
+                            @csrf
+                            <button type="submit" class="dash-store-switch-item">
+                                <span class="dash-store-avatar">@if($ownedStore->logo_path)<img src="{{ $ownedStore->logo_url }}" alt="">@else<x-dashboard-icon name="store"/>@endif</span>
+                                {{ $ownedStore->name }}
+                            </button>
+                        </form>
+                    @endif
+                @endforeach
+                <a href="{{ route('home') }}#precios" class="dash-store-switch-item dash-store-switch-add">+ Abrir otra tienda</a>
+            </div>
+        </div>
+        @elseif($dashboardStore)
         <a href="{{ route('dashboard.store.edit') }}" class="dash-store-switch" title="Configurar {{ $dashboardStore->name }}">
             <span class="dash-store-avatar">
                 @if($dashboardStore->logo_path)<img src="{{ $dashboardStore->logo_url }}" alt="">@else<x-dashboard-icon name="store"/>@endif

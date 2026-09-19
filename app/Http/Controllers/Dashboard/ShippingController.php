@@ -9,17 +9,22 @@ use Illuminate\Support\Facades\Auth;
 
 class ShippingController extends Controller
 {
+    private function getStore()
+    {
+        return Auth::user()->currentStore();
+    }
+
     public function index()
     {
-        $store = Auth::user()->store;
+        $store = $this->getStore();
         $rates = $store->shippingRates()->orderBy('country_code')->get();
         return view('dashboard.shipping.index', compact('store', 'rates'));
     }
 
     public function store(Request $request)
     {
-        $store = Auth::user()->store;
-        
+        $store = $this->getStore();
+
         $request->validate([
             'country_code' => 'required|string|max:3',
             'state'        => 'nullable|string|max:100',
@@ -38,7 +43,7 @@ class ShippingController extends Controller
 
     public function destroy(ShippingRate $shipping)
     {
-        if ($shipping->store_id !== Auth::user()->store->id) {
+        if ($shipping->store_id !== $this->getStore()->id) {
             abort(403);
         }
         $shipping->delete();

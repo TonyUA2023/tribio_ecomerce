@@ -8,9 +8,14 @@ use App\Models\StoreSection;
 
 class StoreBuilderController extends Controller
 {
+    private function getStore()
+    {
+        return auth()->user()->currentStore();
+    }
+
     public function index()
     {
-        $store = auth()->user()->store;
+        $store = $this->getStore();
         $sections = $store->sections;
 
         return view('dashboard.store.builder', compact('store', 'sections'));
@@ -18,8 +23,8 @@ class StoreBuilderController extends Controller
 
     public function store(Request $request)
     {
-        $store = auth()->user()->store;
-        
+        $store = $this->getStore();
+
         $request->validate([
             'type' => 'required|string',
             'order' => 'integer'
@@ -55,7 +60,7 @@ class StoreBuilderController extends Controller
 
     public function update(Request $request, $id)
     {
-        $store = auth()->user()->store;
+        $store = $this->getStore();
         $section = $store->sections()->findOrFail($id);
 
         $request->validate([
@@ -92,8 +97,8 @@ class StoreBuilderController extends Controller
 
     public function reorder(Request $request)
     {
-        $store = auth()->user()->store;
-        
+        $store = $this->getStore();
+
         $request->validate([
             'sections' => 'required|array',
             'sections.*.id' => 'required|exists:store_sections,id',
@@ -109,9 +114,9 @@ class StoreBuilderController extends Controller
 
     public function destroy($id)
     {
-        $store = auth()->user()->store;
+        $store = $this->getStore();
         $section = $store->sections()->findOrFail($id);
-        
+
         $section->delete();
 
         return response()->json(['message' => 'Sección eliminada']);
@@ -126,7 +131,7 @@ class StoreBuilderController extends Controller
 
         $type = $request->type;
         $data = $request->data;
-        $store = auth()->user()->store;
+        $store = $this->getStore();
         $categories = $store->categories;
         $products = $store->products;
 
@@ -154,7 +159,7 @@ class StoreBuilderController extends Controller
 
     public function loadFromTemplate(Request $request)
     {
-        $store = auth()->user()->store;
+        $store = $this->getStore();
         $template = $store->template_name;
 
         // Limpiar secciones existentes
@@ -184,8 +189,8 @@ class StoreBuilderController extends Controller
 
     public function publish(Request $request)
     {
-        $store = auth()->user()->store;
-        
+        $store = $this->getStore();
+
         // Obtener todas las secciones (activas e inactivas) en el orden correcto
         $sections = $store->sections()->orderBy('order')->get();
         

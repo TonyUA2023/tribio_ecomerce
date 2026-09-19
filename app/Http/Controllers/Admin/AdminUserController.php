@@ -10,7 +10,7 @@ class AdminUserController extends Controller
 {
     public function index(Request $request)
     {
-        $users = User::with('store')
+        $users = User::with('stores')
             ->when($request->search, fn($q) => $q->where('name', 'like', "%{$request->search}%")
                 ->orWhere('email', 'like', "%{$request->search}%"))
             ->when($request->role, fn($q) => $q->where('role', $request->role))
@@ -22,7 +22,7 @@ class AdminUserController extends Controller
 
     public function show(User $user)
     {
-        $user->load(['store.orders', 'store.products']);
+        $user->load(['stores.orders', 'stores.products']);
         return view('admin.users.show', compact('user'));
     }
 }

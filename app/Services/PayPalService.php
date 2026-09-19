@@ -83,17 +83,24 @@ class PayPalService
     /**
      * @param array<int, array{name: string, unit_amount: float, quantity: int}> $items
      */
-    public function createOrder(Store $store, string $referenceId, array $items, float $shippingUsd = 0.0): array
+    public function createOrder(Store $store, string $referenceId, array $items, float $shippingUsd = 0.0, float $discountUsd = 0.0): array
     {
         $itemTotal = round(array_sum(array_map(fn ($i) => round($i['unit_amount'], 2) * $i['quantity'], $items)), 2);
         $shippingUsd = round($shippingUsd, 2);
-        $total = round($itemTotal + $shippingUsd, 2);
+        // Never let a discount (e.g. Store::calculateBulkDiscount(), converted to USD)
+        // exceed the items it's discounting — PayPal rejects a breakdown that doesn't
+        // sum exactly to `amount.value`, and a negative total would do exactly that.
+        $discountUsd = round(min($discountUsd, $itemTotal), 2);
+        $total = round($itemTotal - $discountUsd + $shippingUsd, 2);
 
         $breakdown = [
             'item_total' => ['currency_code' => 'USD', 'value' => number_format($itemTotal, 2, '.', '')],
         ];
         if ($shippingUsd > 0) {
             $breakdown['shipping'] = ['currency_code' => 'USD', 'value' => number_format($shippingUsd, 2, '.', '')];
+        }
+        if ($discountUsd > 0) {
+            $breakdown['discount'] = ['currency_code' => 'USD', 'value' => number_format($discountUsd, 2, '.', '')];
         }
 
         $purchaseUnit = [

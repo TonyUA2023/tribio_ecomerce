@@ -25,6 +25,8 @@
         checkoutMode: '{{ old('checkout_mode', $store?->checkout_mode ?? 'whatsapp') }}',
         gateway: '{{ old('payment_gateway', $store?->payment_gateway ?? '') }}',
         expressEnabled: {{ old('is_express_shipping_enabled', $store?->is_express_shipping_enabled) ? 'true' : 'false' }},
+        freeShippingEnabled: {{ old('free_shipping_min_quantity', $store?->free_shipping_min_quantity) || old('free_shipping_min_amount', $store?->free_shipping_min_amount) ? 'true' : 'false' }},
+        bulkDiscountEnabled: {{ old('bulk_discount_min_quantity', $store?->bulk_discount_min_quantity) ? 'true' : 'false' }},
         langEnabled: {{ old('is_multilanguage_enabled', $store?->is_multilanguage_enabled) ? 'true' : 'false' }},
         showGatewayPrivate: false, showMpToken: false, showPaypalSecret: false,
         regions: {{ json_encode(old('distributors', $store->distributors ?? [])) }} || [],
@@ -230,6 +232,67 @@
                     <label class="input-label">Costo del Envío Express (S/.)</label>
                     <input type="number" step="0.01" min="0" name="express_shipping_cost" class="input-field" value="{{ old('express_shipping_cost', $store?->express_shipping_cost ?? '0.00') }}" placeholder="0.00">
                     <p class="text-[10px] text-white/40 mt-1">Si es gratis, déjalo en 0. Este monto se sumará al subtotal del pedido si el cliente lo elige.</p>
+                </div>
+            </div>
+
+            {{-- Envío gratis por cantidad o monto --}}
+            <div class="border-t border-white/10 pt-4 mt-4">
+                <label class="flex items-center gap-3 cursor-pointer mb-3">
+                    <div class="relative">
+                        <input type="checkbox" class="sr-only" x-model="freeShippingEnabled">
+                        <div class="block bg-white/10 w-10 h-6 rounded-full transition-colors" :class="{'bg-tribio-cyan': freeShippingEnabled}"></div>
+                        <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform" :class="{'translate-x-4': freeShippingEnabled}"></div>
+                    </div>
+                    <span class="text-sm font-medium text-white">🎁 Envío Gratis a partir de una cantidad o monto</span>
+                </label>
+                <div x-show="freeShippingEnabled" x-cloak class="bg-white/3 border border-white/5 p-4 rounded-xl space-y-4">
+                    <p class="text-[11px] text-white/50">Se activa el envío gratis apenas se cumple <strong>cualquiera</strong> de las dos condiciones. Deja una en blanco si no quieres usarla.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="input-label">Cantidad mínima de productos</label>
+                            <input type="number" step="1" min="1" name="free_shipping_min_quantity" class="input-field" value="{{ old('free_shipping_min_quantity', $store?->free_shipping_min_quantity) }}" placeholder="Ej: 3">
+                            <p class="text-[10px] text-white/40 mt-1">Ej: 3 → gratis desde 3 productos en el carrito.</p>
+                        </div>
+                        <div>
+                            <label class="input-label">Monto mínimo de compra (S/.)</label>
+                            <input type="number" step="0.01" min="0" name="free_shipping_min_amount" class="input-field" value="{{ old('free_shipping_min_amount', $store?->free_shipping_min_amount) }}" placeholder="Ej: 100.00">
+                            <p class="text-[10px] text-white/40 mt-1">Ej: 100 → gratis si el pedido suma S/ 100 o más.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Descuento por cantidad (compra al por mayor) --}}
+            <div class="border-t border-white/10 pt-4 mt-4">
+                <label class="flex items-center gap-3 cursor-pointer mb-3">
+                    <div class="relative">
+                        <input type="checkbox" class="sr-only" x-model="bulkDiscountEnabled">
+                        <div class="block bg-white/10 w-10 h-6 rounded-full transition-colors" :class="{'bg-tribio-cyan': bulkDiscountEnabled}"></div>
+                        <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform" :class="{'translate-x-4': bulkDiscountEnabled}"></div>
+                    </div>
+                    <span class="text-sm font-medium text-white">🏷️ Descuento por compra al por mayor</span>
+                </label>
+                <div x-show="bulkDiscountEnabled" x-cloak class="bg-white/3 border border-white/5 p-4 rounded-xl space-y-4">
+                    <p class="text-[11px] text-white/50">Aplica un descuento automático al pedido completo cuando el cliente lleva muchos productos.</p>
+                    <div>
+                        <label class="input-label">Cantidad mínima de productos</label>
+                        <input type="number" step="1" min="1" name="bulk_discount_min_quantity" class="input-field" value="{{ old('bulk_discount_min_quantity', $store?->bulk_discount_min_quantity) }}" placeholder="Ej: 10">
+                        <p class="text-[10px] text-white/40 mt-1">Ej: 10 → el descuento se activa desde 10 productos en el carrito.</p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="input-label">Tipo de descuento</label>
+                            <select name="bulk_discount_type" class="input-field">
+                                <option value="percentage" {{ old('bulk_discount_type', $store?->bulk_discount_type) === 'percentage' ? 'selected' : '' }}>Porcentaje (%)</option>
+                                <option value="fixed" {{ old('bulk_discount_type', $store?->bulk_discount_type) === 'fixed' ? 'selected' : '' }}>Monto fijo (S/.)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="input-label">Valor del descuento</label>
+                            <input type="number" step="0.01" min="0" name="bulk_discount_value" class="input-field" value="{{ old('bulk_discount_value', $store?->bulk_discount_value) }}" placeholder="Ej: 10">
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-white/40">El descuento se aplica sobre el subtotal del pedido, antes de sumar el envío.</p>
                 </div>
             </div>
         </div>

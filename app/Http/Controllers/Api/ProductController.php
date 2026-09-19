@@ -11,7 +11,7 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $store = $request->user()->store;
+        $store = $request->user()->currentStore();
 
         if (!$store) {
             return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);
@@ -59,7 +59,7 @@ class ProductController extends Controller
 
     public function show(Request $request, $id)
     {
-        $store = $request->user()->store;
+        $store = $request->user()->currentStore();
 
         if (!$store) {
             return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);
@@ -96,7 +96,7 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
-        $store = $request->user()->store;
+        $store = $request->user()->currentStore();
 
         if (!$store) {
             return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);
@@ -192,7 +192,7 @@ class ProductController extends Controller
 
     public function update(Request $request, $id)
     {
-        $store = $request->user()->store;
+        $store = $request->user()->currentStore();
 
         if (!$store) {
             return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);
@@ -297,7 +297,7 @@ class ProductController extends Controller
 
     public function destroy(Request $request, $id)
     {
-        $store = $request->user()->store;
+        $store = $request->user()->currentStore();
 
         if (!$store) {
             return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);
@@ -318,7 +318,7 @@ class ProductController extends Controller
 
     public function addStateHistory(Request $request, $id)
     {
-        $store = $request->user()->store;
+        $store = $request->user()->currentStore();
         if (!$store) {
             return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);
         }

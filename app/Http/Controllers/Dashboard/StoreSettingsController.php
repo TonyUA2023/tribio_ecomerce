@@ -11,7 +11,7 @@ class StoreSettingsController extends Controller
 {
     private function getStore()
     {
-        return Auth::user()->store;
+        return Auth::user()->currentStore();
     }
 
     public function edit()
@@ -74,6 +74,11 @@ class StoreSettingsController extends Controller
             'is_express_shipping_enabled' => 'nullable|boolean',
             'express_shipping_cost'       => 'nullable|numeric|min:0',
             'national_shipping_cost'      => 'nullable|numeric|min:0',
+            'free_shipping_min_quantity'  => 'nullable|integer|min:1',
+            'free_shipping_min_amount'    => 'nullable|numeric|min:0',
+            'bulk_discount_min_quantity'  => 'nullable|integer|min:1',
+            'bulk_discount_type'          => 'nullable|string|in:percentage,fixed',
+            'bulk_discount_value'         => 'nullable|numeric|min:0',
             'enabled_countries'           => 'nullable|array',
             'enabled_countries.*'         => 'string|in:PE,US,ES,MX,CO,EC,CL,AR',
             'country_shipping_costs'      => 'nullable|array',
@@ -104,11 +109,24 @@ class StoreSettingsController extends Controller
             'mp_access_token', 'mp_public_key', 'contact_email', 'contact_phone',
             'paypal_client_id', 'paypal_client_secret', 'paypal_mode', 'paypal_webhook_id',
             'express_shipping_cost', 'national_shipping_cost',
+            'free_shipping_min_quantity', 'free_shipping_min_amount',
+            'bulk_discount_min_quantity', 'bulk_discount_type', 'bulk_discount_value',
             'hero_title', 'hero_subtitle', 'hero_badge'
         ]);
         $data['is_express_shipping_enabled'] = $request->has('is_express_shipping_enabled');
         $data['is_multilanguage_enabled']    = $request->has('is_multilanguage_enabled');
         $data['paypal_mode'] = in_array($data['paypal_mode'] ?? null, ['sandbox', 'live'], true) ? $data['paypal_mode'] : 'sandbox';
+
+        // Campos numéricos opcionales: un input vacío llega como '' y no como null,
+        // lo cual rompería las columnas integer/decimal si se guarda tal cual.
+        foreach (['free_shipping_min_quantity', 'free_shipping_min_amount', 'bulk_discount_min_quantity', 'bulk_discount_value'] as $numericField) {
+            if (($data[$numericField] ?? '') === '') {
+                $data[$numericField] = null;
+            }
+        }
+        if (empty($data['bulk_discount_type'])) {
+            $data['bulk_discount_type'] = null;
+        }
 
         // Países habilitados
         $enabledCountries = $request->input('enabled_countries', ['PE', 'US']);

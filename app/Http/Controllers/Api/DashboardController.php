@@ -12,7 +12,7 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $store = $user->store;
+        $store = $user->currentStore();
 
         if (!$store) {
             return response()->json([

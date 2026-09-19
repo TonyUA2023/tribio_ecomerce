@@ -27,7 +27,9 @@ class Store extends Model
         'paypal_client_id', 'paypal_client_secret', 'paypal_mode', 'paypal_webhook_id',
         'is_express_shipping_enabled', 'express_shipping_cost',
         'is_multilanguage_enabled', 'hero_badge', 'hero_title', 'hero_subtitle',
-        'enabled_countries', 'national_shipping_cost', 'country_shipping_costs'
+        'enabled_countries', 'national_shipping_cost', 'country_shipping_costs',
+        'free_shipping_min_quantity', 'free_shipping_min_amount',
+        'bulk_discount_min_quantity', 'bulk_discount_type', 'bulk_discount_value',
     ];
 
     protected $casts = [
@@ -44,6 +46,8 @@ class Store extends Model
         'total_revenue'    => 'decimal:2',
         'express_shipping_cost' => 'decimal:2',
         'national_shipping_cost' => 'decimal:2',
+        'free_shipping_min_amount' => 'decimal:2',
+        'bulk_discount_value'      => 'decimal:2',
     ];
 
     public function getEnabledCountriesList(): array
@@ -119,6 +123,47 @@ class Store extends Model
     public function hasPlanExpired(): bool
     {
         return $this->plan_expires_at && $this->plan_expires_at->isPast();
+    }
+
+    /**
+     * Free shipping when EITHER configured threshold is met (OR, not AND) — a store
+     * owner can use just one, both, or neither. Either column being null/0 disables
+     * that specific condition without affecting the other.
+     */
+    public function qualifiesForFreeShipping(float $subtotal, int $quantity): bool
+    {
+        if ($this->free_shipping_min_quantity && $quantity >= $this->free_shipping_min_quantity) {
+            return true;
+        }
+
+        if ($this->free_shipping_min_amount && $subtotal >= (float) $this->free_shipping_min_amount) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * A single quantity-triggered discount on the order subtotal (e.g. "10% off from
+     * 10 items"). Never discounts more than the subtotal itself, and a percentage
+     * above 100 is clamped — both guard against a store owner mistyping the value.
+     */
+    public function calculateBulkDiscount(float $subtotal, int $quantity): float
+    {
+        if (!$this->bulk_discount_min_quantity || $quantity < $this->bulk_discount_min_quantity) {
+            return 0.0;
+        }
+
+        $value = (float) ($this->bulk_discount_value ?? 0);
+        if ($value <= 0) {
+            return 0.0;
+        }
+
+        if ($this->bulk_discount_type === 'percentage') {
+            return round($subtotal * (min($value, 100) / 100), 2);
+        }
+
+        return round(min($value, $subtotal), 2);
     }
 
     // ─── Relationships ───────────────────────────────────────────

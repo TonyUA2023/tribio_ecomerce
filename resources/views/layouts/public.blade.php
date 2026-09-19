@@ -44,11 +44,11 @@
                             <a href="{{ route('dashboard.index') }}" class="btn-primary">Mi Dashboard</a>
                         @else
                             <a href="{{ route('home') }}#precios" class="text-slate-600 hover:text-slate-900 text-sm font-semibold transition-colors hidden sm:inline">Abrir mi negocio</a>
-                            <a href="{{ route('tribio-pass') }}" class="btn-primary">🪪 Mi Tribio Pass</a>
+                            <a href="{{ route('tribio-pass') }}" class="btn-primary">Mi Tribio Pass</a>
                         @endif
                     @else
                         <a href="{{ route('login') }}" class="text-slate-600 hover:text-slate-900 text-sm font-semibold transition-colors hidden sm:inline">Ingresar</a>
-                        <a href="{{ route('tribio-pass') }}" class="text-slate-600 hover:text-slate-900 text-sm font-semibold transition-colors">🪪 Tribio Pass</a>
+                        <a href="{{ route('tribio-pass') }}" class="text-slate-600 hover:text-slate-900 text-sm font-semibold transition-colors">Tribio Pass</a>
                         <a href="{{ route('register') }}" class="btn-primary">Crear mi tienda</a>
                     @endauth
                 </div>

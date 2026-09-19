@@ -10,7 +10,7 @@ class StoreController extends Controller
 {
     public function show(Request $request)
     {
-        $store = $request->user()->store;
+        $store = $request->user()->currentStore();
 
         if (!$store) {
             return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);
@@ -32,7 +32,7 @@ class StoreController extends Controller
 
     public function update(Request $request)
     {
-        $store = $request->user()->store;
+        $store = $request->user()->currentStore();
 
         if (!$store) {
             return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);

@@ -10,7 +10,7 @@ class OrderController extends Controller
 {
     public function index(Request $request)
     {
-        $store = $request->user()->store;
+        $store = $request->user()->currentStore();
 
         if (!$store) {
             return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);
@@ -45,7 +45,7 @@ class OrderController extends Controller
 
     public function show(Request $request, $id)
     {
-        $store = $request->user()->store;
+        $store = $request->user()->currentStore();
 
         if (!$store) {
             return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);
@@ -68,7 +68,7 @@ class OrderController extends Controller
 
     public function updateStatus(Request $request, $id)
     {
-        $store = $request->user()->store;
+        $store = $request->user()->currentStore();
 
         if (!$store) {
             return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);

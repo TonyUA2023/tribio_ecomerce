@@ -53,6 +53,8 @@
          currentCurrency: '{{ \App\Helpers\CurrencyHelper::currentCurrency() }}',
          currencySymbol: '{{ \App\Helpers\CurrencyHelper::symbol() }}',
          shippingCost: 0,
+         discount: 0,
+         freeShippingActive: false,
          hasMercadoPago: {{ $hasMpCapable ? 'true' : 'false' }},
          hasWhatsapp: {{ in_array($store->checkout_mode, ['whatsapp', 'mixed']) ? 'true' : 'false' }},
          hasPaypal: {{ $hasPaypalCapable ? 'true' : 'false' }},
@@ -84,6 +86,9 @@
              this.updateShipping();
              this.checkCurrentCustomer();
              if (this.hasMercadoPago) this.ensureMercadoPagoJs();
+             // Envío gratis / descuento por cantidad dependen de cuánto hay en el carrito,
+             // así que se recalculan cada vez que cambia (agregar, quitar, +/- cantidad).
+             this.$watch('cartItems', () => this.updateShipping());
              window.addEventListener('open-cart-drawer', () => { this.cartOpen = true; });
          },
          async ensureMercadoPagoJs() {
@@ -285,8 +290,14 @@
                  this.submitting = false;
              }
          },
+         get cartSubtotal() {
+             return this.cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+         },
+         get cartQuantity() {
+             return this.cartItems.reduce((acc, item) => acc + item.quantity, 0);
+         },
          get cartTotal() {
-             let total = this.cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+             let total = this.cartSubtotal - this.discount;
              if (this.customer.express_shipping) total += this.expressCost;
              total += this.shippingCost;
              return total;
@@ -359,10 +370,20 @@
          },
          updateShipping() {
              if (!this.customer.country) return;
-             fetch(`/api/shipping-cost/${this.storeSlug}?country=${this.customer.country}&state=${this.customer.state}`)
+             const params = new URLSearchParams({
+                 country: this.customer.country,
+                 state: this.customer.state || '',
+                 quantity: this.cartQuantity,
+                 subtotal: this.cartSubtotal,
+             });
+             fetch(`/api/shipping-cost/${this.storeSlug}?${params.toString()}`)
                  .then(res => res.json())
-                 .then(data => { this.shippingCost = parseFloat(data.cost) || 0; })
-                 .catch(() => this.shippingCost = 0);
+                 .then(data => {
+                     this.shippingCost = parseFloat(data.cost) || 0;
+                     this.freeShippingActive = !!data.free_shipping;
+                     this.discount = parseFloat(data.discount) || 0;
+                 })
+                 .catch(() => { this.shippingCost = 0; this.freeShippingActive = false; this.discount = 0; });
          },
          async checkCurrentCustomer() {
              try {
@@ -778,12 +799,24 @@
             <div class="p-4 sm:p-5 border-t border-[var(--pay-border)] bg-[var(--pay-surface-muted)]">
                 <div class="flex justify-between items-center mb-2 text-[var(--pay-text-muted)] text-sm">
                     <span>Subtotal:</span>
-                    <span x-text="formatMoney(cartTotal - shippingCost - (customer.express_shipping ? expressCost : 0))"></span>
+                    <span x-text="formatMoney(cartSubtotal)"></span>
                 </div>
+                <template x-if="discount > 0">
+                    <div class="flex justify-between items-center mb-2 text-emerald-600 text-sm">
+                        <span>🏷️ Descuento:</span>
+                        <span x-text="'- ' + formatMoney(discount)"></span>
+                    </div>
+                </template>
                 <template x-if="shippingCost > 0">
                     <div class="flex justify-between items-center mb-2 text-[var(--pay-text-muted)] text-sm">
                         <span>Envío:</span>
                         <span x-text="'+ ' + formatMoney(shippingCost)"></span>
+                    </div>
+                </template>
+                <template x-if="freeShippingActive">
+                    <div class="flex justify-between items-center mb-2 text-emerald-600 text-sm">
+                        <span>🎁 Envío:</span>
+                        <span>¡Gratis!</span>
                     </div>
                 </template>
                 <div class="flex justify-between items-center text-[var(--pay-text)] border-t border-[var(--pay-border)] pt-2 mt-2"

@@ -428,9 +428,20 @@ class StoreController extends Controller
         $store = $this->getStore($slug);
         $country = $request->input('country', 'PE');
         $state = $request->input('state');
+        $quantity = (int) $request->input('quantity', 0);
+        $subtotal = (float) $request->input('subtotal', 0);
 
         $cost = $this->resolveShippingCostForStore($store, $country, $state);
-        return response()->json(['cost' => $cost]);
+        $freeShipping = $store->qualifiesForFreeShipping($subtotal, $quantity);
+        if ($freeShipping) {
+            $cost = 0;
+        }
+
+        return response()->json([
+            'cost'          => $cost,
+            'free_shipping' => $freeShipping,
+            'discount'      => $store->calculateBulkDiscount($subtotal, $quantity),
+        ]);
     }
 
     public function checkout(Request $request, string $slug)
@@ -546,10 +557,22 @@ class StoreController extends Controller
             ];
         }
 
+        // Descuento por cantidad (compra al por mayor) — se calcula sobre el subtotal
+        // original, antes de envío. Ver Store::calculateBulkDiscount().
+        $totalQuantity = collect($orderItemsData)->sum('quantity');
+        $discount = $store->calculateBulkDiscount($subtotal, $totalQuantity);
+
         // Calculate dynamic shipping cost
         $country = $request->customer_country ?? 'PE';
         $state   = $request->customer_state;
         $shippingCost = $this->resolveShippingCostForStore($store, $country, $state);
+
+        // Envío gratis por cantidad o monto (ver Store::qualifiesForFreeShipping) anula
+        // solo la tarifa base — el envío express, si el cliente lo elige aparte, se sigue
+        // cobrando normalmente.
+        if ($store->qualifiesForFreeShipping($subtotal, $totalQuantity)) {
+            $shippingCost = 0;
+        }
 
         $isExpress = false;
         if ($request->boolean('express_shipping') && $store->is_express_shipping_enabled) {
@@ -557,7 +580,7 @@ class StoreController extends Controller
             $shippingCost += $store->express_shipping_cost;
         }
 
-        $total = $subtotal + $shippingCost;
+        $total = $subtotal - $discount + $shippingCost;
         $currency = \App\Helpers\CurrencyHelper::currentCurrency();
 
         // Gestión de cuenta de cliente universal Tribio
@@ -621,6 +644,7 @@ class StoreController extends Controller
             'customer_zipcode'    => $request->customer_zipcode,
             'customer_notes'      => $request->customer_notes,
             'subtotal'            => $subtotal,
+            'discount'            => $discount,
             'shipping_cost'       => $shippingCost,
             'is_express_shipping' => $isExpress,
             'total'               => $total,
@@ -743,6 +767,19 @@ class StoreController extends Controller
                         ];
                     }
 
+                    // Descuento por cantidad (Store::calculateBulkDiscount): Mercado Pago no
+                    // tiene un campo dedicado para descuentos en la preference, así que se
+                    // representa como una línea más con precio negativo — sin esto, la suma
+                    // de $items no coincidiría con $total y el cliente pagaría de más.
+                    if ($discount > 0) {
+                        $items[] = [
+                            'title'       => 'Descuento por cantidad',
+                            'quantity'    => 1,
+                            'unit_price'  => round((float) $discount, 2) * -1,
+                            'currency_id' => $currency === 'USD' ? 'USD' : 'PEN',
+                        ];
+                    }
+
                     $backUrl = route('store.order.confirmation', [$store->slug, $order->id]);
                     $webhookUrl = route('api.mercadopago.webhook', [$store->id]);
                     // Mercado Pago no acepta `auto_return`/`notification_url` apuntando a una URL
@@ -856,13 +893,20 @@ class StoreController extends Controller
                     ? app(\App\Services\ExchangeRateService::class)->convert((float) $shippingCost, $currency, 'USD')
                     : 0.0;
 
+                // El descuento por cantidad (Store::calculateBulkDiscount) ya se calculó
+                // en soles/moneda de la tienda más arriba — se convierte a USD para que la
+                // orden de PayPal cobre lo mismo, en vez de el monto completo sin descuento.
+                $discountUsd = $discount > 0
+                    ? app(\App\Services\ExchangeRateService::class)->convert((float) $discount, $currency, 'USD')
+                    : 0.0;
+
                 $paypalItems = array_map(fn ($item) => [
                     'name'        => $item['product_name'] . (!empty($item['variant_title']) ? " ({$item['variant_title']})" : ''),
                     'unit_amount' => (float) $item['price_usd'],
                     'quantity'    => (int) $item['quantity'],
                 ], $orderItemsData);
 
-                $paypalOrder = $paypalService->createOrder($store, $order->order_number, $paypalItems, $shippingUsd);
+                $paypalOrder = $paypalService->createOrder($store, $order->order_number, $paypalItems, $shippingUsd, $discountUsd);
 
                 $order->update([
                     'payment_method'  => 'paypal',

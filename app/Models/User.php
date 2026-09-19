@@ -18,6 +18,7 @@ class User extends Authenticatable
         'role',
         'phone',
         'avatar',
+        'current_store_id',
     ];
 
     protected $hidden = [
@@ -66,7 +67,36 @@ class User extends Authenticatable
     // independent of the legacy `role` value. See the vault ADR on this.
     public function hasStore(): bool
     {
-        return $this->store()->exists();
+        return $this->stores()->exists();
+    }
+
+    /**
+     * The dashboard's "active" store — one Tribio Pass account can now own several
+     * (see the multi-store ADR). Resolution order: the account's remembered
+     * `current_store_id` (survives across devices/logins) if it still belongs to
+     * this user, else their oldest store, else null if they own none yet. Never
+     * throws — every dashboard controller can call this instead of the old
+     * `Auth::user()->store` and get either a valid Store or null, exactly like before.
+     */
+    public function currentStore(): ?Store
+    {
+        if ($this->current_store_id) {
+            $store = $this->stores()->find($this->current_store_id);
+            if ($store) {
+                return $store;
+            }
+        }
+
+        return $this->stores()->oldest()->first();
+    }
+
+    /**
+     * Switches the account's remembered current store. Caller must have already
+     * verified $store belongs to this user (see DashboardController::switchStore()).
+     */
+    public function switchToStore(Store $store): void
+    {
+        $this->update(['current_store_id' => $store->id]);
     }
 
     public function hasPurchaseHistory(): bool
@@ -82,9 +112,9 @@ class User extends Authenticatable
     }
 
     // ─── Relationships ───────────────────────────────────────────
-    public function store()
+    public function stores()
     {
-        return $this->hasOne(Store::class);
+        return $this->hasMany(Store::class);
     }
 
     public function activityLogs()

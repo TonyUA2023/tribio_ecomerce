@@ -38,6 +38,11 @@ class AuthController extends Controller
         $tokenName = $request->device_name ?? 'mobile-app';
         $token = $user->createToken($tokenName)->plainTextToken;
 
+        // Tribio Pass accounts can now own more than one store; the mobile app (not yet
+        // updated for multi-store) still gets a single `store` key — the account's
+        // current/default one — to stay backward-compatible.
+        $currentStore = $user->currentStore();
+
         return response()->json([
             'token' => $token,
             'user' => [
@@ -47,12 +52,12 @@ class AuthController extends Controller
                 'role' => $user->role,
                 'phone' => $user->phone,
             ],
-            'store' => $user->store ? [
-                'id' => $user->store->id,
-                'name' => $user->store->name,
-                'slug' => $user->store->slug,
-                'status' => $user->store->status,
-                'logo_url' => $user->store->logo_url,
+            'store' => $currentStore ? [
+                'id' => $currentStore->id,
+                'name' => $currentStore->name,
+                'slug' => $currentStore->slug,
+                'status' => $currentStore->status,
+                'logo_url' => $currentStore->logo_url,
             ] : null,
         ]);
     }

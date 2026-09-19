@@ -21,7 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return response()->json([
             'user' => $request->user(),
-            'store' => $request->user()->store
+            'store' => $request->user()->currentStore()
         ]);
     });
 

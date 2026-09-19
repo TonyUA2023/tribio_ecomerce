@@ -30,10 +30,11 @@ class SubscriptionController extends Controller
 
         $planKey = $request->input('plan_key');
 
-        // Tribio Pass unification: someone already logged in (e.g. a customer with
-        // purchase history in other stores) upgrades their own account instead of
-        // being forced to register a disconnected second identity.
-        $existingUser = Auth::check() && !Auth::user()->isSuperAdmin() && !Auth::user()->hasStore()
+        // Tribio Pass unification: someone already logged in — a buyer with no store
+        // yet, or a store owner opening an additional store under the same account
+        // (Tribio Pass now supports owning several, see the multi-store ADR) — reuses
+        // their existing account instead of registering a disconnected new identity.
+        $existingUser = Auth::check() && !Auth::user()->isSuperAdmin()
             ? Auth::user()
             : null;
 
@@ -172,6 +173,10 @@ class SubscriptionController extends Controller
                 'culqi_card_id'          => $card['id'],
                 'culqi_subscription_id'  => $subscription['id'],
             ]);
+
+            // Land the owner in *this* store's dashboard next, not whichever other
+            // store (if any) happened to be their current one before this purchase.
+            $user->switchToStore($store);
 
             Log::info('Culqi: suscripción creada', [
                 'store_id'        => $store->id,

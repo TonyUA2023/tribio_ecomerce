@@ -365,6 +365,42 @@
                  this.selectedPlanPrice = price;
                  this.selectedPlanFeatures = features;
                  this.openModal = true;
+             },
+             isAuthenticated: {{ Auth::check() && !Auth::user()->isSuperAdmin() ? 'true' : 'false' }},
+             authName: '{{ Auth::check() ? addslashes(Auth::user()->name) : '' }}',
+             authEmail: '{{ Auth::check() ? addslashes(Auth::user()->email) : '' }}',
+             showLoginForm: false,
+             loginEmail: '',
+             loginPassword: '',
+             loginBusy: false,
+             loginError: '',
+             async doModalLogin() {
+                 this.loginError = '';
+                 if (!this.loginEmail || !this.loginPassword) {
+                     this.loginError = 'Ingresa tu correo y contraseña.';
+                     return;
+                 }
+                 this.loginBusy = true;
+                 try {
+                     const res = await fetch('/customer/login', {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                         body: JSON.stringify({ email: this.loginEmail, password: this.loginPassword }),
+                     });
+                     const data = await res.json();
+                     if (res.ok && data.success) {
+                         this.isAuthenticated = true;
+                         this.authName = data.user.name;
+                         this.authEmail = data.user.email;
+                         this.showLoginForm = false;
+                     } else {
+                         this.loginError = data.message || 'Correo o contraseña incorrectos.';
+                     }
+                 } catch (e) {
+                     this.loginError = 'Error de conexión. Intenta nuevamente.';
+                 } finally {
+                     this.loginBusy = false;
+                 }
              }
          }"
          x-init="
@@ -486,44 +522,76 @@
                     <!-- Right: Registration Form -->
                     <div class="md:col-span-7 space-y-4">
                         <div class="border-b border-slate-100 pb-3">
-                            <h3 class="text-base font-extrabold text-slate-900">Configura tu Cuenta y Tienda</h3>
-                            <p class="text-xs text-slate-400">Ingresa tus datos de acceso y la dirección que tendrá tu tienda virtual.</p>
+                            <h3 class="text-base font-extrabold text-slate-900" x-text="isAuthenticated ? 'Configura tu Nueva Tienda' : (showLoginForm ? 'Inicia sesión con tu Tribio Pass' : 'Configura tu Cuenta y Tienda')"></h3>
+                            <p class="text-xs text-slate-400" x-text="isAuthenticated ? 'Tu Tribio Pass puede tener más de una tienda — esta se suma a tu cuenta.' : (showLoginForm ? 'Usa tu cuenta existente y continúa directo a configurar tu tienda.' : 'Ingresa tus datos de acceso y la dirección que tendrá tu tienda virtual.')"></p>
                         </div>
 
-                        <form method="POST" action="{{ route('plan.checkout') }}" class="space-y-3.5">
+                        <!-- Laravel Errors Display in Modal -->
+                        @if($errors->any())
+                            <div class="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 text-xs space-y-1">
+                                @foreach($errors->all() as $e)
+                                    <p>• {{ $e }}</p>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <!-- Login sub-form: guest who already has a Tribio Pass -->
+                        <template x-if="!isAuthenticated && showLoginForm">
+                            <div class="space-y-3.5">
+                                <template x-if="loginError">
+                                    <div class="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 text-xs" x-text="loginError"></div>
+                                </template>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Correo Electrónico</label>
+                                    <input type="email" x-model="loginEmail" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-sky-500 text-slate-900" placeholder="juan@correo.com">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Contraseña</label>
+                                    <input type="password" x-model="loginPassword" @keydown.enter.prevent="doModalLogin()" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-sky-500 text-slate-900" placeholder="Tu contraseña">
+                                </div>
+                                <button type="button" @click="doModalLogin()" :disabled="loginBusy" class="w-full py-3 font-bold bg-sky-500 hover:bg-sky-600 disabled:opacity-60 text-white text-xs uppercase tracking-wider rounded-xl transition-all">
+                                    <span x-text="loginBusy ? 'Ingresando...' : 'Iniciar sesión y continuar'"></span>
+                                </button>
+                                <button type="button" @click="showLoginForm = false" class="w-full text-center text-[11px] text-slate-400 hover:text-slate-600">← Prefiero crear una cuenta nueva</button>
+                            </div>
+                        </template>
+
+                        <!-- Store purchase form: either already authenticated, or the guest registration path -->
+                        <form x-show="isAuthenticated || !showLoginForm" method="POST" action="{{ route('plan.checkout') }}" class="space-y-3.5">
                             @csrf
                             <input type="hidden" name="plan_key" :value="selectedPlan">
 
-                            <!-- Laravel Errors Display in Modal -->
-                            @if($errors->any())
-                                <div class="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 text-xs space-y-1">
-                                    @foreach($errors->all() as $e)
-                                        <p>• {{ $e }}</p>
-                                    @endforeach
+                            <template x-if="isAuthenticated">
+                                <div class="p-3 rounded-xl bg-sky-50 border border-sky-100 text-xs text-slate-700">
+                                    Comprando como <strong x-text="authName"></strong> <span class="text-slate-400" x-text="'(' + authEmail + ')'"></span>
                                 </div>
-                            @endif
+                            </template>
 
-                            <div class="grid grid-cols-2 gap-3">
+                            <div class="grid grid-cols-2 gap-3" x-show="!isAuthenticated">
                                 <div>
                                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Nombre Completo *</label>
-                                    <input type="text" name="name" value="{{ old('name') }}" required class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-sky-500 text-slate-900" placeholder="Ej: Juan Pérez">
+                                    <input type="text" name="name" value="{{ old('name') }}" :required="!isAuthenticated" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-sky-500 text-slate-900" placeholder="Ej: Juan Pérez">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Correo Electrónico *</label>
-                                    <input type="email" name="email" value="{{ old('email') }}" required class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-sky-500 text-slate-900" placeholder="juan@correo.com">
+                                    <input type="email" name="email" value="{{ old('email') }}" :required="!isAuthenticated" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-sky-500 text-slate-900" placeholder="juan@correo.com">
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-3">
+                            <div class="grid grid-cols-2 gap-3" x-show="!isAuthenticated">
                                 <div>
                                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Contraseña *</label>
-                                    <input type="password" name="password" required class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-sky-500 text-slate-900" placeholder="Mínimo 8 caracteres">
+                                    <input type="password" name="password" :required="!isAuthenticated" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-sky-500 text-slate-900" placeholder="Mínimo 8 caracteres">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Confirmar Contraseña *</label>
-                                    <input type="password" name="password_confirmation" required class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-sky-500 text-slate-900" placeholder="Repite la contraseña">
+                                    <input type="password" name="password_confirmation" :required="!isAuthenticated" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-sky-500 text-slate-900" placeholder="Repite la contraseña">
                                 </div>
                             </div>
+
+                            <template x-if="!isAuthenticated">
+                                <button type="button" @click="showLoginForm = true" class="text-[11px] text-sky-600 hover:text-sky-700 font-semibold -mt-1">¿Ya tienes Tribio Pass? Inicia sesión</button>
+                            </template>
 
                             <div class="grid grid-cols-2 gap-3">
                                 <div>

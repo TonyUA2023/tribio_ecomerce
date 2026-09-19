@@ -12,6 +12,11 @@
         </div>
     @endif
 
+    <div class="p-4 rounded-xl bg-white/3 border border-white/10 flex items-center justify-between gap-4 flex-wrap">
+        <p class="text-xs text-white/60">🎁 ¿Buscas envío gratis por cantidad/monto o descuentos por compra al por mayor? Eso se configura en <strong class="text-white">Mi Tienda</strong>, junto a las tarifas de envío.</p>
+        <a href="{{ route('dashboard.store.edit') }}#" class="btn-secondary py-2 px-4 text-xs flex-shrink-0">Ir a Mi Tienda →</a>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         <!-- Formulario -->

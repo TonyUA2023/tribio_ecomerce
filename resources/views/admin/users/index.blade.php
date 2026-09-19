@@ -49,12 +49,16 @@
                         @endif
                     </td>
                     <td class="py-3 px-3">
-                        @if($user->store)
-                            <a href="{{ route('admin.tiendas.show', $user->store) }}" class="text-tribio-cyan hover:text-white text-sm transition-colors">
-                                {{ $user->store->name }}
+                        @if($user->stores->isEmpty())
+                            <span class="text-white/30 text-sm">Sin tienda</span>
+                        @elseif($user->stores->count() === 1)
+                            <a href="{{ route('admin.tiendas.show', $user->stores->first()) }}" class="text-tribio-cyan hover:text-white text-sm transition-colors">
+                                {{ $user->stores->first()->name }}
                             </a>
                         @else
-                            <span class="text-white/30 text-sm">Sin tienda</span>
+                            <a href="{{ route('admin.usuarios.show', $user) }}" class="text-tribio-cyan hover:text-white text-sm transition-colors">
+                                {{ $user->stores->count() }} tiendas
+                            </a>
                         @endif
                     </td>
                     <td class="py-3 px-3 text-white/40 text-xs">{{ $user->created_at->format('d/m/Y') }}</td>

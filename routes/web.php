@@ -56,6 +56,7 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->midd
 Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')->name('dashboard.')->group(function () {
 
     Route::get('/', [DashboardController::class, 'index'])->name('index');
+    Route::post('/tienda/cambiar/{store}', [DashboardController::class, 'switchStore'])->name('store.switch');
 
     // Configuración de la tienda
     Route::get('/tienda/configuracion', [StoreSettingsController::class, 'edit'])->name('store.edit');

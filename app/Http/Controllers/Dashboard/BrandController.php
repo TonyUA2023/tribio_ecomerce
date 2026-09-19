@@ -12,7 +12,7 @@ class BrandController extends Controller
 {
     private function getStore()
     {
-        return Auth::user()->store;
+        return Auth::user()->currentStore();
     }
 
     public function index()

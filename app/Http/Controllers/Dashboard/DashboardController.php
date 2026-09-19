@@ -12,7 +12,7 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $store = Auth::user()->store;
+        $store = Auth::user()->currentStore();
 
         if (!$store) {
             return redirect()->route('dashboard.store.edit')
@@ -63,5 +63,19 @@ class DashboardController extends Controller
             ->get();
 
         return view('dashboard.index', compact('store', 'stats', 'recentOrders', 'topProducts', 'analytics'));
+    }
+
+    /**
+     * Switches which of the account's own stores the dashboard operates on. Route-model
+     * binding alone doesn't prove ownership, so it's checked explicitly — otherwise any
+     * logged-in store owner could switch another account's dashboard to their store id.
+     */
+    public function switchStore(\App\Models\Store $store)
+    {
+        abort_unless(Auth::user()->stores()->whereKey($store->id)->exists(), 403);
+
+        Auth::user()->switchToStore($store);
+
+        return redirect()->route('dashboard.index');
     }
 }

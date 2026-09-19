@@ -36,11 +36,24 @@ class Order extends Model
     ];
 
     // ─── Helpers ─────────────────────────────────────────────────
+    /**
+     * order_number is globally unique (DB constraint) but the sequence itself is scoped
+     * per store per year, so two different stores placing their Nth order of the year
+     * both compute the same candidate — the loop below guards against that collision
+     * (real, hit while testing the multi-store feature: store A's first-ever order and
+     * store B's first-ever order both generated 'TRB-2026-000001').
+     */
     public static function generateOrderNumber(int $storeId): string
     {
         $year = now()->year;
-        $count = self::where('store_id', $storeId)->whereYear('created_at', $year)->count() + 1;
-        return sprintf('TRB-%d-%06d', $year, $count);
+        $count = self::where('store_id', $storeId)->whereYear('created_at', $year)->count();
+
+        do {
+            $count++;
+            $candidate = sprintf('TRB-%d-%06d', $year, $count);
+        } while (self::where('order_number', $candidate)->exists());
+
+        return $candidate;
     }
 
     public function getStatusLabelAttribute(): string

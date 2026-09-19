@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
 
 class GalleryController extends Controller
 {
-    private function getStore() { return Auth::user()->store; }
+    private function getStore() { return Auth::user()->currentStore(); }
 
     public function index()
     {
