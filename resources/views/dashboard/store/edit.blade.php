@@ -26,7 +26,7 @@
         gateway: '{{ old('payment_gateway', $store?->payment_gateway ?? '') }}',
         expressEnabled: {{ old('is_express_shipping_enabled', $store?->is_express_shipping_enabled) ? 'true' : 'false' }},
         langEnabled: {{ old('is_multilanguage_enabled', $store?->is_multilanguage_enabled) ? 'true' : 'false' }},
-        showGatewayPrivate: false, showMpToken: false,
+        showGatewayPrivate: false, showMpToken: false, showPaypalSecret: false,
         regions: {{ json_encode(old('distributors', $store->distributors ?? [])) }} || [],
         addRegion() { this.regions.push({ region: '', locations: [''] }); },
         removeRegion(index) { this.regions.splice(index, 1); },
@@ -326,6 +326,59 @@
                         <div>
                             <label class="input-label">Llave Pública (Public Key) *</label>
                             <input type="text" name="mp_public_key" value="{{ old('mp_public_key', $store?->mp_public_key ?? $store?->gateway_public_key) }}" class="input-field font-mono text-xs" placeholder="TEST-... o APP_USR-...">
+                        </div>
+                    </div>
+
+                    {{-- PayPal: independiente del selector de pasarela de arriba — puede
+                         activarse junto con Mercado Pago, el checkout de la tienda ofrece
+                         ambos como opciones separadas al cliente. --}}
+                    <div class="space-y-4 pt-2 border-t border-white/5">
+                        <div class="flex items-center justify-between flex-wrap gap-2 pt-2">
+                            <p class="text-[11px] text-tribio-cyan font-bold uppercase tracking-wider">PayPal (Clientes internacionales, cobra en USD)</p>
+                            @if($store?->paypal_client_id)
+                                @if(($store->paypal_mode ?? 'sandbox') === 'live')
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">🟢 Modo Producción (En Vivo)</span>
+                                @else
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">🧪 Modo Pruebas (Sandbox)</span>
+                                @endif
+                            @else
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/10 text-white/50">No configurado</span>
+                            @endif
+                        </div>
+
+                        <div class="p-3 bg-white/5 rounded-xl border border-white/10 text-xs text-slate-300 space-y-1.5">
+                            <p class="font-semibold text-white flex items-center gap-1.5"><span>💵 PayPal siempre cobra en dólares (USD)</span></p>
+                            <p class="text-white/60 text-[11px]">
+                                A diferencia de Mercado Pago, PayPal no admite soles — tus productos deben tener un precio en USD configurado (o se convierte automáticamente al tipo de cambio del momento). Obtén tus credenciales en el
+                                <a href="https://developer.paypal.com/dashboard/applications" target="_blank" class="text-tribio-cyan underline font-bold hover:text-white">Panel de Desarrolladores de PayPal ↗</a>.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="input-label">Modo</label>
+                            <select name="paypal_mode" class="input-field">
+                                <option value="sandbox" {{ old('paypal_mode', $store?->paypal_mode ?? 'sandbox') === 'sandbox' ? 'selected' : '' }}>🧪 Pruebas (Sandbox)</option>
+                                <option value="live" {{ old('paypal_mode', $store?->paypal_mode ?? 'sandbox') === 'live' ? 'selected' : '' }}>🟢 Producción (En Vivo)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="input-label">Client ID</label>
+                            <input type="text" name="paypal_client_id" value="{{ old('paypal_client_id', $store?->paypal_client_id) }}" class="input-field font-mono text-xs" placeholder="AeA1QIZX...">
+                        </div>
+                        <div>
+                            <label class="input-label">Client Secret</label>
+                            <div class="relative">
+                                <input :type="showPaypalSecret ? 'text' : 'password'" name="paypal_client_secret" value="{{ old('paypal_client_secret', $store?->paypal_client_secret) }}" class="input-field font-mono text-xs pr-11" placeholder="EL...">
+                                <button type="button" @click="showPaypalSecret = !showPaypalSecret" class="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 text-sm" :aria-label="showPaypalSecret ? 'Ocultar secreto' : 'Mostrar secreto'">
+                                    <span x-show="!showPaypalSecret">👁️</span><span x-show="showPaypalSecret" x-cloak>🙈</span>
+                                </button>
+                            </div>
+                            <p class="text-[10px] text-white/40 mt-1">Este dato es secreto: no lo compartas con nadie.</p>
+                        </div>
+                        <div>
+                            <label class="input-label">Webhook ID <span class="text-white/40 normal-case font-normal">(opcional)</span></label>
+                            <input type="text" name="paypal_webhook_id" value="{{ old('paypal_webhook_id', $store?->paypal_webhook_id) }}" class="input-field font-mono text-xs" placeholder="Solo si configuraste un webhook en tu app de PayPal">
+                            <p class="text-[10px] text-white/40 mt-1">No es obligatorio: los pagos se confirman sin esto. Solo sirve como respaldo adicional.</p>
                         </div>
                     </div>
                 </div>

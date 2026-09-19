@@ -483,6 +483,11 @@ class StoreController extends Controller
 
             $qty               = (int) $item['quantity'];
             $price             = $product->resolvePrice();
+            // Resolved in parallel regardless of the customer's browsing currency: PayPal
+            // never settles in PEN (confirmed against PayPal's currency-codes reference),
+            // so its branch below always needs a USD amount, prefering each product's own
+            // explicit USD price over a live-converted one (see Product::resolvePrice()).
+            $priceUsd          = $product->resolvePrice('USD');
             $sku               = $product->sku;
             $variantId         = $item['variant_id'] ?? null;
             $variantTitle      = $item['variant_title'] ?? null;
@@ -493,6 +498,7 @@ class StoreController extends Controller
                 $variant = $product->variants()->where('id', $variantId)->first();
                 if ($variant) {
                     $price             = $variant->resolvePrice();
+                    $priceUsd          = $variant->resolvePrice('USD');
                     if (!empty($variant->sku)) $sku = $variant->sku;
                     $variantTitle      = $variant->title;
                     $variantAttributes = $variant->attributes;
@@ -534,6 +540,7 @@ class StoreController extends Controller
                 'product_sku'        => $sku,
                 'product_image'      => $imagePath,
                 'price'              => $price,
+                'price_usd'          => $priceUsd,
                 'quantity'           => $qty,
                 'subtotal'           => $itemSubtotal,
             ];
@@ -646,7 +653,7 @@ class StoreController extends Controller
         //     como campos de formulario, así que usan Checkout Pro (redirección a la
         //     página alojada por Mercado Pago) — llegan aquí sin `mp_form_data`.
         $mpToken = $store->mp_access_token ?? $store->gateway_access_token;
-        if (($paymentMethod === 'mercadopago' || $store->checkout_mode === 'card') && $mpToken) {
+        if ($paymentMethod !== 'paypal' && ($paymentMethod === 'mercadopago' || $store->checkout_mode === 'card') && $mpToken) {
             $mpFormData = $request->input('mp_form_data');
             try {
                 $client = new \GuzzleHttp\Client(['timeout' => 15]);
@@ -826,7 +833,171 @@ class StoreController extends Controller
             }
         }
 
+        // Integración de PayPal — cada tienda usa sus propias credenciales (App\Services\
+        // PayPalService, ver PayPal-Checkout-Flow en la bóveda). PayPal no liquida en PEN
+        // (confirmado contra la referencia oficial de monedas de PayPal antes de construir
+        // esto), así que cobra siempre en USD usando price_usd, ya resuelto por artículo
+        // más arriba vía Product::resolvePrice('USD'). El flujo es de dos pasos: aquí solo
+        // se crea la orden en PayPal (el cliente todavía no aprobó nada); capturePaypalOrder()
+        // la cobra de verdad una vez el popup de PayPal confirma la aprobación.
+        if ($paymentMethod === 'paypal') {
+            $paypalService = app(\App\Services\PayPalService::class);
+
+            if (!$paypalService->isConfigured($store)) {
+                $order->update(['payment_status' => 'failed']);
+                return response()->json([
+                    'success' => false,
+                    'error'   => 'Esta tienda no tiene PayPal configurado. Elige otro método de pago.',
+                ]);
+            }
+
+            try {
+                $shippingUsd = $shippingCost > 0
+                    ? app(\App\Services\ExchangeRateService::class)->convert((float) $shippingCost, $currency, 'USD')
+                    : 0.0;
+
+                $paypalItems = array_map(fn ($item) => [
+                    'name'        => $item['product_name'] . (!empty($item['variant_title']) ? " ({$item['variant_title']})" : ''),
+                    'unit_amount' => (float) $item['price_usd'],
+                    'quantity'    => (int) $item['quantity'],
+                ], $orderItemsData);
+
+                $paypalOrder = $paypalService->createOrder($store, $order->order_number, $paypalItems, $shippingUsd);
+
+                $order->update([
+                    'payment_method'  => 'paypal',
+                    'paypal_order_id' => $paypalOrder['id'],
+                ]);
+
+                // El frontend usa este id para abrir el popup de PayPal (paypalPaymentSession
+                // .start()); la orden Tribio queda 'pending' hasta que capturePaypalOrder()
+                // confirme el pago — el cliente nunca sale de la tienda mientras tanto.
+                $response['paypal_order_id'] = $paypalOrder['id'];
+            } catch (\Throwable $e) {
+                \Log::error('PayPal: error al crear la orden', [
+                    'order_number' => $order->order_number,
+                    'message'      => $e->getMessage(),
+                ]);
+                $order->update([
+                    'payment_status' => 'failed',
+                    'internal_notes' => trim(($order->internal_notes ?? '') . "\nError PayPal: " . $e->getMessage()),
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'error'   => 'No se pudo iniciar el pago con PayPal. Intenta de nuevo o elige otro método.',
+                ]);
+            }
+        }
+
         return response()->json($response);
+    }
+
+    /**
+     * Captures a previously-created PayPal order once the customer approves it in the
+     * popup. Synchronous — the customer sees the result immediately, same as the
+     * embedded Mercado Pago card path.
+     */
+    public function capturePaypalOrder(Request $request, string $slug)
+    {
+        $store = $this->getStore($slug);
+
+        $request->validate([
+            'order_number'    => 'required|string',
+            'paypal_order_id' => 'required|string',
+        ]);
+
+        $order = Order::where('store_id', $store->id)
+            ->where('order_number', $request->order_number)
+            ->where('paypal_order_id', $request->paypal_order_id)
+            ->firstOrFail();
+
+        if ($order->payment_status === 'paid') {
+            return response()->json(['success' => true, 'order_number' => $order->order_number]);
+        }
+
+        $paypalService = app(\App\Services\PayPalService::class);
+
+        try {
+            $capture = $paypalService->captureOrder($store, $order->paypal_order_id);
+            $status  = $capture['status'] ?? '';
+
+            if ($status === 'COMPLETED') {
+                $captureId = $capture['purchase_units'][0]['payments']['captures'][0]['id'] ?? null;
+                $order->update([
+                    'status'         => 'confirmed',
+                    'payment_status' => 'paid',
+                    'internal_notes' => trim(($order->internal_notes ?? '') . "\nPayPal Capture ID: " . ($captureId ?? 'N/A')),
+                ]);
+
+                return response()->json([
+                    'success'      => true,
+                    'order_number' => $order->order_number,
+                    'redirect_url' => route('store.order.confirmation', [$store->slug, $order->id]),
+                ]);
+            }
+
+            \Log::error('PayPal: captura no completada.', ['order_number' => $order->order_number, 'response' => $capture]);
+            $order->update([
+                'payment_status' => 'failed',
+                'internal_notes' => trim(($order->internal_notes ?? '') . "\nCaptura PayPal no completada: {$status}"),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error'   => 'PayPal no pudo completar el pago. Intenta de nuevo o elige otro método.',
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('PayPal: error al capturar la orden', [
+                'order_number' => $order->order_number,
+                'message'      => $e->getMessage(),
+            ]);
+            $order->update([
+                'payment_status' => 'failed',
+                'internal_notes' => trim(($order->internal_notes ?? '') . "\nError al capturar PayPal: " . $e->getMessage()),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error'   => $e->getMessage() ?: 'No se pudo completar el pago con PayPal.',
+            ]);
+        }
+    }
+
+    /**
+     * Optional reconciliation webhook — the core create+capture flow above already
+     * confirms payment synchronously. Only does anything once the store has configured
+     * a Webhook ID in their own PayPal app dashboard (verifyWebhookSignature() returns
+     * false otherwise, and the event is ignored rather than trusted blindly).
+     */
+    public function paypalWebhook(Request $request, string $slug)
+    {
+        $store = $this->getStore($slug);
+        $paypalService = app(\App\Services\PayPalService::class);
+
+        \Log::info('PayPal Webhook recibido:', ['store_id' => $store->id, 'event_type' => $request->input('event_type')]);
+
+        if (!$paypalService->verifyWebhookSignature($store, $request)) {
+            \Log::warning('PayPal Webhook: firma inválida o webhook_id no configurado.', ['store_id' => $store->id]);
+            return response()->json(['status' => 'ignored'], 200);
+        }
+
+        $eventType = $request->input('event_type');
+        $paypalOrderId = $request->input('resource.supplementary_data.related_ids.order_id')
+            ?? $request->input('resource.id');
+
+        if (!$paypalOrderId || !in_array($eventType, ['PAYMENT.CAPTURE.COMPLETED', 'CHECKOUT.ORDER.APPROVED'], true)) {
+            return response()->json(['status' => 'ignored'], 200);
+        }
+
+        $order = Order::where('store_id', $store->id)->where('paypal_order_id', $paypalOrderId)->first();
+        if ($order && $order->payment_status !== 'paid') {
+            $paypalOrder = $paypalService->getOrder($store, $paypalOrderId);
+            if (($paypalOrder['status'] ?? null) === 'COMPLETED') {
+                $order->update(['status' => 'confirmed', 'payment_status' => 'paid']);
+            }
+        }
+
+        return response()->json(['status' => 'ok'], 200);
     }
 
     public function orderConfirmation(string $slug, Order $order)

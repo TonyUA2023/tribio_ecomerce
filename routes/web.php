@@ -156,6 +156,8 @@ Route::domain('{custom_domain}')
         Route::get('/producto/{product}', [StoreController::class, 'product']);
         Route::get('/galeria', [StoreController::class, 'gallery']);
         Route::post('/checkout', [StoreController::class, 'checkout']);
+        Route::post('/checkout/paypal/capturar', [StoreController::class, 'capturePaypalOrder']);
+        Route::post('/checkout/paypal/webhook', [StoreController::class, 'paypalWebhook']);
         Route::get('/pedido/{order}/confirmacion', [StoreController::class, 'orderConfirmation']);
         Route::get('/contacto', [StoreController::class, 'contact']);
         Route::post('/contacto', [StoreController::class, 'submitContact']);
@@ -168,6 +170,8 @@ Route::prefix('tienda')->name('store.')->group(function () {
     Route::get('/{slug}/producto/{product}', [StoreController::class, 'product'])->name('product');
     Route::get('/{slug}/galeria', [StoreController::class, 'gallery'])->name('gallery');
     Route::post('/{slug}/checkout', [StoreController::class, 'checkout'])->name('checkout');
+    Route::post('/{slug}/checkout/paypal/capturar', [StoreController::class, 'capturePaypalOrder'])->name('checkout.paypal.capture');
+    Route::post('/{slug}/checkout/paypal/webhook', [StoreController::class, 'paypalWebhook'])->name('checkout.paypal.webhook');
     Route::get('/{slug}/pedido/{order}/confirmacion', [StoreController::class, 'orderConfirmation'])->name('order.confirmation');
     Route::get('/{slug}/contacto', [StoreController::class, 'contact'])->name('contact');
     Route::post('/{slug}/contacto', [StoreController::class, 'submitContact'])->name('contact.submit');

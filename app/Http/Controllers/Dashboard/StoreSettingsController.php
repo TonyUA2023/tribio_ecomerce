@@ -83,6 +83,10 @@ class StoreSettingsController extends Controller
             'hero_badge'                  => 'nullable|string|max:50',
             'mp_access_token'             => 'nullable|string|max:255',
             'mp_public_key'               => 'nullable|string|max:255',
+            'paypal_client_id'            => 'nullable|string|max:255',
+            'paypal_client_secret'        => 'nullable|string|max:255',
+            'paypal_mode'                 => 'nullable|string|in:sandbox,live',
+            'paypal_webhook_id'           => 'nullable|string|max:255',
             'contact_email'               => 'nullable|email|max:255',
             'contact_phone'               => 'nullable|string|max:20',
         ], [
@@ -98,11 +102,13 @@ class StoreSettingsController extends Controller
             'custom_domain',
             'checkout_mode', 'payment_gateway', 'gateway_public_key', 'gateway_private_key', 'gateway_access_token',
             'mp_access_token', 'mp_public_key', 'contact_email', 'contact_phone',
+            'paypal_client_id', 'paypal_client_secret', 'paypal_mode', 'paypal_webhook_id',
             'express_shipping_cost', 'national_shipping_cost',
             'hero_title', 'hero_subtitle', 'hero_badge'
         ]);
         $data['is_express_shipping_enabled'] = $request->has('is_express_shipping_enabled');
         $data['is_multilanguage_enabled']    = $request->has('is_multilanguage_enabled');
+        $data['paypal_mode'] = in_array($data['paypal_mode'] ?? null, ['sandbox', 'live'], true) ? $data['paypal_mode'] : 'sandbox';
 
         // Países habilitados
         $enabledCountries = $request->input('enabled_countries', ['PE', 'US']);

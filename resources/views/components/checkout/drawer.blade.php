@@ -9,6 +9,7 @@
     $payAccent = $store->accent_color ?: config("tribio.templates.{$store->template_name}.default_accent", '#1A1A1A');
     $paySecondary = $store->secondary_color ?: config("tribio.templates.{$store->template_name}.default_secondary", '#C8A68B');
     $hasMpCapable = in_array($store->checkout_mode, ['card', 'mixed']) && (!empty($store->mp_access_token) || !empty($store->gateway_access_token));
+    $hasPaypalCapable = in_array($store->checkout_mode, ['card', 'mixed']) && !empty($store->paypal_client_id) && !empty($store->paypal_client_secret);
 @endphp
 <script>window.tribioCsrfToken = '{{ csrf_token() }}';</script>
 <div id="cartDrawer"
@@ -54,6 +55,12 @@
          shippingCost: 0,
          hasMercadoPago: {{ $hasMpCapable ? 'true' : 'false' }},
          hasWhatsapp: {{ in_array($store->checkout_mode, ['whatsapp', 'mixed']) ? 'true' : 'false' }},
+         hasPaypal: {{ $hasPaypalCapable ? 'true' : 'false' }},
+         paypalClientId: '{{ $store->paypal_client_id }}',
+         paypalSdkOrigin: '{{ ($store->paypal_mode ?? 'sandbox') === 'live' ? 'https://www.paypal.com' : 'https://www.sandbox.paypal.com' }}',
+         paypalReady: false,
+         paypalSession: null,
+         paypalOrderNumber: null,
          paymentMethod: '{{ ($store->checkout_mode === 'card' || ($store->checkout_mode === 'mixed' && !empty($store->mp_access_token))) ? 'card' : 'whatsapp' }}',
          hasActiveToken: {{ (!empty($store->mp_access_token) || !empty($store->gateway_access_token)) ? 'true' : 'false' }},
          cartItems: window.TribioCart ? window.TribioCart.items : [],
@@ -89,6 +96,122 @@
                      this.cardForm.idType = types[0].id;
                  }
              } catch (e) { console.error('MercadoPago getIdentificationTypes:', e); }
+         },
+         // PayPal: cobra siempre en USD (no soporta PEN — confirmado contra la referencia
+         // de monedas de PayPal). Usa su Web SDK v6 (no el paypal.Buttons() clásico, que
+         // está siendo reemplazado) — ver PayPal-Checkout-Flow en la bóveda del proyecto.
+         async ensurePaypalSdk() {
+             if (this.paypalReady || !this.hasPaypal) return;
+             try {
+                 if (!window.paypal) {
+                     await new Promise((resolve, reject) => {
+                         const s = document.createElement('script');
+                         s.src = this.paypalSdkOrigin + '/web-sdk/v6/core';
+                         s.onload = resolve;
+                         s.onerror = () => reject(new Error('No se pudo cargar PayPal.'));
+                         document.body.appendChild(s);
+                     });
+                 }
+                 const sdkInstance = await window.paypal.createInstance({
+                     clientId: this.paypalClientId,
+                     components: ['paypal-payments'],
+                     pageType: 'checkout',
+                 });
+                 const eligibility = await sdkInstance.findEligibleMethods({ currencyCode: 'USD' });
+                 if (!eligibility.isEligible('paypal')) {
+                     this.errors.payment = 'PayPal no está disponible en este momento. Elige otro método de pago.';
+                     return;
+                 }
+                 const self = this;
+                 this.paypalSession = sdkInstance.createPayPalOneTimePaymentSession({
+                     async onApprove(data) { await self.capturePaypalOrder(data.orderId); },
+                     onCancel() { self.submitting = false; },
+                     onError(err) {
+                         console.error('PayPal onError:', err);
+                         self.errors.payment = 'Ocurrió un error con PayPal. Intenta de nuevo.';
+                         self.submitting = false;
+                     },
+                 });
+                 this.paypalReady = true;
+                 this.$nextTick(() => this.bindPaypalButton());
+             } catch (e) {
+                 console.error('ensurePaypalSdk:', e);
+                 this.errors.payment = 'No se pudo inicializar PayPal.';
+             }
+         },
+         bindPaypalButton() {
+             const btn = document.getElementById('paypalButtonEl');
+             if (!btn || btn.dataset.bound || !this.paypalReady) return;
+             btn.dataset.bound = '1';
+             btn.removeAttribute('hidden');
+             btn.addEventListener('click', async () => {
+                 this.errors = {};
+                 if (!this.validateStep2()) return;
+                 this.submitting = true;
+                 try {
+                     // Se le pasa la promesa de createPaypalOrder() sin esperarla (sin
+                     // await aquí): el SDK abre el popup de inmediato, dentro del mismo
+                     // gesto de clic del usuario, y recién ahí espera a que la orden se
+                     // resuelva — si se esperara antes de llamar a start(), el navegador
+                     // podría bloquear el popup por no considerarlo ya una acción directa
+                     // del usuario.
+                     await this.paypalSession.start({ presentationMode: 'auto' }, this.createPaypalOrder());
+                 } catch (e) {
+                     console.error('PayPal start:', e);
+                     this.submitting = false;
+                 }
+             });
+         },
+         async createPaypalOrder() {
+             const token = this.customer._token;
+             const payload = {
+                 _token: token,
+                 items: this.cartItems,
+                 customer_name: this.customer.name,
+                 customer_email: this.customer.email,
+                 customer_phone: this.customer.phone,
+                 customer_address: this.customer.address,
+                 customer_country: this.customer.country,
+                 customer_state: this.customer.state,
+                 customer_city: this.customer.city,
+                 customer_zipcode: this.customer.zipcode,
+                 customer_notes: this.customer.notes,
+                 express_shipping: !!this.customer.express_shipping,
+                 payment_method: 'paypal',
+             };
+             const res = await fetch(`/tienda/${this.storeSlug}/checkout`, {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': token },
+                 body: JSON.stringify(payload),
+             });
+             const data = await res.json();
+             if (!res.ok || !data.success || !data.paypal_order_id) {
+                 this.submitting = false;
+                 this.errors.payment = data.error || 'No se pudo iniciar el pago con PayPal.';
+                 throw new Error(this.errors.payment);
+             }
+             this.paypalOrderNumber = data.order_number;
+             return data.paypal_order_id;
+         },
+         async capturePaypalOrder(paypalOrderId) {
+             try {
+                 const res = await fetch(`/tienda/${this.storeSlug}/checkout/paypal/capturar`, {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': this.customer._token },
+                     body: JSON.stringify({ order_number: this.paypalOrderNumber, paypal_order_id: paypalOrderId }),
+                 });
+                 const data = await res.json();
+                 if (res.ok && data.success) {
+                     if (window.TribioCart) window.TribioCart.clear();
+                     window.location.href = data.redirect_url;
+                 } else {
+                     this.submitting = false;
+                     this.errors.payment = data.error || 'No se pudo completar el pago con PayPal.';
+                 }
+             } catch (e) {
+                 this.submitting = false;
+                 this.errors.payment = 'Error de conexión al confirmar el pago con PayPal.';
+             }
          },
          formatCardNumber() {
              const digits = this.cardForm.number.replace(/\D/g, '').slice(0, 19);
@@ -320,6 +443,13 @@
          submitOrder() {
              if (!this.customerLoggedIn) {
                  this.openTribioPass('register');
+                 return;
+             }
+             if (this.paymentMethod === 'paypal') {
+                 // PayPal se paga desde su propio botón (bindPaypalButton()), nunca desde
+                 // este botón genérico — TribioCart.checkout() no sabe abrir el popup de
+                 // PayPal ni esperar su aprobación, así que dejarlo pasar dejaría la orden
+                 // confirmada en pantalla sin que el cliente haya pagado de verdad.
                  return;
              }
              if (!this.validateStep2()) return;
@@ -614,6 +744,18 @@
                                     <p class="mt-1.5 text-[11px] text-[var(--pay-text-muted)] pl-6">Coordina tu compra directamente con el vendedor.</p>
                                 </label>
                             </template>
+
+                            <template x-if="hasPaypal">
+                                <label :class="paymentMethod === 'paypal' ? 'border-[var(--pay-accent)] bg-[var(--pay-surface-muted)] ring-1 ring-[var(--pay-accent)]' : 'border-[var(--pay-border)] bg-white'"
+                                       class="flex flex-col p-3.5 rounded-xl border cursor-pointer transition-all">
+                                    <div class="flex items-center gap-2.5">
+                                        <input type="radio" name="payment_method" value="paypal" x-model="paymentMethod" @change="ensurePaypalSdk()" class="accent-[var(--pay-accent)] w-4 h-4">
+                                        <svg class="w-4 h-4 text-[#003087]" fill="currentColor" viewBox="0 0 24 24"><path d="M7.5 21H4.2a.6.6 0 01-.59-.7L6.2 3.7A.9.9 0 017.1 3h6.4c2.9 0 5 1.6 4.6 4.3-.4 3.1-2.7 4.8-5.6 4.8h-2l-1 5.2a.9.9 0 01-.9.7H7.5zm7.8-13.4c.2-1.3-.8-1.9-2.2-1.9h-3.3l-.8 4.3h2.9c1.6 0 3.1-.7 3.4-2.4z"/></svg>
+                                        <span class="font-bold text-sm">PayPal</span>
+                                    </div>
+                                    <p class="mt-1.5 text-[11px] text-[var(--pay-text-muted)] pl-6">Para clientes internacionales. Se cobra el equivalente en dólares (USD), no en soles.</p>
+                                </label>
+                            </template>
                             <span x-show="errors.payment" x-text="errors.payment" class="pay-field-error-msg"></span>
                         </div>
                     </div>
@@ -644,10 +786,12 @@
                         <span x-text="'+ ' + formatMoney(shippingCost)"></span>
                     </div>
                 </template>
-                <div class="flex justify-between items-center mb-4 text-[var(--pay-text)] border-t border-[var(--pay-border)] pt-2 mt-2">
+                <div class="flex justify-between items-center text-[var(--pay-text)] border-t border-[var(--pay-border)] pt-2 mt-2"
+                     :class="(checkoutStep === 2 && paymentMethod === 'paypal') ? 'mb-1' : 'mb-4'">
                     <span class="font-bold text-sm">Total a pagar:</span>
                     <span class="font-black text-xl" x-text="formatMoney(cartTotal)"></span>
                 </div>
+                <p x-show="checkoutStep === 2 && paymentMethod === 'paypal'" x-cloak class="text-[11px] text-[var(--pay-text-muted)] text-right mb-3">PayPal te cobrará el equivalente en USD, no en soles.</p>
 
                 <template x-if="checkoutStep === 1">
                     <button @click="checkoutStep = 2" style="background: var(--pay-accent);" class="w-full py-3 rounded-xl font-bold text-white transition-all shadow-md flex items-center justify-center gap-2 hover:opacity-90">
@@ -666,11 +810,17 @@
                                 Inicia sesión para pagar
                             </button>
                         </template>
-                        <template x-if="customerLoggedIn">
+                        <template x-if="customerLoggedIn && paymentMethod !== 'paypal'">
                             <button id="btnSubmitOrder" @click="submitOrder" :disabled="submitting" style="background: var(--pay-accent);" class="flex-1 py-3 rounded-xl font-bold text-white transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-60 hover:opacity-90">
                                 <span x-show="submitting" class="pay-spinner"></span>
                                 <span x-text="submitting ? 'Procesando...' : (paymentMethod === 'card' ? 'Pagar ahora' : (paymentMethod === 'mercadopago_other' ? 'Continuar al pago' : 'Confirmar pedido'))"></span>
                             </button>
+                        </template>
+                        <template x-if="customerLoggedIn && paymentMethod === 'paypal'">
+                            <div class="flex-1" x-init="$nextTick(() => bindPaypalButton())">
+                                <paypal-button id="paypalButtonEl" hidden style="width:100%; display:block;"></paypal-button>
+                                <p x-show="!paypalReady" class="text-center text-xs text-[var(--pay-text-muted)] py-3">Cargando PayPal...</p>
+                            </div>
                         </template>
                     </div>
                 </template>

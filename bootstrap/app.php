@@ -28,6 +28,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'tienda/*/checkout',
             'checkout',
             'customer/*',
+            'tienda/*/checkout/paypal/webhook',
+            'checkout/paypal/webhook',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

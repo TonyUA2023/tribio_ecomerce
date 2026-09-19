@@ -20,7 +20,7 @@ class Order extends Model
         'customer_zipcode',
         'customer_notes',
         'subtotal', 'discount', 'shipping_cost', 'total', 'currency',
-        'status', 'payment_status', 'payment_method',
+        'status', 'payment_status', 'payment_method', 'paypal_order_id',
         'whatsapp_sent', 'whatsapp_sent_at',
         'source', 'internal_notes', 'is_express_shipping'
     ];
