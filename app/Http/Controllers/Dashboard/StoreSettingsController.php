@@ -42,6 +42,11 @@ class StoreSettingsController extends Controller
         }
 
         $request->validate([
+            'flow_enabled' => 'nullable|boolean',
+            'flow_api_key' => 'nullable|string|max:255',
+            'flow_secret_key' => 'nullable|string|max:255',
+            'flow_mode' => 'nullable|in:sandbox,live',
+            'flow_currency' => 'nullable|in:PEN,USD,CLP,MXN',
             'name'           => 'required|string|max:255',
             'slug'           => 'nullable|string|max:150|alpha_dash|unique:stores,slug,' . $store->id,
             'tagline'        => 'nullable|string|max:150',
@@ -100,6 +105,7 @@ class StoreSettingsController extends Controller
         ]);
 
         $data = $request->only([
+            'flow_enabled', 'flow_mode', 'flow_currency',
             'name', 'tagline', 'description', 'category', 'build_mode',
             'whatsapp_phone', 'phone', 'email', 'address', 'city',
             'facebook_url', 'instagram_url', 'tiktok_url',
@@ -182,6 +188,16 @@ class StoreSettingsController extends Controller
             $data['mp_public_key'] = trim($request->input('gateway_public_key'));
         }
 
+        // Blank credentials preserve stored values; secrets never return in the form.
+        foreach (['flow_api_key', 'flow_secret_key'] as $field) {
+            if ($request->filled($field)) {
+                $data[$field] = trim($request->input($field));
+            }
+        }
+        if ($request->boolean('flow_enabled') &&
+            (empty($data['flow_api_key'] ?? $store->flow_api_key) || empty($data['flow_secret_key'] ?? $store->flow_secret_key))) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['flow_enabled' => 'Ingresa API Key y Secret Key para activar Flow.']);
+        }
         $store->update($data);
 
         return back()->with('success', 'Información de la tienda actualizada correctamente.');

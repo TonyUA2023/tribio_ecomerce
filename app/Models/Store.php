@@ -12,6 +12,7 @@ class Store extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'flow_enabled', 'flow_api_key', 'flow_secret_key', 'flow_mode', 'flow_currency',
         'user_id', 'name', 'slug', 'description', 'tagline', 'category',
         'logo_path', 'cover_path', 'favicon_path',
         'template_name', 'build_mode', 'accent_color', 'secondary_color', 'text_color', 'bg_color',
@@ -32,7 +33,12 @@ class Store extends Model
         'bulk_discount_min_quantity', 'bulk_discount_type', 'bulk_discount_value',
     ];
 
+    protected $hidden = ['flow_api_key', 'flow_secret_key'];
+
     protected $casts = [
+        'flow_enabled' => 'boolean',
+        'flow_api_key' => 'encrypted',
+        'flow_secret_key' => 'encrypted',
         'custom_css_vars'  => 'array',
         'published_layout' => 'array',
         'distributors'     => 'array',

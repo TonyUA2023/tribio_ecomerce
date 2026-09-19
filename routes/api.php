@@ -15,6 +15,9 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/mercadopago/webhook/{store}', [\App\Http\Controllers\StoreController::class, 'mercadopagoWebhook'])->name('api.mercadopago.webhook');
 
 // Rutas protegidas
+Route::post('/flow/{store}/confirmation', [\App\Http\Controllers\FlowPaymentController::class, 'confirmation'])->name('flow.confirmation');
+Route::match(['get', 'post'], '/flow/{store}/return', [\App\Http\Controllers\FlowPaymentController::class, 'returned'])->name('flow.return');
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 

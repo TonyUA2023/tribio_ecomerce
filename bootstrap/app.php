@@ -33,5 +33,6 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->dontFlash(['flow_api_key', 'flow_secret_key']);
         //
     })->create();

@@ -30,7 +30,7 @@ class OrderObserver
 
         if ($order->customer_email) {
             try {
-                Mail::to($order->customer_email)->queue(new OrderReceivedCustomer($order));
+                Mail::to($order->customer_email)->queue((new OrderReceivedCustomer($order))->afterCommit());
             } catch (Throwable $e) {
                 Log::error('No se pudo encolar el correo de pedido para el cliente.', [
                     'order_id' => $order->id,
@@ -42,7 +42,7 @@ class OrderObserver
         $storeEmail = $order->store?->contact_email ?: $order->store?->email;
         if ($storeEmail) {
             try {
-                Mail::to($storeEmail)->queue(new OrderReceivedStore($order));
+                Mail::to($storeEmail)->queue((new OrderReceivedStore($order))->afterCommit());
             } catch (Throwable $e) {
                 Log::error('No se pudo encolar el correo de pedido para la tienda.', [
                     'order_id' => $order->id,

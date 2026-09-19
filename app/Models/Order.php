@@ -10,6 +10,7 @@ class Order extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'flow_order_id', 'flow_token',
         'store_id', 'user_id', 'order_number',        'customer_name',
         'customer_phone',
         'customer_email',
@@ -24,6 +25,8 @@ class Order extends Model
         'whatsapp_sent', 'whatsapp_sent_at',
         'source', 'internal_notes', 'is_express_shipping'
     ];
+
+    protected $hidden = ['flow_token'];
 
     protected $casts = [
         'subtotal'         => 'decimal:2',

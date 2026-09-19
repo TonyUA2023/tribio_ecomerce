@@ -446,6 +446,38 @@ class StoreController extends Controller
 
     public function checkout(Request $request, string $slug)
     {
+        if ($request->input('payment_method') !== 'flow') {
+            return $this->performCheckout($request, $slug);
+        }
+        $store = $this->getStore($slug);
+        $flow = app(\App\Services\FlowService::class);
+        if (!$flow->isConfigured($store) || !in_array($store->checkout_mode, ['card', 'mixed'], true)) {
+            return response()->json(['success' => false, 'error' => 'Flow no está disponible en esta tienda. Elige otro método.'], 422);
+        }
+        if (\App\Helpers\CurrencyHelper::currentCurrency() !== $store->flow_currency) {
+            return response()->json(['success' => false, 'error' => 'Para pagar con Flow, cambia la moneda de la tienda a ' . $store->flow_currency . '.'], 422);
+        }
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $response = $this->performCheckout($request, $slug);
+            if ($response->getStatusCode() >= 400) {
+                \Illuminate\Support\Facades\DB::rollBack();
+            } else {
+                \Illuminate\Support\Facades\DB::commit();
+            }
+            return $response;
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            throw $e;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Log::warning('Flow checkout could not be started.', ['store_id' => $store->id]);
+            return response()->json(['success' => false, 'error' => 'No se pudo abrir Flow. Tu carrito sigue disponible; inténtalo nuevamente en unos momentos.'], 502);
+        }
+    }
+
+    private function performCheckout(Request $request, string $slug)
+    {
         $store = $this->getStore($slug);
 
         // Normalizar campos en caso lleguen sin el prefijo customer_
@@ -667,6 +699,12 @@ class StoreController extends Controller
             'redirect_url' => route('store.order.confirmation', [$store->slug, $order->id]),
             'whatsapp_url' => $whatsappUrl,
         ];
+
+        if ($paymentMethod === 'flow') {
+            $response['payment_url'] = app(\App\Services\FlowService::class)->createPayment($store, $order);
+            $response['whatsapp_url'] = null;
+            return response()->json($response);
+        }
 
         // Integración de Mercado Pago — dos caminos distintos según lo que el cliente
         // eligió en el drawer (ver Mercado-Pago-Checkout-Flow en la bóveda del proyecto):
@@ -1047,19 +1085,20 @@ class StoreController extends Controller
     public function orderConfirmation(string $slug, Order $order)
     {
         $store = $this->getStore($slug);
+        abort_unless($order->store_id === $store->id, 404);
 
         // Procesar retorno de Mercado Pago si aplica
         $collectionStatus = request()->query('collection_status') ?? request()->query('status');
         $paymentId        = request()->query('payment_id') ?? request()->query('collection_id');
 
-        if ($collectionStatus === 'approved') {
+        if ($order->payment_method === 'mercadopago' && $collectionStatus === 'approved') {
             $order->update([
                 'status'         => 'confirmed',
                 'payment_status' => 'paid',
                 'payment_method' => 'mercadopago',
                 'internal_notes' => trim(($order->internal_notes ?? '') . "\nMercado Pago ID: " . $paymentId . " (Pago Aprobado)")
             ]);
-        } elseif (in_array($collectionStatus, ['rejected', 'cancelled'])) {
+        } elseif ($order->payment_method === 'mercadopago' && in_array($collectionStatus, ['rejected', 'cancelled'])) {
             $order->update([
                 'payment_status' => 'failed',
                 'internal_notes' => trim(($order->internal_notes ?? '') . "\nMercado Pago Estado: " . $collectionStatus)

@@ -392,6 +392,8 @@
                         </div>
                     </div>
 
+                    @include('components.checkout.flow-settings')
+
                     {{-- PayPal: independiente del selector de pasarela de arriba — puede
                          activarse junto con Mercado Pago, el checkout de la tienda ofrece
                          ambos como opciones separadas al cliente. --}}

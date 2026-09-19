@@ -19,12 +19,12 @@
         @if($order->payment_status === 'paid')
         <div class="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-center gap-3 text-emerald-800 text-sm font-semibold">
             <span class="text-lg">💳</span>
-            <span>¡Pago Aprobado con Tarjeta vía Mercado Pago! Tu orden está 100% confirmada.</span>
+            <span>Pago confirmado{{ $order->payment_method === 'flow' ? ' por Flow' : ($order->payment_method === 'paypal' ? ' por PayPal' : '') }}. Tu tienda continuará con la preparación del pedido.</span>
         </div>
-        @elseif($order->payment_method === 'mercadopago')
+        @elseif(in_array($order->payment_method, ['mercadopago', 'flow']))
         <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-center gap-3 text-amber-800 text-sm font-semibold">
             <span class="text-lg">⏳</span>
-            <span>Pago con Tarjeta en proceso de verificación por Mercado Pago. Te notificaremos en cuanto se confirme.</span>
+            <span>{{ $order->payment_status === 'failed' ? 'El pago no se completó. Contacta a la tienda para coordinar otra forma de pago.' : 'El pago está pendiente de confirmación. Si ya pagaste, espera la verificación antes de realizar otro pago.' }}</span>
         </div>
         @endif
 

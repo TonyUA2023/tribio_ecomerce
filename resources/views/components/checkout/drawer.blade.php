@@ -10,6 +10,9 @@
     $paySecondary = $store->secondary_color ?: config("tribio.templates.{$store->template_name}.default_secondary", '#C8A68B');
     $hasMpCapable = in_array($store->checkout_mode, ['card', 'mixed']) && (!empty($store->mp_access_token) || !empty($store->gateway_access_token));
     $hasPaypalCapable = in_array($store->checkout_mode, ['card', 'mixed']) && !empty($store->paypal_client_id) && !empty($store->paypal_client_secret);
+    $hasFlowCapable = in_array($store->checkout_mode, ['card', 'mixed']) && app(\App\Services\FlowService::class)->isConfigured($store);
+    $flowCurrencyMatches = \App\Helpers\CurrencyHelper::currentCurrency() === $store->flow_currency;
+    $defaultPayment = $hasMpCapable ? 'card' : (($hasFlowCapable && $flowCurrencyMatches) ? 'flow' : ($hasPaypalCapable ? 'paypal' : (in_array($store->checkout_mode, ['whatsapp', 'mixed']) ? 'whatsapp' : '')));
 @endphp
 <script>window.tribioCsrfToken = '{{ csrf_token() }}';</script>
 <div id="cartDrawer"
@@ -34,7 +37,7 @@
              express_shipping: false,
              create_account: false,
              password: '',
-             payment_method: '{{ ($store->checkout_mode === 'card' || ($store->checkout_mode === 'mixed' && !empty($store->mp_access_token))) ? 'card' : 'whatsapp' }}'
+             payment_method: '{{ $defaultPayment }}'
          },
          customerLoggedIn: false,
          customerUser: null,
@@ -57,13 +60,15 @@
          freeShippingActive: false,
          hasMercadoPago: {{ $hasMpCapable ? 'true' : 'false' }},
          hasWhatsapp: {{ in_array($store->checkout_mode, ['whatsapp', 'mixed']) ? 'true' : 'false' }},
+         hasFlow: {{ $hasFlowCapable ? 'true' : 'false' }},
+         flowCurrencyMatches: {{ $flowCurrencyMatches ? 'true' : 'false' }},
          hasPaypal: {{ $hasPaypalCapable ? 'true' : 'false' }},
          paypalClientId: '{{ $store->paypal_client_id }}',
          paypalSdkOrigin: '{{ ($store->paypal_mode ?? 'sandbox') === 'live' ? 'https://www.paypal.com' : 'https://www.sandbox.paypal.com' }}',
          paypalReady: false,
          paypalSession: null,
          paypalOrderNumber: null,
-         paymentMethod: '{{ ($store->checkout_mode === 'card' || ($store->checkout_mode === 'mixed' && !empty($store->mp_access_token))) ? 'card' : 'whatsapp' }}',
+         paymentMethod: '{{ $defaultPayment }}',
          hasActiveToken: {{ (!empty($store->mp_access_token) || !empty($store->gateway_access_token)) ? 'true' : 'false' }},
          cartItems: window.TribioCart ? window.TribioCart.items : [],
          // Tarjeta embebida: se tokeniza con MercadoPago.js dentro del propio drawer, sin
@@ -86,6 +91,7 @@
              this.updateShipping();
              this.checkCurrentCustomer();
              if (this.hasMercadoPago) this.ensureMercadoPagoJs();
+             if (this.paymentMethod === 'paypal') this.ensurePaypalSdk();
              // Envío gratis / descuento por cantidad dependen de cuánto hay en el carrito,
              // así que se recalculan cada vez que cambia (agregar, quitar, +/- cantidad).
              this.$watch('cartItems', () => this.updateShipping());
@@ -462,6 +468,8 @@
              return Object.keys(this.errors).length === 0;
          },
          submitOrder() {
+             if (this.submitting) return;
+             if (!this.paymentMethod) { this.errors.payment = 'La tienda todavía no tiene un medio de pago disponible.'; return; }
              if (!this.customerLoggedIn) {
                  this.openTribioPass('register');
                  return;
@@ -491,7 +499,7 @@
              this.customer.payment_method = this.paymentMethod === 'mercadopago_other' ? 'mercadopago' : this.paymentMethod;
              if (window.TribioCart) {
                  this.submitting = true;
-                 window.TribioCart.checkout(this.storeSlug, this.customer).finally(() => { this.submitting = false; });
+                 window.TribioCart.checkout(this.storeSlug, this.customer).catch(e => { this.errors.payment = e.message || 'No se pudo iniciar el pago. Intenta nuevamente.'; }).finally(() => { this.submitting = false; });
              }
          }
      }"
@@ -777,7 +785,10 @@
                                     <p class="mt-1.5 text-[11px] text-[var(--pay-text-muted)] pl-6">Para clientes internacionales. Se cobra el equivalente en dólares (USD), no en soles.</p>
                                 </label>
                             </template>
-                            <span x-show="errors.payment" x-text="errors.payment" class="pay-field-error-msg"></span>
+                            @if($hasFlowCapable)
+                                @include('components.checkout.flow-option')
+                            @endif
+                            <span role="alert" x-show="errors.payment" x-text="errors.payment" class="pay-field-error-msg"></span>
                         </div>
                     </div>
 
@@ -846,7 +857,7 @@
                         <template x-if="customerLoggedIn && paymentMethod !== 'paypal'">
                             <button id="btnSubmitOrder" @click="submitOrder" :disabled="submitting" style="background: var(--pay-accent);" class="flex-1 py-3 rounded-xl font-bold text-white transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-60 hover:opacity-90">
                                 <span x-show="submitting" class="pay-spinner"></span>
-                                <span x-text="submitting ? 'Procesando...' : (paymentMethod === 'card' ? 'Pagar ahora' : (paymentMethod === 'mercadopago_other' ? 'Continuar al pago' : 'Confirmar pedido'))"></span>
+                                <span x-text="submitting ? 'Procesando...' : (paymentMethod === 'card' ? 'Pagar ahora' : (paymentMethod === 'flow' ? 'Continuar a Flow' : (paymentMethod === 'mercadopago_other' ? 'Continuar al pago' : 'Confirmar pedido')))"></span>
                             </button>
                         </template>
                         <template x-if="customerLoggedIn && paymentMethod === 'paypal'">
