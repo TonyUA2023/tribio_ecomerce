@@ -473,9 +473,18 @@ class StoreController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Illuminate\Support\Facades\DB::rollBack();
             throw $e;
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            // Flow rejected the request itself (4xx) — its JSON "message" describes a
+            // fixable input problem (e.g. "The userEmail: ... is not valid.") and is
+            // written to be shown to the end customer, unlike a raw exception message.
+            \Illuminate\Support\Facades\DB::rollBack();
+            $flowMessage = $e->response?->json('message');
+            \Log::warning('Flow rejected the payment request.', ['store_id' => $store->id, 'status' => $e->response?->status(), 'flow_message' => $flowMessage]);
+            $detail = $flowMessage ? " ({$flowMessage})" : '';
+            return response()->json(['success' => false, 'error' => "No se pudo abrir Flow{$detail}. Corrige el dato e inténtalo nuevamente."], 502);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\DB::rollBack();
-            \Log::warning('Flow checkout could not be started.', ['store_id' => $store->id]);
+            \Log::warning('Flow checkout could not be started.', ['store_id' => $store->id, 'error' => $e->getMessage()]);
             return response()->json(['success' => false, 'error' => 'No se pudo abrir Flow. Tu carrito sigue disponible; inténtalo nuevamente en unos momentos.'], 502);
         }
     }
