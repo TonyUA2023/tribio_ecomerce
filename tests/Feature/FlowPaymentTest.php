@@ -156,5 +156,31 @@ class FlowPaymentTest extends TestCase
         $this->assertStringContainsString('pay-flow-option', $html);
         $this->assertStringNotContainsString('test-secret', $html);
     }
+
+    public function test_legacy_confirmation_cannot_confirm_flow_from_query_parameters(): void
+    {
+        $store = $this->store(); $store->update(['template_name' => 'minimal-light']);
+        $order = $this->order($store);
+        $this->get('/tienda/'.$store->slug.'/pedido/'.$order->id.'/confirmacion?status=approved&payment_id=forged')->assertOk();
+        $this->assertEquals('pending', $order->fresh()->payment_status);
+        $this->assertEquals('flow', $order->fresh()->payment_method);
+        $other = Store::create(['user_id' => $store->user_id, 'name' => 'Otra', 'slug' => 'otra', 'status' => 'active']);
+        $this->get('/tienda/'.$other->slug.'/pedido/'.$order->id.'/confirmacion?status=approved')->assertNotFound();
+        Http::assertNothingSent();
+    }
+
+    public function test_settings_preserve_blank_secrets_and_never_render_them(): void
+    {
+        $store = $this->store();
+        $this->actingAs($store->user);
+        $this->get(route('dashboard.store.edit'))->assertOk()->assertSee('Ofrecer Flow a mis clientes')->assertDontSee('test-secret');
+        $payload = ['name' => $store->name, 'category' => 'otros', 'build_mode' => 'builder', 'checkout_mode' => 'mixed',
+            'flow_enabled' => '1', 'flow_mode' => 'sandbox', 'flow_currency' => 'PEN', 'flow_api_key' => '', 'flow_secret_key' => ''];
+        $this->post(route('dashboard.store.update'), $payload)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertEquals('test-secret', $store->fresh()->flow_secret_key);
+        $this->assertTrue($store->fresh()->flow_enabled);
+        $this->post(route('dashboard.store.update'), array_replace($payload, ['flow_enabled' => '0']))->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertFalse($store->fresh()->flow_enabled);
+    }
 }
 
