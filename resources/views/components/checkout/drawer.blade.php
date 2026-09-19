@@ -8,9 +8,12 @@
 @php
     $payAccent = $store->accent_color ?: config("tribio.templates.{$store->template_name}.default_accent", '#1A1A1A');
     $paySecondary = $store->secondary_color ?: config("tribio.templates.{$store->template_name}.default_secondary", '#C8A68B');
-    $hasMpCapable = in_array($store->checkout_mode, ['card', 'mixed']) && (!empty($store->mp_access_token) || !empty($store->gateway_access_token));
-    $hasPaypalCapable = in_array($store->checkout_mode, ['card', 'mixed']) && !empty($store->paypal_client_id) && !empty($store->paypal_client_secret);
-    $hasFlowCapable = in_array($store->checkout_mode, ['card', 'mixed']) && app(\App\Services\FlowService::class)->isConfigured($store);
+    // Una tienda activa una sola pasarela a la vez (store->payment_gateway, elegida en Mi
+    // Tienda) — de ahí el === en cada condición: evita que dos o tres gateways aparezcan
+    // juntos como opciones si credenciales de una selección anterior quedaron guardadas.
+    $hasMpCapable = in_array($store->checkout_mode, ['card', 'mixed']) && $store->payment_gateway === 'mercado_pago' && (!empty($store->mp_access_token) || !empty($store->gateway_access_token));
+    $hasPaypalCapable = in_array($store->checkout_mode, ['card', 'mixed']) && $store->payment_gateway === 'paypal' && !empty($store->paypal_client_id) && !empty($store->paypal_client_secret);
+    $hasFlowCapable = in_array($store->checkout_mode, ['card', 'mixed']) && $store->payment_gateway === 'flow' && app(\App\Services\FlowService::class)->isConfigured($store);
     $flowCurrencyMatches = \App\Helpers\CurrencyHelper::currentCurrency() === $store->flow_currency;
     $defaultPayment = $hasMpCapable ? 'card' : (($hasFlowCapable && $flowCurrencyMatches) ? 'flow' : ($hasPaypalCapable ? 'paypal' : (in_array($store->checkout_mode, ['whatsapp', 'mixed']) ? 'whatsapp' : '')));
 @endphp

@@ -65,7 +65,7 @@ class StoreSettingsController extends Controller
             'meta_description'=> 'nullable|string|max:160',
             'distributors'   => 'nullable|array',
             'checkout_mode'  => 'required|string|in:whatsapp,card,mixed',
-            'payment_gateway'=> 'nullable|string|in:culqi,mercado_pago',
+            'payment_gateway'=> 'nullable|string|in:mercado_pago,paypal,flow',
             'gateway_public_key' => 'nullable|string|max:255',
             'gateway_private_key'=> 'nullable|string|max:255',
             'gateway_access_token'=> 'nullable|string',
@@ -105,7 +105,7 @@ class StoreSettingsController extends Controller
         ]);
 
         $data = $request->only([
-            'flow_enabled', 'flow_mode', 'flow_currency',
+            'flow_mode', 'flow_currency',
             'name', 'tagline', 'description', 'category', 'build_mode',
             'whatsapp_phone', 'phone', 'email', 'address', 'city',
             'facebook_url', 'instagram_url', 'tiktok_url',
@@ -132,6 +132,9 @@ class StoreSettingsController extends Controller
         }
         if (empty($data['bulk_discount_type'])) {
             $data['bulk_discount_type'] = null;
+        }
+        if (($data['payment_gateway'] ?? '') === '') {
+            $data['payment_gateway'] = null;
         }
 
         // Países habilitados
@@ -169,10 +172,6 @@ class StoreSettingsController extends Controller
             $data['slug'] = $slug;
         }
 
-        if ($data['checkout_mode'] === 'card' && empty($data['payment_gateway'])) {
-            $data['payment_gateway'] = 'mercado_pago';
-        }
-
         if ($request->filled('mp_access_token')) {
             $data['gateway_access_token'] = trim($request->input('mp_access_token'));
             $data['mp_access_token'] = trim($request->input('mp_access_token'));
@@ -194,9 +193,15 @@ class StoreSettingsController extends Controller
                 $data[$field] = trim($request->input($field));
             }
         }
-        if ($request->boolean('flow_enabled') &&
+        // flow_enabled ya no es un checkbox propio en el formulario: se deriva de
+        // cuál pasarela quedó seleccionada (payment_gateway, ya normalizada arriba
+        // a null cuando viene vacía — por eso NO se usa "?? $store->payment_gateway"
+        // aquí: haría que limpiar la selección "resucite" el valor guardado viejo).
+        // Mercado Pago y PayPal se activan igual, implícitamente, al ser la elegida.
+        $data['flow_enabled'] = $data['payment_gateway'] === 'flow';
+        if ($data['flow_enabled'] &&
             (empty($data['flow_api_key'] ?? $store->flow_api_key) || empty($data['flow_secret_key'] ?? $store->flow_secret_key))) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['flow_enabled' => 'Ingresa API Key y Secret Key para activar Flow.']);
+            throw \Illuminate\Validation\ValidationException::withMessages(['payment_gateway' => 'Seleccionaste Flow: ingresa tu API Key y Secret Key para activarlo.']);
         }
         $store->update($data);
 

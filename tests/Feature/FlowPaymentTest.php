@@ -35,6 +35,7 @@ class FlowPaymentTest extends TestCase
         return Store::create([
             'user_id' => User::factory()->create()->id, 'name' => 'Maetek Store', 'slug' => 'maetek-store',
             'status' => 'active', 'template_name' => 'elegant-refurbished', 'checkout_mode' => 'mixed',
+            'payment_gateway' => 'flow',
             'flow_enabled' => true, 'flow_api_key' => 'test-key', 'flow_secret_key' => 'test-secret',
             'flow_mode' => 'sandbox', 'flow_currency' => 'PEN',
         ]);
@@ -173,14 +174,16 @@ class FlowPaymentTest extends TestCase
     {
         $store = $this->store();
         $this->actingAs($store->user);
-        $this->get(route('dashboard.store.edit'))->assertOk()->assertSee('Ofrecer Flow a mis clientes')->assertDontSee('test-secret');
+        $this->get(route('dashboard.store.edit'))->assertOk()->assertSee('Secret Key')->assertDontSee('test-secret');
+        // flow_enabled ya no es un checkbox del formulario: se deriva de payment_gateway.
         $payload = ['name' => $store->name, 'category' => 'otros', 'build_mode' => 'builder', 'checkout_mode' => 'mixed',
-            'flow_enabled' => '1', 'flow_mode' => 'sandbox', 'flow_currency' => 'PEN', 'flow_api_key' => '', 'flow_secret_key' => ''];
+            'payment_gateway' => 'flow', 'flow_mode' => 'sandbox', 'flow_currency' => 'PEN', 'flow_api_key' => '', 'flow_secret_key' => ''];
         $this->post(route('dashboard.store.update'), $payload)->assertRedirect()->assertSessionHasNoErrors();
         $this->assertEquals('test-secret', $store->fresh()->flow_secret_key);
         $this->assertTrue($store->fresh()->flow_enabled);
-        $this->post(route('dashboard.store.update'), array_replace($payload, ['flow_enabled' => '0']))->assertRedirect()->assertSessionHasNoErrors();
+        $this->post(route('dashboard.store.update'), array_replace($payload, ['payment_gateway' => '']))->assertRedirect()->assertSessionHasNoErrors();
         $this->assertFalse($store->fresh()->flow_enabled);
+        $this->assertNull($store->fresh()->payment_gateway);
     }
 }
 

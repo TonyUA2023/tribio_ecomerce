@@ -451,7 +451,11 @@ class StoreController extends Controller
         }
         $store = $this->getStore($slug);
         $flow = app(\App\Services\FlowService::class);
-        if (!$flow->isConfigured($store) || !in_array($store->checkout_mode, ['card', 'mixed'], true)) {
+        // Cada tienda activa una sola pasarela a la vez (store->payment_gateway, elegida
+        // en Mi Tienda) — se exige aquí además de en isConfigured() para que un POST
+        // manual con payment_method=flow no pueda cobrar por Flow si la tienda tiene
+        // seleccionada otra pasarela, aunque sus credenciales de Flow sigan guardadas.
+        if ($store->payment_gateway !== 'flow' || !$flow->isConfigured($store) || !in_array($store->checkout_mode, ['card', 'mixed'], true)) {
             return response()->json(['success' => false, 'error' => 'Flow no está disponible en esta tienda. Elige otro método.'], 422);
         }
         if (\App\Helpers\CurrencyHelper::currentCurrency() !== $store->flow_currency) {
@@ -714,8 +718,11 @@ class StoreController extends Controller
         //  2) "Otros medios" (Yape, PagoEfectivo, banca, etc.): no se pueden representar
         //     como campos de formulario, así que usan Checkout Pro (redirección a la
         //     página alojada por Mercado Pago) — llegan aquí sin `mp_form_data`.
+        // store->payment_gateway is the single pasarela activa (elegida en Mi Tienda) —
+        // exigirla aquí es lo que garantiza que solo una API se use para cobrar, aunque
+        // credenciales de otra pasarela hayan quedado guardadas de una selección anterior.
         $mpToken = $store->mp_access_token ?? $store->gateway_access_token;
-        if ($paymentMethod !== 'paypal' && ($paymentMethod === 'mercadopago' || $store->checkout_mode === 'card') && $mpToken) {
+        if ($store->payment_gateway === 'mercado_pago' && $paymentMethod !== 'paypal' && ($paymentMethod === 'mercadopago' || $store->checkout_mode === 'card') && $mpToken) {
             $mpFormData = $request->input('mp_form_data');
             try {
                 $client = new \GuzzleHttp\Client(['timeout' => 15]);
@@ -918,7 +925,10 @@ class StoreController extends Controller
         if ($paymentMethod === 'paypal') {
             $paypalService = app(\App\Services\PayPalService::class);
 
-            if (!$paypalService->isConfigured($store)) {
+            // store->payment_gateway es la única pasarela activa de la tienda — sin esto,
+            // credenciales de PayPal guardadas de una selección anterior seguirían
+            // funcionando incluso si la tienda ahora usa Mercado Pago o Flow.
+            if ($store->payment_gateway !== 'paypal' || !$paypalService->isConfigured($store)) {
                 $order->update(['payment_status' => 'failed']);
                 return response()->json([
                     'success' => false,

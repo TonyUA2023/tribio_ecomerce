@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('stores', function (Blueprint $table) {
             $table->string('checkout_mode')->default('whatsapp'); // whatsapp | card
-            $table->string('payment_gateway')->nullable(); // culqi | mercado_pago
+            $table->string('payment_gateway')->nullable(); // mercado_pago | paypal | flow
             $table->string('gateway_public_key')->nullable();
             $table->string('gateway_private_key')->nullable();
             $table->text('gateway_access_token')->nullable();

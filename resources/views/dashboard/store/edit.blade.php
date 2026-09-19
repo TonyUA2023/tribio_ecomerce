@@ -28,7 +28,7 @@
         freeShippingEnabled: {{ old('free_shipping_min_quantity', $store?->free_shipping_min_quantity) || old('free_shipping_min_amount', $store?->free_shipping_min_amount) ? 'true' : 'false' }},
         bulkDiscountEnabled: {{ old('bulk_discount_min_quantity', $store?->bulk_discount_min_quantity) ? 'true' : 'false' }},
         langEnabled: {{ old('is_multilanguage_enabled', $store?->is_multilanguage_enabled) ? 'true' : 'false' }},
-        showGatewayPrivate: false, showMpToken: false, showPaypalSecret: false,
+        showGatewayPrivate: false, showMpToken: false, showPaypalSecret: false, showFlowSecret: false,
         regions: {{ json_encode(old('distributors', $store->distributors ?? [])) }} || [],
         addRegion() { this.regions.push({ region: '', locations: [''] }); },
         removeRegion(index) { this.regions.splice(index, 1); },
@@ -315,29 +315,13 @@
                     <div>
                         <label class="input-label">Pasarela de Pago Habilitada</label>
                         <select name="payment_gateway" x-model="gateway" class="input-field">
-                            <option value="">Selecciona una pasarela...</option>
-                            <option value="culqi">Culqi</option>
+                            <option value="">Ninguna todavía — selecciona una...</option>
                             <option value="mercado_pago">Mercado Pago</option>
+                            <option value="paypal">PayPal</option>
+                            <option value="flow">Flow</option>
                         </select>
-                    </div>
-
-                    {{-- Campos para Culqi --}}
-                    <div x-show="gateway === 'culqi'" x-cloak class="space-y-4">
-                        <p class="text-[10px] text-tribio-cyan font-bold uppercase tracking-wider">Configuración de Culqi (Perú)</p>
-                        <div>
-                            <label class="input-label">Llave Pública (Public Key) *</label>
-                            <input type="text" name="gateway_public_key" value="{{ old('gateway_public_key', $store?->gateway_public_key) }}" class="input-field" placeholder="pk_live_...">
-                        </div>
-                        <div>
-                            <label class="input-label">Llave Privada (Private Key) *</label>
-                            <div class="relative">
-                                <input :type="showGatewayPrivate ? 'text' : 'password'" name="gateway_private_key" value="{{ old('gateway_private_key', $store?->gateway_private_key) }}" class="input-field pr-11" placeholder="sk_live_...">
-                                <button type="button" @click="showGatewayPrivate = !showGatewayPrivate" class="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 text-sm" :aria-label="showGatewayPrivate ? 'Ocultar llave privada' : 'Mostrar llave privada'">
-                                    <span x-show="!showGatewayPrivate">👁️</span><span x-show="showGatewayPrivate" x-cloak>🙈</span>
-                                </button>
-                            </div>
-                            <p class="text-[10px] text-white/40 mt-1">Esta llave es secreta: no la compartas. Solo tú puedes verla al pulsar el ícono del ojo.</p>
-                        </div>
+                        <p class="text-[10px] text-white/40 mt-1">Solo una pasarela está activa a la vez: al elegir una y guardar, es la única que se le cobra a tus clientes y la única que verán en el checkout — así evitas confusiones. Puedes cambiarla cuando quieras; tus credenciales guardadas de otras pasarelas no se pierden.</p>
+                        @error('payment_gateway') <p class="text-sm text-red-300 mt-1" role="alert">{{ $message }}</p> @enderror
                     </div>
 
                     {{-- Campos para Mercado Pago --}}
@@ -392,12 +376,13 @@
                         </div>
                     </div>
 
-                    @include('components.checkout.flow-settings')
+                    {{-- Campos para Flow --}}
+                    <div x-show="gateway === 'flow'" x-cloak>
+                        @include('components.checkout.flow-settings')
+                    </div>
 
-                    {{-- PayPal: independiente del selector de pasarela de arriba — puede
-                         activarse junto con Mercado Pago, el checkout de la tienda ofrece
-                         ambos como opciones separadas al cliente. --}}
-                    <div class="space-y-4 pt-2 border-t border-white/5">
+                    {{-- Campos para PayPal --}}
+                    <div x-show="gateway === 'paypal'" x-cloak class="space-y-4">
                         <div class="flex items-center justify-between flex-wrap gap-2 pt-2">
                             <p class="text-[11px] text-tribio-cyan font-bold uppercase tracking-wider">PayPal (Clientes internacionales, cobra en USD)</p>
                             @if($store?->paypal_client_id)
