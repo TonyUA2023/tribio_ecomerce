@@ -32,6 +32,16 @@ class FlowService
         return $parameters;
     }
 
+    // Apache/PHP-FPM workers are long-lived and Guzzle pools keep-alive connections
+    // across requests; a connection recycled after Flow's load balancer silently drops
+    // it hangs for the full timeout with 0 bytes back. A one-off CLI curl never reuses
+    // a pool and never hits this, which is how it was isolated. Forcing a fresh
+    // connection per call avoids it entirely.
+    private function freshConnectionOptions(): array
+    {
+        return ['curl' => [CURLOPT_FRESH_CONNECT => true, CURLOPT_FORBID_REUSE => true]];
+    }
+
     public function createPayment(Store $store, Order $order): string
     {
         if (!$this->isConfigured($store) || $order->currency !== $store->flow_currency || $order->total <= 0) {
@@ -53,6 +63,7 @@ class FlowService
 
         // Do not retry creation automatically: a timeout may hide a created payment.
         $data = Http::asForm()->acceptJson()->connectTimeout(5)->timeout(20)
+            ->withOptions($this->freshConnectionOptions())
             ->post($this->baseUrl($store) . '/payment/create', $parameters)->throw()->json();
         $url = $data['url'] ?? '';
         $host = parse_url($url, PHP_URL_HOST);
@@ -70,6 +81,7 @@ class FlowService
         $order = Order::where('store_id', $store->id)->where('payment_method', 'flow')
             ->where('flow_token', $token)->firstOrFail();
         $data = Http::acceptJson()->connectTimeout(5)->timeout(15)
+            ->withOptions($this->freshConnectionOptions())
             ->get($this->baseUrl($store) . '/payment/getStatus', $this->sign([
                 'apiKey' => $store->flow_api_key, 'token' => $token,
             ], $store->flow_secret_key))->throw()->json();
