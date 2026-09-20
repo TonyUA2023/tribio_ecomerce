@@ -338,8 +338,8 @@
                             ['title' => \App\Helpers\TranslationHelper::trans('back_in_stock', 'De regreso'), 'bg' => '#FAF0E4', 'text' => '#4A4335', 'icon' => '🔄', 'query' => 'q=destacado'],
                             ['title' => \App\Helpers\TranslationHelper::trans('deco', 'Deco'), 'bg' => '#E8E7E1', 'text' => '#363532', 'icon' => '🪴', 'query' => 'category=deco'],
                             ['title' => \App\Helpers\TranslationHelper::trans('wholesale', 'Por mayor'), 'bg' => '#D8E5D0', 'text' => '#23391C', 'icon' => '📦', 'query' => 'q=mayor'],
-                            $isUsd ? ['title' => '$2 o menos', 'bg' => '#EFE3D0', 'text' => '#4A3525', 'icon' => '$ 2', 'query' => 'max_price=2'] : ['title' => 'De S/5', 'bg' => '#EFE3D0', 'text' => '#4A3525', 'icon' => 'S/ 5', 'query' => 'max_price=5'],
-                            $isUsd ? ['title' => '$5 o menos', 'bg' => '#D6E8E2', 'text' => '#1E3A33', 'icon' => '$ 5', 'query' => 'max_price=5'] : ['title' => 'De S/10', 'bg' => '#D6E8E2', 'text' => '#1E3A33', 'icon' => 'S/ 10', 'query' => 'max_price=10'],
+                            $isUsd ? ['title' => '$2 o menos', 'bg' => '#EFE3D0', 'text' => '#4A3525', 'icon' => '$ 2', 'query' => 'max_price=2'] : ['title' => 'Desde S/5', 'bg' => '#EFE3D0', 'text' => '#4A3525', 'icon' => 'S/ 5', 'query' => 'max_price=5'],
+                            $isUsd ? ['title' => '$5 o menos', 'bg' => '#D6E8E2', 'text' => '#1E3A33', 'icon' => '$ 5', 'query' => 'max_price=5'] : ['title' => 'Desde S/10', 'bg' => '#D6E8E2', 'text' => '#1E3A33', 'icon' => 'S/ 10', 'query' => 'max_price=10'],
                         ];
                     @endphp
                     @foreach($highlights as $index => $h)
