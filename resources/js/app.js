@@ -230,11 +230,14 @@ window.TribioCart = {
                 if (!errorMsg && data.errors) {
                     errorMsg = Object.values(data.errors).flat().join('\n');
                 }
-                alert(errorMsg || 'Error al procesar el pedido. Por favor verifica los datos.');
+                // Flow's drawer owns its inline error and loading state.
+                if (customerData.payment_method !== 'flow') {
+                    alert(errorMsg || 'Error al procesar el pedido. Por favor verifica los datos.');
+                }
                 console.error(data);
 
                 const btn = document.getElementById('btnSubmitOrder');
-                if (btn) {
+                if (btn && customerData.payment_method !== 'flow') {
                     btn.innerText = 'Confirmar y Pagar';
                     btn.disabled = false;
                 }
@@ -243,11 +246,11 @@ window.TribioCart = {
         } catch (error) {
             console.error('Error during checkout:', error);
             // Only alert if it's not a thrown error from above
-            if (error.message === 'Failed to fetch') {
+            if (error.message === 'Failed to fetch' && customerData.payment_method !== 'flow') {
                 alert('Ocurrió un error inesperado al procesar el checkout.');
             }
             const btn = document.getElementById('btnSubmitOrder');
-            if (btn) {
+            if (btn && customerData.payment_method !== 'flow') {
                 btn.innerText = 'Confirmar y Pagar';
                 btn.disabled = false;
             }

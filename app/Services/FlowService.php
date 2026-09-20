@@ -32,13 +32,12 @@ class FlowService
         return $parameters;
     }
 
-    // Apache/PHP-FPM workers are long-lived and Guzzle pools keep-alive connections
-    // across requests; a connection recycled after Flow's load balancer silently drops
-    // it hangs for the full timeout with 0 bytes back. A one-off CLI curl never reuses
-    // a pool and never hits this, which is how it was isolated. Forcing a fresh
-    // connection per call avoids it entirely.
+    // Keep connections independent. This is not a fix for DNS, TLS or firewall errors.
     private function freshConnectionOptions(): array
     {
+        if (!extension_loaded('curl')) {
+            return []; // Guzzle also supports PHP streams; curl constants may not exist.
+        }
         return ['curl' => [CURLOPT_FRESH_CONNECT => true, CURLOPT_FORBID_REUSE => true]];
     }
 
@@ -62,13 +61,16 @@ class FlowService
         ], $store->flow_secret_key);
 
         // Do not retry creation automatically: a timeout may hide a created payment.
+        // A ConnectionException here propagates as-is so FlowFailure can classify it.
         $data = Http::asForm()->acceptJson()->connectTimeout(5)->timeout(20)
             ->withOptions($this->freshConnectionOptions())
             ->post($this->baseUrl($store) . '/payment/create', $parameters)->throw()->json();
         $url = $data['url'] ?? '';
         $host = parse_url($url, PHP_URL_HOST);
         if (empty($data['token']) || empty($data['flowOrder']) || parse_url($url, PHP_URL_SCHEME) !== 'https'
-            || !in_array($host, ['www.flow.cl', 'sandbox.flow.cl'], true)) {
+            || !in_array($host, ['www.flow.cl', 'sandbox.flow.cl', 'api.flow.cl'], true)
+            || parse_url($url, PHP_URL_USER) !== null || parse_url($url, PHP_URL_PASS) !== null
+            || !in_array(parse_url($url, PHP_URL_PORT), [null, 443], true)) {
             throw new RuntimeException('Invalid Flow payment response.');
         }
         $order->update(['flow_token' => $data['token'], 'flow_order_id' => (string) $data['flowOrder']]);

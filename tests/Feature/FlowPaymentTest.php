@@ -75,6 +75,69 @@ class FlowPaymentTest extends TestCase
         $this->assertArrayNotHasKey('flow_token', $order->toArray());
     }
 
+    public function test_documented_api_flow_redirect_is_accepted(): void
+    {
+        $store = $this->store(); $order = $this->order($store);
+        Http::fake(['*/payment/create' => Http::response(['url' => 'https://api.flow.cl', 'token' => 'new-token', 'flowOrder' => 456])]);
+        $this->assertEquals('https://api.flow.cl?token=new-token', app(FlowService::class)->createPayment($store, $order));
+    }
+
+    public function test_untrusted_redirects_are_still_rejected(): void
+    {
+        $store = $this->store(); $order = $this->order($store);
+        foreach (['https://api.flow.cl.evil.test', 'https://evil.test', 'http://api.flow.cl', 'https://user@api.flow.cl', 'https://api.flow.cl:8443'] as $url) {
+            Http::fake(['*/payment/create' => Http::response(['url' => $url, 'token' => 'new-token', 'flowOrder' => 456])]);
+            try {
+                app(FlowService::class)->createPayment($store, $order);
+                $this->fail('Untrusted redirect accepted');
+            } catch (\RuntimeException $e) {
+                $this->assertEquals('Invalid Flow payment response.', $e->getMessage());
+            }
+        }
+    }
+
+    public function test_network_failure_has_diagnostic_reference_and_preserves_stock(): void
+    {
+        $store = $this->store();
+        $product = Product::create(['store_id' => $store->id, 'name' => 'Producto', 'slug' => 'producto', 'price' => 50, 'price_usd' => 15, 'stock' => 10, 'track_stock' => true, 'is_active' => true]);
+        $attempts = 0;
+        Http::fake(function () use (&$attempts) {
+            $attempts++;
+            throw new \Illuminate\Http\Client\ConnectionException('cURL error 28: timeout');
+        });
+        $this->postJson('/tienda/'.$store->slug.'/checkout', ['payment_method' => 'flow', 'customer_name' => 'Cliente', 'customer_email' => 'buyer@example.test', 'customer_phone' => '999999999', 'items' => [['id' => $product->id, 'quantity' => 2]]])
+            ->assertStatus(502)->assertJsonPath('code', 'flow_connection_error')->assertJsonStructure(['reference'])
+            ->assertDontSee('test-secret');
+        $this->assertEquals(10, $product->fresh()->stock);
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertEquals(1, $attempts);
+    }
+
+    public function test_failure_diagnostics_redact_secrets_and_email(): void
+    {
+        $store = $this->store();
+        Http::fake(['*' => Http::response(['code' => 501, 'message' => 'Invalid test-key test-secret buyer@example.test token=opaque-token'], 401)]);
+        try {
+            Http::get('https://www.flow.cl/api/payment/getStatus')->throw();
+            $this->fail('Expected rejection');
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            $details = \App\Services\FlowFailure::details($e, $store);
+            $this->assertEquals('flow_api_rejected', $details['kind']);
+            foreach (['test-key', 'test-secret', 'buyer@example.test', 'opaque-token'] as $secret) {
+                $this->assertStringNotContainsString($secret, json_encode($details));
+            }
+        }
+    }
+
+    public function test_production_diagnostic_posts_without_secrets_or_payment_data(): void
+    {
+        config(['app.url' => 'https://tribioshop.com']);
+        $store = $this->store();
+        Http::fake(['*/payment/create' => Http::response(['code' => 501, 'message' => 'apiKey required'], 400)]);
+        $this->artisan('flow:diagnose', ['store' => $store->slug, '--network' => true])->assertSuccessful();
+        Http::assertSent(fn ($request) => $request->method() === 'POST' && $request->data() === []);
+    }
+
     public function test_callbacks_are_verified_idempotent_and_cannot_downgrade_paid_orders(): void
     {
         $store = $this->store(); $order = $this->order($store);
