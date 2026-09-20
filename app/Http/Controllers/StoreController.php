@@ -1131,8 +1131,22 @@ class StoreController extends Controller
             }
         }
 
-        $template = $store->template_name;
-        return view("templates.{$template}.confirmation", compact('store', 'order'));
+        // No dedicated confirmation page: the buyer lands back on the store and
+        // app.js shows the real order status via SweetAlert (never "success" just
+        // because the order exists — Mercado Pago sends success/failure/pending here alike).
+        return redirect(route('store.show', $store->slug) . '?pedido=' . urlencode($order->order_number));
+    }
+
+    public function orderStatus(string $orderNumber)
+    {
+        // order_number is globally unique (see Shipping-Promotions vault note on the
+        // collision fix), so this needs no store scoping and works on custom domains too.
+        $order = Order::where('order_number', $orderNumber)->firstOrFail();
+        return response()->json([
+            'order_number'   => $order->order_number,
+            'payment_status' => $order->payment_status,
+            'payment_method' => $order->payment_method,
+        ]);
     }
 
     public function mercadopagoWebhook(Request $request, Store $store)

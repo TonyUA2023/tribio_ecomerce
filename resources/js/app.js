@@ -1,10 +1,48 @@
 import './bootstrap';
 import './dashboard-images';
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 
 // ═══════════════════════════════════════════════════════════
 //  TRIBIO APP — Main JS
 //  Plugins: Alpine.js (via CDN in layouts), Swiper.js (via CDN en vistas que lo requieran)
 // ═══════════════════════════════════════════════════════════
+
+// ── Confirmación de pedido al volver de una pasarela (o del flujo por WhatsApp) ──
+// No hay página de confirmación propia: siempre se vuelve a la tienda con
+// ?pedido=<order_number> y se le pregunta al backend el estado real antes de
+// decir nada — así nunca se muestra "gracias por tu compra" sin haber pagado.
+(async () => {
+    const params = new URLSearchParams(window.location.search);
+    const orderNumber = params.get('pedido');
+    if (!orderNumber) return;
+
+    params.delete('pedido');
+    const cleanQuery = params.toString();
+    window.history.replaceState(null, '', window.location.pathname + (cleanQuery ? '?' + cleanQuery : ''));
+
+    try {
+        const res = await fetch(`/api/pedido-estado/${encodeURIComponent(orderNumber)}`, { headers: { Accept: 'application/json' } });
+        if (!res.ok) return;
+        const order = await res.json();
+        const isGatewayOrder = ['mercadopago', 'flow', 'paypal'].includes(order.payment_method);
+
+        let config;
+        if (order.payment_status === 'paid') {
+            config = { icon: 'success', title: '¡Pago confirmado!', text: `Tu pedido ${order.order_number} fue pagado y ya está en preparación.` };
+        } else if (isGatewayOrder && order.payment_status === 'failed') {
+            config = { icon: 'error', title: 'El pago no se completó', text: `Tu pedido ${order.order_number} sigue disponible. Contacta a la tienda para coordinar otra forma de pago.` };
+        } else if (isGatewayOrder) {
+            config = { icon: 'info', title: 'Pedido registrado', text: `Aún no hemos confirmado el pago de tu pedido ${order.order_number}. Si ya pagaste, espera la verificación antes de intentar de nuevo.` };
+        } else {
+            config = { icon: 'success', title: '¡Pedido registrado!', text: `Tu pedido ${order.order_number} fue registrado con éxito. Nos pondremos en contacto por WhatsApp.` };
+        }
+        Swal.fire({ ...config, confirmButtonColor: '#1A1A1A' });
+    } catch (e) {
+        // El pedido ya existe de todas formas; si esto falla, el cliente puede
+        // revisarlo desde "Mis Pedidos" — no hay nada más que hacer aquí.
+    }
+})();
 
 // ── Intersection Observer para animaciones al hacer scroll ──
 document.addEventListener('DOMContentLoaded', () => {

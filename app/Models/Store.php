@@ -172,6 +172,56 @@ class Store extends Model
         return round(min($value, $subtotal), 2);
     }
 
+    /**
+     * Human-readable messages for whichever promo rules (free shipping / bulk discount)
+     * this store currently has configured, in the visitor's active currency. Shared by
+     * every storefront placement (hero strip, footer) so they can never drift out of
+     * sync with each other or with what checkout actually charges.
+     */
+    public function activePromoMessages(bool $isEn = false): array
+    {
+        $currency = \App\Helpers\CurrencyHelper::currentCurrency();
+        $symbol = \App\Helpers\CurrencyHelper::symbol();
+        $formatAmount = function (float $penAmount) use ($currency, $symbol) {
+            $amount = $currency === 'PEN'
+                ? $penAmount
+                : app(\App\Services\ExchangeRateService::class)->convert($penAmount, 'PEN', $currency);
+            return $symbol . ' ' . \App\Helpers\CurrencyHelper::format($amount, $currency);
+        };
+
+        $promos = [];
+
+        if ($this->free_shipping_min_quantity || $this->free_shipping_min_amount) {
+            $thresholds = [];
+            if ($this->free_shipping_min_quantity) {
+                $thresholds[] = $isEn
+                    ? $this->free_shipping_min_quantity . '+ items'
+                    : $this->free_shipping_min_quantity . '+ unidades';
+            }
+            if ($this->free_shipping_min_amount) {
+                $thresholds[] = ($isEn ? 'orders over ' : 'compras desde ') . $formatAmount((float) $this->free_shipping_min_amount);
+            }
+            $promos[] = [
+                'icon' => '🎁',
+                'text' => ($isEn ? 'Free shipping on ' : 'Envío gratis en ') . implode($isEn ? ' or ' : ' o ', $thresholds),
+            ];
+        }
+
+        if ($this->bulk_discount_min_quantity && (float) $this->bulk_discount_value > 0) {
+            $discountLabel = $this->bulk_discount_type === 'percentage'
+                ? rtrim(rtrim(number_format((float) $this->bulk_discount_value, 2), '0'), '.') . '%'
+                : $formatAmount((float) $this->bulk_discount_value);
+            $promos[] = [
+                'icon' => '🏷️',
+                'text' => $isEn
+                    ? "{$discountLabel} off on orders of {$this->bulk_discount_min_quantity}+ items"
+                    : "{$discountLabel} de descuento en compras de {$this->bulk_discount_min_quantity}+ unidades",
+            ];
+        }
+
+        return $promos;
+    }
+
     // ─── Relationships ───────────────────────────────────────────
     public function user()
     {

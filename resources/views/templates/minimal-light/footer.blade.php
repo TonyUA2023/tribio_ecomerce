@@ -4,6 +4,10 @@
     $footerCategories = $store->categories()->take(6)->get();
     $phoneClean = preg_replace('/[^0-9]/', '', $store->whatsapp_phone ?? $store->contact_phone ?? '51956183384');
     $waUrl = !empty($phoneClean) ? "https://wa.me/{$phoneClean}?text=" . urlencode($isEn ? "Hello, I would like more information" : "Hola, deseo más información sobre los productos de {$store->name}") : '#';
+
+    // Promociones reales configuradas por la tienda (envío gratis / descuento por mayor),
+    // mostradas automáticamente en vez de un texto fijo de descuento no vinculado a ninguna regla.
+    $storePromos = $store->activePromoMessages($isEn);
 @endphp
 
 <footer class="bg-[#1E1D1B] text-stone-300 font-sans border-t border-stone-800 selection:bg-[#C8A68B] selection:text-white"
@@ -63,12 +67,26 @@
                     <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C8A68B]/20 text-[#E0C3AB] text-xs font-bold uppercase tracking-wider mb-2 border border-[#C8A68B]/30 font-brand">
                         {{ $isEn ? 'Join the Club' : 'Club Exclusivo' }}
                     </span>
-                    <h3 class="text-xl sm:text-2xl font-bold text-white tracking-tight font-brand">
-                        {{ $isEn ? 'Get 10% off your first purchase' : 'Recibe 10% de descuento en tu primera compra' }}
-                    </h3>
-                    <p class="text-xs sm:text-sm text-stone-400 mt-1">
-                        {{ $isEn ? 'Subscribe to receive secret flash sales, product launches and member gifts.' : 'Suscríbete para enterarte antes de lanzamientos, ofertas relámpago y regalos exclusivos.' }}
-                    </p>
+
+                    @if(count($storePromos) > 0)
+                        <div class="flex flex-col gap-0.5 mb-1">
+                            @foreach($storePromos as $promo)
+                                <h3 class="flex items-center justify-center lg:justify-start gap-1.5 text-lg sm:text-xl font-bold text-white tracking-tight font-brand">
+                                    <span>{{ $promo['icon'] }}</span> {{ $promo['text'] }}
+                                </h3>
+                            @endforeach
+                        </div>
+                        <p class="text-xs sm:text-sm text-stone-400 mt-1">
+                            {{ $isEn ? 'Subscribe to get notified about launches and flash sales.' : 'Suscríbete para enterarte de lanzamientos y ofertas relámpago.' }}
+                        </p>
+                    @else
+                        <h3 class="text-xl sm:text-2xl font-bold text-white tracking-tight font-brand">
+                            {{ $isEn ? 'Join our exclusive club' : 'Únete a nuestro club exclusivo' }}
+                        </h3>
+                        <p class="text-xs sm:text-sm text-stone-400 mt-1">
+                            {{ $isEn ? 'Subscribe to receive secret flash sales, product launches and member gifts.' : 'Suscríbete para enterarte antes de lanzamientos, ofertas relámpago y regalos exclusivos.' }}
+                        </p>
+                    @endif
                 </div>
 
                 {{-- Formulario Interactivo --}}

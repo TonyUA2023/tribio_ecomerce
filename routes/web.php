@@ -180,6 +180,7 @@ Route::prefix('tienda')->name('store.')->group(function () {
 
 // API para costos de envío
 Route::get('/api/shipping-cost/{slug}', [\App\Http\Controllers\StoreController::class, 'getShippingCost']);
+Route::get('/api/pedido-estado/{orderNumber}', [\App\Http\Controllers\StoreController::class, 'orderStatus']);
 Route::get('/api/exchange-rates', function (\App\Services\ExchangeRateService $service) {
     return response()->json([
         'rates' => $service->getRates(),

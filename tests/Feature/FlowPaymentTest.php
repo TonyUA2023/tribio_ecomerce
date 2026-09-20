@@ -225,7 +225,8 @@ class FlowPaymentTest extends TestCase
     {
         $store = $this->store(); $store->update(['template_name' => 'minimal-light']);
         $order = $this->order($store);
-        $this->get('/tienda/'.$store->slug.'/pedido/'.$order->id.'/confirmacion?status=approved&payment_id=forged')->assertOk();
+        $this->get('/tienda/'.$store->slug.'/pedido/'.$order->id.'/confirmacion?status=approved&payment_id=forged')
+            ->assertRedirect(route('store.show', $store->slug) . '?pedido=' . $order->order_number);
         $this->assertEquals('pending', $order->fresh()->payment_status);
         $this->assertEquals('flow', $order->fresh()->payment_method);
         $other = Store::create(['user_id' => $store->user_id, 'name' => 'Otra', 'slug' => 'otra', 'status' => 'active']);

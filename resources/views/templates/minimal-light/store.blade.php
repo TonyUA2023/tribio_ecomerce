@@ -143,6 +143,24 @@
 
         </section>
 
+        <!-- Active Promos Strip (Free Shipping / Bulk Discount) — auto-generated from the store's real settings -->
+        @php
+            $heroPromos = $store->activePromoMessages(\App\Helpers\TranslationHelper::isEn());
+        @endphp
+        @if(count($heroPromos) > 0)
+        <section class="bg-[#EAF1E4] border-b border-[#CCDBC0]">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+                <div class="flex flex-wrap items-center justify-center gap-x-8 gap-y-1.5">
+                    @foreach($heroPromos as $promo)
+                        <span class="inline-flex items-center gap-2 text-sm sm:text-base font-bold text-[#2A3A1E] font-brand">
+                            <span>{{ $promo['icon'] }}</span>{{ $promo['text'] }}
+                        </span>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+        @endif
+
         <!-- Maetek 3 Pastel Brand Pillars (Inspired Directly from Official Logo: House, Leaf, Lightbulb) -->
         <section class="py-6 sm:py-9 bg-[#FAF7F2] border-b border-stone-200/70">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
