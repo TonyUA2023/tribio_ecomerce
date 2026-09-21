@@ -71,6 +71,10 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     Route::post('/tienda/envios', [\App\Http\Controllers\Dashboard\ShippingController::class, 'store'])->name('shipping.store');
     Route::delete('/tienda/envios/{shipping}', [\App\Http\Controllers\Dashboard\ShippingController::class, 'destroy'])->name('shipping.destroy');
 
+    // Pasarela de pago
+    Route::get('/tienda/pasarela-de-pago', [\App\Http\Controllers\Dashboard\PaymentGatewayController::class, 'edit'])->name('gateway.edit');
+    Route::post('/tienda/pasarela-de-pago', [\App\Http\Controllers\Dashboard\PaymentGatewayController::class, 'update'])->name('gateway.update');
+
     // Constructor visual
     Route::get('/tienda/constructor', [StoreBuilderController::class, 'index'])->name('store.builder');
     Route::post('/tienda/constructor/secciones', [StoreBuilderController::class, 'store'])->name('store.builder.store');
@@ -160,6 +164,7 @@ Route::domain('{custom_domain}')
         Route::post('/checkout/paypal/capturar', [StoreController::class, 'capturePaypalOrder']);
         Route::post('/checkout/paypal/webhook', [StoreController::class, 'paypalWebhook']);
         Route::get('/pedido/{order}/confirmacion', [StoreController::class, 'orderConfirmation']);
+        Route::get('/checkout/retorno/{reference}', [StoreController::class, 'checkoutReturn']);
         Route::get('/contacto', [StoreController::class, 'contact']);
         Route::post('/contacto', [StoreController::class, 'submitContact']);
     });
@@ -174,6 +179,7 @@ Route::prefix('tienda')->name('store.')->group(function () {
     Route::post('/{slug}/checkout/paypal/capturar', [StoreController::class, 'capturePaypalOrder'])->name('checkout.paypal.capture');
     Route::post('/{slug}/checkout/paypal/webhook', [StoreController::class, 'paypalWebhook'])->name('checkout.paypal.webhook');
     Route::get('/{slug}/pedido/{order}/confirmacion', [StoreController::class, 'orderConfirmation'])->name('order.confirmation');
+    Route::get('/{slug}/checkout/retorno/{reference}', [StoreController::class, 'checkoutReturn'])->name('checkout.return');
     Route::get('/{slug}/contacto', [StoreController::class, 'contact'])->name('contact');
     Route::post('/{slug}/contacto', [StoreController::class, 'submitContact'])->name('contact.submit');
 });

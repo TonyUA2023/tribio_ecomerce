@@ -28,7 +28,11 @@ class OrderObserver
         // cero cuando el worker los procesa, así que si ya existen los items para entonces.
         $order->loadMissing('store');
 
-        if ($order->customer_email) {
+        // A rejected gateway attempt is still worth recording (see PendingCheckout::
+        // materialize()), but telling the buyer "thanks for your order" on a failed
+        // payment would repeat the exact false-success problem the confirmation page
+        // used to have — the store owner's copy below is unaffected, they should know.
+        if ($order->customer_email && $order->payment_status !== 'failed') {
             try {
                 Mail::to($order->customer_email)->queue((new OrderReceivedCustomer($order))->afterCommit());
             } catch (Throwable $e) {

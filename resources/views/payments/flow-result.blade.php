@@ -9,8 +9,8 @@
 </head>
 <body class="pay-flow-result-page">
     @php
-        $paid = $order->payment_status === 'paid';
-        $failed = $order->payment_status === 'failed';
+        $paid = $paymentStatus === 'paid';
+        $failed = $paymentStatus === 'failed';
     @endphp
     <main class="pay-flow-result" aria-labelledby="payment-title">
         <p class="pay-flow-store">{{ $store->name }}</p>
@@ -21,13 +21,13 @@
             <p role="status">No pudimos consultar Flow en este momento. Puedes revisar el estado nuevamente; tu pedido sigue registrado.</p>
         @endif
         <dl class="pay-flow-receipt">
-            <div><dt>Pedido</dt><dd>{{ $order->order_number }}</dd></div>
-            <div><dt>Total</dt><dd>{{ $order->currency }} {{ number_format($order->total, 2) }}</dd></div>
+            <div><dt>Pedido</dt><dd>{{ $orderNumber }}</dd></div>
+            <div><dt>Total</dt><dd>{{ $currency }} {{ number_format($total, 2) }}</dd></div>
             <div><dt>Medio de pago</dt><dd>Flow</dd></div>
         </dl>
         @if(!$paid && !$failed)
             <form method="post" action="{{ rtrim(config('app.url'), '/') }}/api/flow/{{ $store->id }}/return">
-                <input type="hidden" name="token" value="{{ $order->flow_token }}">
+                <input type="hidden" name="token" value="{{ $flowToken }}">
                 <button type="submit" class="pay-flow-primary">Consultar estado del pago</button>
             </form>
         @endif

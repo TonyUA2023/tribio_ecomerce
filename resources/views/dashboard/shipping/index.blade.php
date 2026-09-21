@@ -17,6 +17,11 @@
         <a href="{{ route('dashboard.store.edit') }}#" class="btn-secondary py-2 px-4 text-xs flex-shrink-0">Ir a Mi Tienda →</a>
     </div>
 
+    <div class="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 flex items-center justify-between gap-4 flex-wrap">
+        <p class="text-xs text-white/60">⚠️ <strong class="text-white">Mi Tienda</strong> también tiene una tarifa para "todo el Perú" y una caja por país (US, ES, MX, CO, EC, CL, AR). Si ese campo tiene un valor ahí, gana <strong class="text-white">esa</strong> tarifa y las zonas de abajo para ese mismo país (sin departamento/estado) se ignoran — usa esta página para tarifas por departamento/estado, o para el costo "Resto del Mundo".</p>
+        <a href="{{ route('dashboard.store.edit') }}#" class="btn-secondary py-2 px-4 text-xs flex-shrink-0">Ir a Mi Tienda →</a>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         <!-- Formulario -->
@@ -28,12 +33,10 @@
                     <div>
                         <label class="input-label">País (Código 2 letras)</label>
                         <select name="country_code" class="input-field" required>
-                            <option value="PE">Perú (PE)</option>
-                            <option value="US">Estados Unidos (US)</option>
-                            <option value="MX">México (MX)</option>
-                            <option value="CO">Colombia (CO)</option>
-                            <option value="ES">España (ES)</option>
-                            <option value="ALL">Resto del Mundo (ALL)</option>
+                            @foreach($supported as $code => $country)
+                                <option value="{{ $code }}">{{ $country['flag'] }} {{ $country['name'] }} ({{ $code }})</option>
+                            @endforeach
+                            <option value="ALL">🌎 Resto del Mundo (ALL)</option>
                         </select>
                         <p class="text-[10px] text-white/40 mt-1">Usa 'ALL' para el costo por defecto de otros países.</p>
                     </div>
@@ -76,10 +79,28 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-white/5">
+                            @php
+                                $countryCosts = is_array($store->country_shipping_costs) ? $store->country_shipping_costs : [];
+                            @endphp
                             @foreach($rates as $rate)
+                            @php
+                                // Una zona sin departamento/estado queda sobrescrita si Mi Tienda ya
+                                // tiene un valor para ese mismo país — ver resolveShippingCostForStore().
+                                $isShadowed = false;
+                                if (!$rate->state) {
+                                    if ($rate->country_code === 'PE') {
+                                        $isShadowed = $store->national_shipping_cost !== null;
+                                    } elseif ($rate->country_code !== 'ALL') {
+                                        $isShadowed = isset($countryCosts[$rate->country_code]);
+                                    }
+                                }
+                            @endphp
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4 font-bold text-white">
                                     {{ $rate->country_code === 'ALL' ? '🌎 Resto del Mundo' : $rate->country_code }}
+                                    @if($isShadowed)
+                                        <span class="ml-1.5 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 text-[10px] font-semibold align-middle" title="Mi Tienda tiene un valor para este país, así que esa tarifa se usa en vez de esta.">⚠️ Sobrescrita por Mi Tienda</span>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4">
                                     @if($rate->state)

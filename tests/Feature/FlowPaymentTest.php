@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Order;
+use App\Models\PendingCheckout;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\User;
@@ -41,12 +42,22 @@ class FlowPaymentTest extends TestCase
         ]);
     }
 
-    private function order(Store $store): Order
+    /**
+     * A checkout that already went through FlowService::createPayment() — mirrors the
+     * state the real checkout endpoint leaves behind, without needing a live Flow call.
+     */
+    private function pendingCheckout(Store $store, array $overrides = []): PendingCheckout
     {
-        return Order::create(['store_id' => $store->id, 'order_number' => 'FLOW-TEST-1',
-            'customer_name' => 'Comprador', 'customer_email' => 'buyer@example.test',
-            'total' => 49.90, 'currency' => 'PEN', 'payment_method' => 'flow',
-            'payment_status' => 'pending', 'status' => 'pending', 'flow_token' => 'opaque-token', 'flow_order_id' => '123']);
+        return PendingCheckout::create(array_replace([
+            'store_id' => $store->id, 'reference' => 'FLOW-TEST-1', 'gateway' => 'flow',
+            'payload' => [
+                'customer_name' => 'Comprador', 'customer_email' => 'buyer@example.test', 'customer_phone' => '999999999',
+                'total' => 49.90, 'currency' => 'PEN', 'payment_method' => 'flow', 'subtotal' => 49.90,
+                'discount' => 0, 'shipping_cost' => 0, 'is_express_shipping' => false, 'source' => 'store',
+                'items' => [],
+            ],
+            'gateway_ref' => 'opaque-token', 'gateway_meta' => ['flowOrder' => '123'],
+        ], $overrides));
     }
 
     private function flowStatus(int $status = 2, array $override = []): array
@@ -58,9 +69,9 @@ class FlowPaymentTest extends TestCase
     public function test_creation_signs_form_and_never_exposes_credentials(): void
     {
         $store = $this->store();
-        $order = $this->order($store);
+        $pending = $this->pendingCheckout($store, ['gateway_ref' => null, 'gateway_meta' => null]);
         Http::fake(['*/payment/create' => Http::response(['url' => 'https://sandbox.flow.cl/app/web/pay.php', 'token' => 'new-token', 'flowOrder' => 456])]);
-        $url = app(FlowService::class)->createPayment($store, $order);
+        $url = app(FlowService::class)->createPayment($store, $pending);
         $this->assertStringEndsWith('?token=new-token', $url);
         Http::assertSent(function ($request) {
             $p = $request->data();
@@ -72,23 +83,28 @@ class FlowPaymentTest extends TestCase
         });
         $this->assertNotEquals('test-secret', $store->getRawOriginal('flow_secret_key'));
         $this->assertArrayNotHasKey('flow_secret_key', $store->toArray());
-        $this->assertArrayNotHasKey('flow_token', $order->toArray());
+        $pending->refresh();
+        $this->assertEquals('new-token', $pending->gateway_ref);
+        $this->assertEquals('456', $pending->gateway_meta['flowOrder']);
+        $this->assertDatabaseCount('orders', 0);
     }
 
     public function test_documented_api_flow_redirect_is_accepted(): void
     {
-        $store = $this->store(); $order = $this->order($store);
+        $store = $this->store();
+        $pending = $this->pendingCheckout($store, ['gateway_ref' => null, 'gateway_meta' => null]);
         Http::fake(['*/payment/create' => Http::response(['url' => 'https://api.flow.cl', 'token' => 'new-token', 'flowOrder' => 456])]);
-        $this->assertEquals('https://api.flow.cl?token=new-token', app(FlowService::class)->createPayment($store, $order));
+        $this->assertEquals('https://api.flow.cl?token=new-token', app(FlowService::class)->createPayment($store, $pending));
     }
 
     public function test_untrusted_redirects_are_still_rejected(): void
     {
-        $store = $this->store(); $order = $this->order($store);
+        $store = $this->store();
         foreach (['https://api.flow.cl.evil.test', 'https://evil.test', 'http://api.flow.cl', 'https://user@api.flow.cl', 'https://api.flow.cl:8443'] as $url) {
+            $pending = $this->pendingCheckout($store, ['reference' => 'FLOW-TEST-' . uniqid(), 'gateway_ref' => null, 'gateway_meta' => null]);
             Http::fake(['*/payment/create' => Http::response(['url' => $url, 'token' => 'new-token', 'flowOrder' => 456])]);
             try {
-                app(FlowService::class)->createPayment($store, $order);
+                app(FlowService::class)->createPayment($store, $pending);
                 $this->fail('Untrusted redirect accepted');
             } catch (\RuntimeException $e) {
                 $this->assertEquals('Invalid Flow payment response.', $e->getMessage());
@@ -110,6 +126,7 @@ class FlowPaymentTest extends TestCase
             ->assertDontSee('test-secret');
         $this->assertEquals(10, $product->fresh()->stock);
         $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseCount('pending_checkouts', 0);
         $this->assertEquals(1, $attempts);
     }
 
@@ -140,28 +157,57 @@ class FlowPaymentTest extends TestCase
 
     public function test_callbacks_are_verified_idempotent_and_cannot_downgrade_paid_orders(): void
     {
-        $store = $this->store(); $order = $this->order($store);
+        $store = $this->store(); $this->pendingCheckout($store);
         Http::fake(['*/payment/getStatus*' => Http::sequence()->push($this->flowStatus())->push($this->flowStatus())->push($this->flowStatus(1))]);
         for ($i = 0; $i < 3; $i++) {
             $this->postJson('/api/flow/'.$store->id.'/confirmation', ['token' => 'opaque-token'])->assertOk();
         }
+        $order = Order::where('order_number', 'FLOW-TEST-1')->firstOrFail();
+        $this->assertEquals('paid', $order->payment_status);
+        $this->assertEquals('confirmed', $order->status);
+        $this->assertDatabaseCount('orders', 1);
+    }
+
+    public function test_rejected_then_confirmed_upgrades_the_same_order_and_decrements_once(): void
+    {
+        $store = $this->store();
+        $product = Product::create(['store_id' => $store->id, 'name' => 'Producto', 'slug' => 'producto', 'price' => 49.90, 'price_usd' => 15, 'stock' => 10, 'track_stock' => true, 'is_active' => true]);
+        $pending = $this->pendingCheckout($store, ['payload' => [
+            'customer_name' => 'Comprador', 'customer_email' => 'buyer@example.test', 'customer_phone' => '999999999',
+            'total' => 49.90, 'currency' => 'PEN', 'payment_method' => 'flow', 'subtotal' => 49.90,
+            'discount' => 0, 'shipping_cost' => 0, 'is_express_shipping' => false, 'source' => 'store',
+            'items' => [['product_id' => $product->id, 'variant_id' => null, 'variant_title' => null, 'variant_attributes' => null,
+                'product_name' => 'Producto', 'product_sku' => null, 'product_image' => null, 'price' => 49.90, 'price_usd' => 15,
+                'quantity' => 1, 'subtotal' => 49.90]],
+        ]]);
+        Http::fake(['*/payment/getStatus*' => Http::sequence()->push($this->flowStatus(3))->push($this->flowStatus(2))]);
+
+        $this->postJson('/api/flow/'.$store->id.'/confirmation', ['token' => 'opaque-token'])->assertOk();
+        $order = Order::where('order_number', 'FLOW-TEST-1')->firstOrFail();
+        $this->assertEquals('failed', $order->payment_status);
+        $this->assertEquals(10, $product->fresh()->stock);
+
+        $this->postJson('/api/flow/'.$store->id.'/confirmation', ['token' => 'opaque-token'])->assertOk();
         $this->assertEquals('paid', $order->fresh()->payment_status);
-        $this->assertEquals('confirmed', $order->fresh()->status);
+        $this->assertEquals(9, $product->fresh()->stock);
+        $this->assertDatabaseCount('orders', 1);
     }
 
     public function test_amount_currency_and_identity_mismatches_never_mark_paid(): void
     {
-        $store = $this->store(); $order = $this->order($store);
+        $store = $this->store();
+        $pending = $this->pendingCheckout($store);
         foreach ([['amount' => 1], ['currency' => 'USD'], ['commerceOrder' => 'OTHER'], ['flowOrder' => 999]] as $override) {
             Http::fake(['*/payment/getStatus*' => Http::response($this->flowStatus(2, $override))]);
             $this->postJson('/api/flow/'.$store->id.'/confirmation', ['token' => 'opaque-token'])->assertStatus(503);
-            $this->assertEquals('pending', $order->fresh()->payment_status);
+            $this->assertDatabaseCount('orders', 0);
+            $this->assertNull($pending->fresh()->order_id);
         }
     }
 
     public function test_unknown_token_and_other_store_are_rejected_without_network_call(): void
     {
-        $store = $this->store(); $this->order($store);
+        $store = $this->store(); $this->pendingCheckout($store);
         $other = Store::create(['user_id' => $store->user_id, 'name' => 'Otra', 'slug' => 'otra']);
         $this->postJson('/api/flow/'.$other->id.'/confirmation', ['token' => 'opaque-token'])->assertNotFound();
         $this->postJson('/api/flow/'.$store->id.'/confirmation', [])->assertUnprocessable();
@@ -170,7 +216,7 @@ class FlowPaymentTest extends TestCase
 
     public function test_pending_failed_paid_and_unavailable_return_screens(): void
     {
-        $store = $this->store(); $this->order($store);
+        $store = $this->store(); $this->pendingCheckout($store);
         Http::fake(['*/payment/getStatus*' => Http::sequence()->push($this->flowStatus(1))->push([], 500)->push($this->flowStatus(3))->push($this->flowStatus(2))]);
         foreach (['Tu pago está pendiente', 'No pudimos consultar Flow', 'El pago no se completó', 'Tu pago está confirmado'] as $message) {
             $this->post('/api/flow/'.$store->id.'/return', ['token' => 'opaque-token'])->assertOk()->assertSee($message)->assertHeader('Referrer-Policy', 'no-referrer');
@@ -185,8 +231,11 @@ class FlowPaymentTest extends TestCase
         Http::fake(['*/payment/create' => Http::response(['url' => 'https://sandbox.flow.cl/app/web/pay.php', 'token' => 'checkout-token', 'flowOrder' => 567])]);
         $this->postJson('/tienda/'.$store->slug.'/checkout', ['payment_method' => 'flow', 'customer_name' => 'Cliente', 'customer_email' => 'buyer@example.test', 'customer_phone' => '999999999', 'items' => [['id' => $product->id, 'quantity' => 2]]])
             ->assertOk()->assertJsonPath('success', true)->assertJsonPath('whatsapp_url', null)->assertJsonPath('payment_url', 'https://sandbox.flow.cl/app/web/pay.php?token=checkout-token');
-        $this->assertDatabaseHas('orders', ['payment_method' => 'flow', 'payment_status' => 'pending', 'total' => 100]);
-        $this->assertEquals(8, $product->fresh()->stock);
+        // Nada es un pedido real todavía — Flow no ha confirmado nada, el carrito
+        // "sigue disponible" en los hechos: ni stock ni orders se tocaron.
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseHas('pending_checkouts', ['gateway' => 'flow', 'gateway_ref' => 'checkout-token']);
+        $this->assertEquals(10, $product->fresh()->stock);
         Http::assertSentCount(1);
     }
 
@@ -198,6 +247,7 @@ class FlowPaymentTest extends TestCase
         $this->postJson('/tienda/'.$store->slug.'/checkout', ['payment_method' => 'flow', 'customer_name' => 'Cliente', 'customer_email' => 'buyer@example.test', 'customer_phone' => '999999999', 'items' => [['id' => $product->id, 'quantity' => 2]]])->assertStatus(502);
         $this->assertEquals(10, $product->fresh()->stock);
         $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseCount('pending_checkouts', 0);
     }
 
     public function test_disabled_flow_and_currency_mismatch_reject_before_stock_changes(): void
@@ -208,6 +258,7 @@ class FlowPaymentTest extends TestCase
         $store->update(['flow_enabled' => true, 'flow_currency' => 'USD']);
         $this->postJson('/tienda/'.$store->slug.'/checkout', ['payment_method' => 'flow'])->assertUnprocessable();
         $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseCount('pending_checkouts', 0);
         Http::assertNothingSent();
     }
 
@@ -221,10 +272,11 @@ class FlowPaymentTest extends TestCase
         $this->assertStringNotContainsString('test-secret', $html);
     }
 
-    public function test_legacy_confirmation_cannot_confirm_flow_from_query_parameters(): void
+    public function test_legacy_confirmation_redirects_to_store_without_touching_payment_status(): void
     {
         $store = $this->store(); $store->update(['template_name' => 'minimal-light']);
-        $order = $this->order($store);
+        $pending = $this->pendingCheckout($store);
+        $order = $pending->materialize('pending', 'pending', decrementStock: false);
         $this->get('/tienda/'.$store->slug.'/pedido/'.$order->id.'/confirmacion?status=approved&payment_id=forged')
             ->assertRedirect(route('store.show', $store->slug) . '?pedido=' . $order->order_number);
         $this->assertEquals('pending', $order->fresh()->payment_status);
@@ -238,16 +290,15 @@ class FlowPaymentTest extends TestCase
     {
         $store = $this->store();
         $this->actingAs($store->user);
-        $this->get(route('dashboard.store.edit'))->assertOk()->assertSee('Secret Key')->assertDontSee('test-secret');
+        $this->get(route('dashboard.gateway.edit'))->assertOk()->assertSee('Secret Key')->assertDontSee('test-secret');
         // flow_enabled ya no es un checkbox del formulario: se deriva de payment_gateway.
-        $payload = ['name' => $store->name, 'category' => 'otros', 'build_mode' => 'builder', 'checkout_mode' => 'mixed',
+        $payload = ['checkout_mode' => 'mixed',
             'payment_gateway' => 'flow', 'flow_mode' => 'sandbox', 'flow_currency' => 'PEN', 'flow_api_key' => '', 'flow_secret_key' => ''];
-        $this->post(route('dashboard.store.update'), $payload)->assertRedirect()->assertSessionHasNoErrors();
+        $this->post(route('dashboard.gateway.update'), $payload)->assertRedirect()->assertSessionHasNoErrors();
         $this->assertEquals('test-secret', $store->fresh()->flow_secret_key);
         $this->assertTrue($store->fresh()->flow_enabled);
-        $this->post(route('dashboard.store.update'), array_replace($payload, ['payment_gateway' => '']))->assertRedirect()->assertSessionHasNoErrors();
+        $this->post(route('dashboard.gateway.update'), array_replace($payload, ['payment_gateway' => '']))->assertRedirect()->assertSessionHasNoErrors();
         $this->assertFalse($store->fresh()->flow_enabled);
         $this->assertNull($store->fresh()->payment_gateway);
     }
 }
-

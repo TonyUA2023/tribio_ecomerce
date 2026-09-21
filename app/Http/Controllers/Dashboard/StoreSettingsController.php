@@ -42,11 +42,6 @@ class StoreSettingsController extends Controller
         }
 
         $request->validate([
-            'flow_enabled' => 'nullable|boolean',
-            'flow_api_key' => 'nullable|string|max:255',
-            'flow_secret_key' => 'nullable|string|max:255',
-            'flow_mode' => 'nullable|in:sandbox,live',
-            'flow_currency' => 'nullable|in:PEN,USD,CLP,MXN',
             'name'           => 'required|string|max:255',
             'slug'           => 'nullable|string|max:150|alpha_dash|unique:stores,slug,' . $store->id,
             'tagline'        => 'nullable|string|max:150',
@@ -64,11 +59,6 @@ class StoreSettingsController extends Controller
             'meta_title'     => 'nullable|string|max:70',
             'meta_description'=> 'nullable|string|max:160',
             'distributors'   => 'nullable|array',
-            'checkout_mode'  => 'required|string|in:whatsapp,card,mixed',
-            'payment_gateway'=> 'nullable|string|in:mercado_pago,paypal,flow',
-            'gateway_public_key' => 'nullable|string|max:255',
-            'gateway_private_key'=> 'nullable|string|max:255',
-            'gateway_access_token'=> 'nullable|string',
             'custom_domain'  => [
                 'nullable',
                 'string',
@@ -91,12 +81,6 @@ class StoreSettingsController extends Controller
             'hero_title'                  => 'nullable|string|max:100',
             'hero_subtitle'               => 'nullable|string|max:200',
             'hero_badge'                  => 'nullable|string|max:50',
-            'mp_access_token'             => 'nullable|string|max:255',
-            'mp_public_key'               => 'nullable|string|max:255',
-            'paypal_client_id'            => 'nullable|string|max:255',
-            'paypal_client_secret'        => 'nullable|string|max:255',
-            'paypal_mode'                 => 'nullable|string|in:sandbox,live',
-            'paypal_webhook_id'           => 'nullable|string|max:255',
             'contact_email'               => 'nullable|email|max:255',
             'contact_phone'               => 'nullable|string|max:20',
         ], [
@@ -105,15 +89,12 @@ class StoreSettingsController extends Controller
         ]);
 
         $data = $request->only([
-            'flow_mode', 'flow_currency',
             'name', 'tagline', 'description', 'category', 'build_mode',
             'whatsapp_phone', 'phone', 'email', 'address', 'city',
             'facebook_url', 'instagram_url', 'tiktok_url',
             'meta_title', 'meta_description', 'distributors',
             'custom_domain',
-            'checkout_mode', 'payment_gateway', 'gateway_public_key', 'gateway_private_key', 'gateway_access_token',
-            'mp_access_token', 'mp_public_key', 'contact_email', 'contact_phone',
-            'paypal_client_id', 'paypal_client_secret', 'paypal_mode', 'paypal_webhook_id',
+            'contact_email', 'contact_phone',
             'express_shipping_cost', 'national_shipping_cost',
             'free_shipping_min_quantity', 'free_shipping_min_amount',
             'bulk_discount_min_quantity', 'bulk_discount_type', 'bulk_discount_value',
@@ -121,20 +102,19 @@ class StoreSettingsController extends Controller
         ]);
         $data['is_express_shipping_enabled'] = $request->has('is_express_shipping_enabled');
         $data['is_multilanguage_enabled']    = $request->has('is_multilanguage_enabled');
-        $data['paypal_mode'] = in_array($data['paypal_mode'] ?? null, ['sandbox', 'live'], true) ? $data['paypal_mode'] : 'sandbox';
 
         // Campos numéricos opcionales: un input vacío llega como '' y no como null,
         // lo cual rompería las columnas integer/decimal si se guarda tal cual.
-        foreach (['free_shipping_min_quantity', 'free_shipping_min_amount', 'bulk_discount_min_quantity', 'bulk_discount_value'] as $numericField) {
+        // national_shipping_cost debe poder quedar NULL (no 0.00) cuando se deja vacío:
+        // 0.00 significa "Perú siempre gratis" a propósito, mientras que NULL significa
+        // "no configurado aquí, usar la tarifa de Zonas de Envío" — ver Store::resolveShippingCostForStore().
+        foreach (['free_shipping_min_quantity', 'free_shipping_min_amount', 'bulk_discount_min_quantity', 'bulk_discount_value', 'national_shipping_cost'] as $numericField) {
             if (($data[$numericField] ?? '') === '') {
                 $data[$numericField] = null;
             }
         }
         if (empty($data['bulk_discount_type'])) {
             $data['bulk_discount_type'] = null;
-        }
-        if (($data['payment_gateway'] ?? '') === '') {
-            $data['payment_gateway'] = null;
         }
 
         // Países habilitados
@@ -172,37 +152,6 @@ class StoreSettingsController extends Controller
             $data['slug'] = $slug;
         }
 
-        if ($request->filled('mp_access_token')) {
-            $data['gateway_access_token'] = trim($request->input('mp_access_token'));
-            $data['mp_access_token'] = trim($request->input('mp_access_token'));
-        }
-        if ($request->filled('mp_public_key')) {
-            $data['gateway_public_key'] = trim($request->input('mp_public_key'));
-            $data['mp_public_key'] = trim($request->input('mp_public_key'));
-        }
-        if ($request->filled('gateway_access_token') && empty($data['mp_access_token'])) {
-            $data['mp_access_token'] = trim($request->input('gateway_access_token'));
-        }
-        if ($request->filled('gateway_public_key') && empty($data['mp_public_key'])) {
-            $data['mp_public_key'] = trim($request->input('gateway_public_key'));
-        }
-
-        // Blank credentials preserve stored values; secrets never return in the form.
-        foreach (['flow_api_key', 'flow_secret_key'] as $field) {
-            if ($request->filled($field)) {
-                $data[$field] = trim($request->input($field));
-            }
-        }
-        // flow_enabled ya no es un checkbox propio en el formulario: se deriva de
-        // cuál pasarela quedó seleccionada (payment_gateway, ya normalizada arriba
-        // a null cuando viene vacía — por eso NO se usa "?? $store->payment_gateway"
-        // aquí: haría que limpiar la selección "resucite" el valor guardado viejo).
-        // Mercado Pago y PayPal se activan igual, implícitamente, al ser la elegida.
-        $data['flow_enabled'] = $data['payment_gateway'] === 'flow';
-        if ($data['flow_enabled'] &&
-            (empty($data['flow_api_key'] ?? $store->flow_api_key) || empty($data['flow_secret_key'] ?? $store->flow_secret_key))) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['payment_gateway' => 'Seleccionaste Flow: ingresa tu API Key y Secret Key para activarlo.']);
-        }
         $store->update($data);
 
         return back()->with('success', 'Información de la tienda actualizada correctamente.');

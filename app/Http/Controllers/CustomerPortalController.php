@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\CustomerAddress;
 use App\Models\Order;
 use App\Models\User;
+use App\Services\CustomerIdentityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 class CustomerPortalController extends Controller
@@ -117,7 +117,7 @@ class CustomerPortalController extends Controller
     /**
      * Step 1: Validate data and send OTP via Brevo API
      */
-    public function sendOtp(Request $request)
+    public function sendOtp(Request $request, CustomerIdentityService $identity)
     {
         $request->validate([
             'name'     => 'required|string|max:255',
@@ -126,57 +126,18 @@ class CustomerPortalController extends Controller
             'password' => 'required|string|min:6',
         ]);
 
-        $email = trim(strtolower($request->email));
-        $otp = sprintf("%06d", mt_rand(100000, 999999));
-
-        // Store OTP in cache for 15 minutes
-        \Illuminate\Support\Facades\Cache::put('otp_' . $email, $otp, now()->addMinutes(15));
-
-        // Send Email via Brevo API
-        $brevoApiKey = env('BREVO_API_KEY');
-        
-        if ($brevoApiKey) {
-            try {
-                $client = new \GuzzleHttp\Client();
-                $client->request('POST', 'https://api.brevo.com/v3/smtp/email', [
-                    'headers' => [
-                        'accept' => 'application/json',
-                        'api-key' => $brevoApiKey,
-                        'content-type' => 'application/json',
-                    ],
-                    'json' => [
-                        'sender' => [
-                            'name' => 'Tribio Pass',
-                            'email' => env('MAIL_FROM_ADDRESS', 'noreply@tribio.pe')
-                        ],
-                        'to' => [
-                            [
-                                'email' => $email,
-                                'name' => $request->name
-                            ]
-                        ],
-                        'subject' => 'Tu código de verificación de Tribio Pass',
-                        'htmlContent' => '<html><body><h1>Verificación de Correo</h1><p>Hola ' . htmlspecialchars($request->name) . ',</p><p>Tu código de verificación de 6 dígitos es: <strong>' . $otp . '</strong></p><p>Este código expirará en 15 minutos.</p></body></html>'
-                    ]
-                ]);
-            } catch (\Exception $e) {
-                // Log error but continue (so user is not blocked if API fails)
-                \Illuminate\Support\Facades\Log::error('Error sending Brevo OTP: ' . $e->getMessage());
-            }
-        }
+        $identity->sendRegistrationOtp($request->name, trim(strtolower($request->email)));
 
         return response()->json([
             'success' => true,
             'message' => 'Código enviado. Por favor revisa tu correo electrónico.',
-            // Only for dev debugging, uncomment if needed:
-            // 'debug_otp' => $otp 
         ]);
     }
 
     /**
      * Step 2: Verify OTP and Register new customer
      */
-    public function verifyAndRegister(Request $request)
+    public function verifyAndRegister(Request $request, CustomerIdentityService $identity)
     {
         $request->validate([
             'email'    => 'required|email|max:255',
@@ -194,10 +155,8 @@ class CustomerPortalController extends Controller
         ]);
 
         $email = trim(strtolower($request->email));
-        $cachedOtp = \Illuminate\Support\Facades\Cache::get('otp_' . $email);
 
-        // Allow '000000' as a backdoor if Brevo API is not set up
-        if ($cachedOtp !== $request->token && (!empty(env('BREVO_API_KEY')) || $request->token !== '000000')) {
+        if (!$identity->verifyRegistrationOtp($email, $request->token)) {
             return response()->json([
                 'success' => false,
                 'message' => 'El código ingresado es incorrecto o ha expirado.',
@@ -212,36 +171,20 @@ class CustomerPortalController extends Controller
             ], 422);
         }
 
-        \Illuminate\Support\Facades\Cache::forget('otp_' . $email);
-
-        $user = User::create([
+        $user = $identity->registerCustomer([
             'name'     => $request->name,
             'email'    => $email,
             'phone'    => $request->phone,
-            'password' => Hash::make($request->password),
-            'role'     => User::ROLE_CLIENTE,
+            'password' => $request->password,
+            'address'  => $request->address,
+            'city'     => $request->city,
+            'state'    => $request->state,
+            'country'  => $request->country,
+            'zipcode'  => $request->zipcode,
+            'type'     => $request->type,
         ]);
 
-        // Save initial address if provided
-        if (!empty($request->address)) {
-            $user->customerAddresses()->create([
-                'type'       => $request->type ?? 'casa',
-                'title'      => ucfirst($request->type ?? 'casa'),
-                'address'    => $request->address,
-                'city'       => $request->city,
-                'state'      => $request->state,
-                'country'    => $request->country ?? 'PE',
-                'zipcode'    => $request->zipcode,
-                'is_default' => true,
-            ]);
-        }
-
         Auth::login($user, true);
-
-        // Associate previous guest orders made with this email
-        Order::whereNull('user_id')
-            ->where('customer_email', $user->email)
-            ->update(['user_id' => $user->id]);
 
         return response()->json([
             'success'   => true,
@@ -274,59 +217,22 @@ class CustomerPortalController extends Controller
     /**
      * List customer orders with tracking information
      */
-    public function orders()
+    public function orders(CustomerIdentityService $identity)
     {
         if (!Auth::check() || !Auth::user()->canUseCustomerPortal()) {
             return response()->json(['success' => false, 'message' => 'No autenticado como cliente.', 'orders' => []], 401);
         }
 
-        $user = Auth::user();
-
-        $orders = Order::where(function ($q) use ($user) {
-            $q->where('user_id', $user->id)
-              ->orWhere('customer_email', $user->email);
-        })
-        ->with(['items', 'store:id,name,slug,logo_path'])
-        ->latest()
-        ->get()
-        ->map(function ($order) {
-            return [
-                'id'             => $order->id,
-                'order_number'   => $order->order_number,
-                'store_name'     => $order->store?->name ?? 'Tienda Tribio',
-                'store_slug'     => $order->store?->slug,
-                'total'          => (float) $order->total,
-                'currency'       => $order->currency ?? 'PEN',
-                'currency_symbol'=> $order->currency === 'USD' ? '$' : 'S/',
-                'status'         => $order->status,
-                'status_label'   => $order->status_label,
-                'status_color'   => $order->status_color,
-                'status_step'    => $this->resolveStatusStep($order->status),
-                'created_at'     => $order->created_at ? $order->created_at->format('d/m/Y H:i') : '',
-                'created_diff'   => $order->created_at ? $order->created_at->diffForHumans() : '',
-                'items_count'    => $order->items->sum('quantity'),
-                'items'          => $order->items->map(function ($i) {
-                    return [
-                        'name'     => $i->product_name,
-                        'price'    => (float) $i->price,
-                        'quantity' => $i->quantity,
-                        'subtotal' => (float) $i->subtotal,
-                    ];
-                }),
-                'shipping_address' => $order->customer_address ? "{$order->customer_address}, {$order->customer_city} ({$order->customer_state})" : '',
-            ];
-        });
-
         return response()->json([
             'success' => true,
-            'orders'  => $orders,
+            'orders'  => $identity->ordersFor(Auth::user()),
         ]);
     }
 
     /**
      * Public track order without login
      */
-    public function trackOrder(Request $request)
+    public function trackOrder(Request $request, CustomerIdentityService $identity)
     {
         $request->validate([
             'order_number' => 'required|string',
@@ -361,7 +267,7 @@ class CustomerPortalController extends Controller
                 'status'          => $order->status,
                 'status_label'    => $order->status_label,
                 'status_color'    => $order->status_color,
-                'status_step'     => $this->resolveStatusStep($order->status),
+                'status_step'     => $identity->resolveStatusStep($order->status),
                 'created_at'      => $order->created_at ? $order->created_at->format('d/m/Y H:i') : '',
                 'items_count'     => $order->items->sum('quantity'),
                 'items'           => $order->items->map(fn($i) => ['name' => $i->product_name, 'quantity' => $i->quantity, 'price' => (float)$i->price]),
@@ -455,18 +361,4 @@ class CustomerPortalController extends Controller
         ]);
     }
 
-    /**
-     * Map order status to progress step index (1-5)
-     */
-    private function resolveStatusStep(?string $status): int
-    {
-        return match ($status) {
-            'pending'    => 1, // 1. Pedido Recibido
-            'confirmed'  => 2, // 2. Confirmado
-            'processing' => 3, // 3. En Preparación
-            'shipped'    => 4, // 4. En Camino / Enviado
-            'delivered'  => 5, // 5. Entregado
-            default      => 1,
-        };
-    }
 }

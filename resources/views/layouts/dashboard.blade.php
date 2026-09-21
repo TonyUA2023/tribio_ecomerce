@@ -88,6 +88,7 @@
                     ['dashboard.pedidos.index', 'cart', 'Pedidos', 'Operación'],
                     ['dashboard.inventario.index', 'inventory', 'Inventario', null],
                     ['dashboard.shipping.index', 'truck', 'Zonas de envío', null],
+                    ['dashboard.gateway.edit', 'wallet', 'Pasarela de pago', null],
                     ['dashboard.store.edit', 'store', 'Mi tienda', 'Personalización'],
                 ];
             @endphp

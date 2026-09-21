@@ -18,7 +18,8 @@ class ShippingController extends Controller
     {
         $store = $this->getStore();
         $rates = $store->shippingRates()->orderBy('country_code')->get();
-        return view('dashboard.shipping.index', compact('store', 'rates'));
+        $supported = \App\Helpers\CurrencyHelper::supportedCountries();
+        return view('dashboard.shipping.index', compact('store', 'rates', 'supported'));
     }
 
     public function store(Request $request)

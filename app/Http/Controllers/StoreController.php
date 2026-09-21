@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Store;
+use App\Models\PendingCheckout;
 use App\Models\Product;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -550,6 +551,9 @@ class StoreController extends Controller
             $variantAttributes = $item['variant_attributes'] ?? null;
             $imagePath         = $product->image_path;
 
+            // Availability is only checked here, never decremented: stock only moves once
+            // a payment is actually confirmed, in PendingCheckout::materialize(). A
+            // gateway checkout that's abandoned or rejected must never cost real inventory.
             if ($variantId) {
                 $variant = $product->variants()->where('id', $variantId)->first();
                 if ($variant) {
@@ -567,9 +571,6 @@ class StoreController extends Controller
                             ], 422);
                         }
                     }
-                    if ($product->track_stock) {
-                        $variant->decrement('stock', $qty);
-                    }
                 }
             }
 
@@ -579,9 +580,6 @@ class StoreController extends Controller
                         'error' => "Stock insuficiente para {$product->name}. Disponibles: {$product->stock}."
                     ], 422);
                 }
-            }
-            if ($product->track_stock) {
-                $product->decrement('stock', $qty);
             }
 
             $itemSubtotal = $price * $qty;
@@ -649,74 +647,84 @@ class StoreController extends Controller
             $userId = $user->id;
         }
 
-        // Si hay usuario (o recién creado), registrar su dirección si es nueva
-        if ($userId && !empty($request->customer_address)) {
+        // Si hay usuario (o recién creado), registrar su dirección si es nueva y
+        // guardar su teléfono en el perfil de Tribio Pass si todavía no tenía uno, para
+        // que el siguiente pedido —en esta u otra tienda, la cuenta es única— ya llegue
+        // con el WhatsApp precargado. Si ya tenía teléfono guardado no se sobrescribe:
+        // el de este pedido puede ser intencionalmente distinto (p. ej. un regalo).
+        if ($userId) {
             $customerUser = User::find($userId);
             if ($customerUser && $customerUser->isCliente()) {
-                $addressType = $request->input('address_type', 'casa');
-                $alreadyHasAddress = $customerUser->customerAddresses()
-                    ->where('address', $request->customer_address)
-                    ->exists();
+                if (!empty($request->customer_address)) {
+                    $addressType = $request->input('address_type', 'casa');
+                    $alreadyHasAddress = $customerUser->customerAddresses()
+                        ->where('address', $request->customer_address)
+                        ->exists();
 
-                if (!$alreadyHasAddress) {
-                    $customerUser->customerAddresses()->create([
-                        'type'       => in_array($addressType, ['casa', 'trabajo', 'otro']) ? $addressType : 'casa',
-                        'title'      => ucfirst($addressType),
-                        'address'    => $request->customer_address,
-                        'city'       => $request->customer_city,
-                        'state'      => $state,
-                        'country'    => $country,
-                        'zipcode'    => $request->customer_zipcode,
-                        'is_default' => $customerUser->customerAddresses()->count() === 0,
-                    ]);
+                    if (!$alreadyHasAddress) {
+                        $customerUser->customerAddresses()->create([
+                            'type'       => in_array($addressType, ['casa', 'trabajo', 'otro']) ? $addressType : 'casa',
+                            'title'      => ucfirst($addressType),
+                            'address'    => $request->customer_address,
+                            'city'       => $request->customer_city,
+                            'state'      => $state,
+                            'country'    => $country,
+                            'zipcode'    => $request->customer_zipcode,
+                            'is_default' => $customerUser->customerAddresses()->count() === 0,
+                        ]);
+                    }
+                }
+
+                if (empty($customerUser->phone) && !empty($request->customer_phone)) {
+                    $customerUser->update(['phone' => $request->customer_phone]);
                 }
             }
         }
 
         $paymentMethod = $request->input('payment_method', 'whatsapp');
 
-        $order = Order::create([
-            'store_id'            => $store->id,
-            'user_id'             => $userId,
-            'order_number'        => Order::generateOrderNumber($store->id),
-            'customer_name'       => $request->customer_name,
-            'customer_phone'      => $request->customer_phone,
-            'customer_email'      => $request->customer_email,
-            'customer_address'    => $request->customer_address,
-            'customer_country'    => $country,
-            'customer_state'      => $state,
-            'customer_city'       => $request->customer_city,
-            'customer_zipcode'    => $request->customer_zipcode,
-            'customer_notes'      => $request->customer_notes,
-            'subtotal'            => $subtotal,
-            'discount'            => $discount,
-            'shipping_cost'       => $shippingCost,
-            'is_express_shipping' => $isExpress,
-            'total'               => $total,
-            'currency'            => $currency,
-            'status'              => 'pending',
-            'payment_status'      => 'pending',
-            'payment_method'      => $paymentMethod,
-            'source'              => 'store',
+        // Nothing in `orders` or product stock exists yet: this is a draft snapshot of
+        // the checkout request. It only ever becomes a real Order — and only then does
+        // stock move — once a gateway actually confirms a result (see PendingCheckout::
+        // materialize()). A customer who just looks at the payment screen and leaves
+        // never triggers any of that: no callback ever arrives, so nothing here is used.
+        $pending = PendingCheckout::create([
+            'store_id'  => $store->id,
+            'reference' => Order::generateOrderNumber($store->id),
+            'gateway'   => $paymentMethod,
+            'payload'   => [
+                'user_id'             => $userId,
+                'customer_name'       => $request->customer_name,
+                'customer_phone'      => $request->customer_phone,
+                'customer_email'      => $request->customer_email,
+                'customer_address'    => $request->customer_address,
+                'customer_country'    => $country,
+                'customer_state'      => $state,
+                'customer_city'       => $request->customer_city,
+                'customer_zipcode'    => $request->customer_zipcode,
+                'customer_notes'      => $request->customer_notes,
+                'subtotal'            => $subtotal,
+                'discount'            => $discount,
+                'shipping_cost'       => $shippingCost,
+                'is_express_shipping' => $isExpress,
+                'total'               => $total,
+                'currency'            => $currency,
+                'payment_method'      => $paymentMethod,
+                'source'              => 'store',
+                'items'               => $orderItemsData,
+            ],
         ]);
 
-        $order->items()->createMany($orderItemsData);
-        $store->increment('total_orders');
-
-        $whatsappNumber = preg_replace('/[^0-9]/', '', $store->whatsapp_phone ?? '');
-        $whatsappUrl = $whatsappNumber ? ("https://wa.me/{$whatsappNumber}?text=" . $order->buildWhatsappMessage()) : null;
-
-        $response = [
-            'success'      => true,
-            'order_number' => $order->order_number,
-            'redirect_url' => route('store.order.confirmation', [$store->slug, $order->id]),
-            'whatsapp_url' => $whatsappUrl,
-        ];
-
         if ($paymentMethod === 'flow') {
-            $response['payment_url'] = app(\App\Services\FlowService::class)->createPayment($store, $order);
-            $response['whatsapp_url'] = null;
-            return response()->json($response);
+            // Failure here propagates to checkout()'s transaction wrapper, which rolls
+            // back this PendingCheckout along with everything else in the same request.
+            $paymentUrl = app(\App\Services\FlowService::class)->createPayment($store, $pending);
+            return response()->json([
+                'success'      => true,
+                'order_number' => $pending->reference,
+                'payment_url'  => $paymentUrl,
+                'whatsapp_url' => null,
+            ]);
         }
 
         // Integración de Mercado Pago — dos caminos distintos según lo que el cliente
@@ -741,13 +749,13 @@ class StoreController extends Controller
                     $paymentBody = [
                         'transaction_amount' => round((float) $total, 2),
                         'token'              => $mpFormData['token'],
-                        'description'        => 'Pedido en ' . $store->name . ' - ' . $order->order_number,
+                        'description'        => 'Pedido en ' . $store->name . ' - ' . $pending->reference,
                         'installments'       => (int) ($mpFormData['installments'] ?? 1),
                         'payment_method_id'  => $mpFormData['payment_method_id'] ?? null,
                         'issuer_id'          => $mpFormData['issuer_id'] ?? null,
-                        'external_reference' => (string) $order->order_number,
+                        'external_reference' => $pending->reference,
                         'payer'              => array_merge([
-                            'email' => $order->customer_email,
+                            'email' => $request->customer_email,
                         ], $mpFormData['payer'] ?? []),
                     ];
 
@@ -755,49 +763,56 @@ class StoreController extends Controller
                         'headers' => [
                             'Authorization'      => 'Bearer ' . trim($mpToken),
                             'Content-Type'       => 'application/json',
-                            'X-Idempotency-Key'  => (string) $order->order_number . '_' . time(),
+                            'X-Idempotency-Key'  => $pending->reference . '_' . time(),
                         ],
                         'json' => $paymentBody,
                     ]);
 
                     $paymentData = json_decode($mpResponse->getBody()->getContents(), true);
                     $status = $paymentData['status'] ?? '';
+                    $pending->update(['gateway_ref' => isset($paymentData['id']) ? (string) $paymentData['id'] : null]);
 
+                    // Only an approved charge decrements stock — a declined or still-
+                    // processing card never should, same rule as every other gateway.
                     if ($status === 'approved') {
-                        $order->update([
-                            'status'          => 'confirmed',
-                            'payment_status'  => 'paid',
-                            'payment_method'  => 'mercadopago',
-                            'internal_notes'  => trim(($order->internal_notes ?? '') . "\nMercado Pago Payment ID: " . ($paymentData['id'] ?? 'N/A') . ' (Aprobado — tarjeta embebida)'),
-                        ]);
-                    } elseif (in_array($status, ['in_process', 'pending'], true)) {
+                        $order = $pending->materialize('paid', 'confirmed', decrementStock: true);
                         $order->update([
                             'payment_method' => 'mercadopago',
-                            'internal_notes' => trim(($order->internal_notes ?? '') . "\nMercado Pago Payment ID: " . ($paymentData['id'] ?? 'N/A') . " (En proceso: {$status})"),
+                            'internal_notes' => 'Mercado Pago Payment ID: ' . ($paymentData['id'] ?? 'N/A') . ' (Aprobado — tarjeta embebida)',
+                        ]);
+                    } elseif (in_array($status, ['in_process', 'pending'], true)) {
+                        $order = $pending->materialize('pending', 'pending', decrementStock: false);
+                        $order->update([
+                            'payment_method' => 'mercadopago',
+                            'internal_notes' => 'Mercado Pago Payment ID: ' . ($paymentData['id'] ?? 'N/A') . " (En proceso: {$status})",
                         ]);
                     } else {
                         $statusDetail = $paymentData['status_detail'] ?? 'desconocido';
                         \Log::error('Mercado Pago: pago con tarjeta rechazado.', [
-                            'order_number' => $order->order_number,
-                            'response'     => $paymentData,
+                            'reference' => $pending->reference,
+                            'response'  => $paymentData,
                         ]);
-                        $order->update([
-                            'payment_status' => 'failed',
-                            'internal_notes' => trim(($order->internal_notes ?? '') . "\nPago con tarjeta rechazado: {$statusDetail}"),
+                        $pending->materialize('failed', 'pending', decrementStock: false)->update([
+                            'payment_method' => 'mercadopago',
+                            'internal_notes' => "Pago con tarjeta rechazado: {$statusDetail}",
                         ]);
                         return response()->json([
                             'success' => false,
                             'error'   => 'Tu tarjeta fue rechazada (' . $statusDetail . '). Verifica los datos o intenta con otro método de pago.',
                         ]);
                     }
-                    // Aprobado o pendiente: continúa hacia $response normal más abajo —
-                    // el cliente se queda en la tienda, ve la confirmación sin salir.
+                    // Aprobado o pendiente: el cliente se queda en la tienda y ve la
+                    // confirmación (SweetAlert) sin salir — nunca una página propia.
+                    return response()->json([
+                        'success'      => true,
+                        'order_number' => $order->order_number,
+                        'redirect_url' => route('store.show', $store->slug) . '?pedido=' . $order->order_number,
+                        'whatsapp_url' => null,
+                    ]);
                 } else {
                     // --- OTROS MEDIOS DE MERCADO PAGO (Checkout Pro, con redirección) ---
-                    // Se arma desde $orderItemsData (ya en memoria, recién usado para crear
-                    // el pedido) y no desde $order->items: el observer de Order ya dejó esa
-                    // relación cacheada como vacía (ver el comentario en OrderObserver::created),
-                    // así que leerla aquí de nuevo mandaría un carrito vacío a Mercado Pago.
+                    // Se arma desde $orderItemsData: no existe ningún Order todavía en este
+                    // punto (ver PendingCheckout::materialize), así que no hay otra fuente.
                     $items = [];
                     foreach ($orderItemsData as $orderItem) {
                         $itemTitle = $orderItem['product_name'];
@@ -834,7 +849,7 @@ class StoreController extends Controller
                         ];
                     }
 
-                    $backUrl = route('store.order.confirmation', [$store->slug, $order->id]);
+                    $backUrl = route('store.checkout.return', [$store->slug, $pending->reference]);
                     $webhookUrl = route('api.mercadopago.webhook', [$store->id]);
                     // Mercado Pago no acepta `auto_return`/`notification_url` apuntando a una URL
                     // no pública (ej. localhost/127.0.0.1 en desarrollo local) — rechaza la creación
@@ -844,13 +859,13 @@ class StoreController extends Controller
                     $preferenceBody = [
                         'items' => $items,
                         'payer' => [
-                            'name'    => $order->customer_name,
-                            'email'   => $order->customer_email,
+                            'name'    => $request->customer_name,
+                            'email'   => $request->customer_email,
                             'phone'   => [
-                                'number' => preg_replace('/[^0-9]/', '', $order->customer_phone ?? '')
+                                'number' => preg_replace('/[^0-9]/', '', $request->customer_phone ?? '')
                             ],
                             'address' => [
-                                'street_name' => $order->customer_address ?? ''
+                                'street_name' => $request->customer_address ?? ''
                             ]
                         ],
                         'back_urls' => [
@@ -858,7 +873,7 @@ class StoreController extends Controller
                             'failure' => $backUrl,
                             'pending' => $backUrl,
                         ],
-                        'external_reference'  => (string) $order->order_number,
+                        'external_reference'  => $pending->reference,
                         'statement_descriptor'=> Str::limit(preg_replace('/[^A-Za-z0-9 ]/', '', $store->name), 22),
                     ];
 
@@ -880,20 +895,19 @@ class StoreController extends Controller
                     $paymentUrl = $isSandbox ? ($preference['sandbox_init_point'] ?? $preference['init_point'] ?? null) : ($preference['init_point'] ?? null);
 
                     if ($paymentUrl) {
-                        $response['payment_url'] = $paymentUrl;
-                        $order->update([
-                            'payment_method' => 'mercadopago',
-                            'internal_notes' => 'Mercado Pago Preference ID: ' . ($preference['id'] ?? 'N/A') . ' (' . ($isSandbox ? 'Sandbox/Test' : 'Producción') . ')'
+                        $pending->update(['gateway_ref' => $preference['id'] ?? null]);
+                        return response()->json([
+                            'success'      => true,
+                            'order_number' => $pending->reference,
+                            'payment_url'  => $paymentUrl,
+                            'whatsapp_url' => null,
                         ]);
                     } else {
                         \Log::error('Mercado Pago: la preference se creó pero no devolvió una URL de pago.', [
-                            'order_number' => $order->order_number,
+                            'reference' => $pending->reference,
                             'preference_response' => $preference,
                         ]);
-                        $order->update([
-                            'payment_status' => 'failed',
-                            'internal_notes' => trim(($order->internal_notes ?? '') . "\nMercado Pago no devolvió una URL de pago: " . json_encode($preference)),
-                        ]);
+                        $pending->delete();
                         return response()->json([
                             'success' => false,
                             'error' => 'No se pudo iniciar el pago con Mercado Pago. Intenta de nuevo o elige otro método.',
@@ -902,21 +916,15 @@ class StoreController extends Controller
                 }
             } catch (\GuzzleHttp\Exception\RequestException $e) {
                 $mpErrorBody = $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : $e->getMessage();
-                \Log::error('Mercado Pago Error: ' . $mpErrorBody, ['order_number' => $order->order_number]);
-                $order->update([
-                    'payment_status' => 'failed',
-                    'internal_notes' => trim(($order->internal_notes ?? '') . "\nError Mercado Pago: " . $mpErrorBody),
-                ]);
+                \Log::error('Mercado Pago Error: ' . $mpErrorBody, ['reference' => $pending->reference]);
+                $pending->delete();
                 return response()->json([
                     'success' => false,
                     'error' => 'No se pudo conectar con Mercado Pago. Intenta de nuevo o elige otro método de pago.',
                 ]);
             } catch (\Exception $e) {
-                \Log::error('Mercado Pago Error: ' . $e->getMessage(), ['order_number' => $order->order_number]);
-                $order->update([
-                    'payment_status' => 'failed',
-                    'internal_notes' => trim(($order->internal_notes ?? '') . "\nError Mercado Pago: " . $e->getMessage()),
-                ]);
+                \Log::error('Mercado Pago Error: ' . $e->getMessage(), ['reference' => $pending->reference]);
+                $pending->delete();
                 return response()->json([
                     'success' => false,
                     'error' => 'No se pudo iniciar el pago con Mercado Pago. Intenta de nuevo o elige otro método de pago.',
@@ -938,7 +946,7 @@ class StoreController extends Controller
             // credenciales de PayPal guardadas de una selección anterior seguirían
             // funcionando incluso si la tienda ahora usa Mercado Pago o Flow.
             if ($store->payment_gateway !== 'paypal' || !$paypalService->isConfigured($store)) {
-                $order->update(['payment_status' => 'failed']);
+                $pending->delete();
                 return response()->json([
                     'success' => false,
                     'error'   => 'Esta tienda no tiene PayPal configurado. Elige otro método de pago.',
@@ -963,26 +971,23 @@ class StoreController extends Controller
                     'quantity'    => (int) $item['quantity'],
                 ], $orderItemsData);
 
-                $paypalOrder = $paypalService->createOrder($store, $order->order_number, $paypalItems, $shippingUsd, $discountUsd);
-
-                $order->update([
-                    'payment_method'  => 'paypal',
-                    'paypal_order_id' => $paypalOrder['id'],
-                ]);
+                $paypalOrder = $paypalService->createOrder($store, $pending->reference, $paypalItems, $shippingUsd, $discountUsd);
+                $pending->update(['gateway_ref' => $paypalOrder['id']]);
 
                 // El frontend usa este id para abrir el popup de PayPal (paypalPaymentSession
-                // .start()); la orden Tribio queda 'pending' hasta que capturePaypalOrder()
-                // confirme el pago — el cliente nunca sale de la tienda mientras tanto.
-                $response['paypal_order_id'] = $paypalOrder['id'];
+                // .start()); nada existe todavía en `orders` — capturePaypalOrder() recién
+                // crea el pedido real (y descuenta stock) si el cliente aprueba de verdad.
+                return response()->json([
+                    'success'         => true,
+                    'order_number'    => $pending->reference,
+                    'paypal_order_id' => $paypalOrder['id'],
+                ]);
             } catch (\Throwable $e) {
                 \Log::error('PayPal: error al crear la orden', [
-                    'order_number' => $order->order_number,
-                    'message'      => $e->getMessage(),
+                    'reference' => $pending->reference,
+                    'message'   => $e->getMessage(),
                 ]);
-                $order->update([
-                    'payment_status' => 'failed',
-                    'internal_notes' => trim(($order->internal_notes ?? '') . "\nError PayPal: " . $e->getMessage()),
-                ]);
+                $pending->delete();
                 return response()->json([
                     'success' => false,
                     'error'   => 'No se pudo iniciar el pago con PayPal. Intenta de nuevo o elige otro método.',
@@ -990,7 +995,20 @@ class StoreController extends Controller
             }
         }
 
-        return response()->json($response);
+        // DEFAULT: sin pasarela en línea (WhatsApp / pago directo coordinado manualmente).
+        // No hay nada que confirmar de forma asíncrona, así que se materializa de una vez
+        // y el stock se descuenta ahora — el pedido en sí es el compromiso, no un intento
+        // que pueda quedar a medias como con una pasarela.
+        $order = $pending->materialize('pending', 'pending', decrementStock: true);
+        $whatsappNumber = preg_replace('/[^0-9]/', '', $store->whatsapp_phone ?? '');
+        $whatsappUrl = $whatsappNumber ? ("https://wa.me/{$whatsappNumber}?text=" . $order->buildWhatsappMessage()) : null;
+
+        return response()->json([
+            'success'      => true,
+            'order_number' => $order->order_number,
+            'redirect_url' => route('store.show', $store->slug) . '?pedido=' . $order->order_number,
+            'whatsapp_url' => $whatsappUrl,
+        ]);
     }
 
     /**
@@ -1007,40 +1025,42 @@ class StoreController extends Controller
             'paypal_order_id' => 'required|string',
         ]);
 
-        $order = Order::where('store_id', $store->id)
-            ->where('order_number', $request->order_number)
-            ->where('paypal_order_id', $request->paypal_order_id)
+        $pending = PendingCheckout::where('store_id', $store->id)
+            ->where('reference', $request->order_number)
+            ->where('gateway_ref', $request->paypal_order_id)
             ->firstOrFail();
 
-        if ($order->payment_status === 'paid') {
-            return response()->json(['success' => true, 'order_number' => $order->order_number]);
+        if ($pending->order_id) {
+            return response()->json(['success' => true, 'order_number' => $pending->order->order_number]);
         }
 
         $paypalService = app(\App\Services\PayPalService::class);
 
         try {
-            $capture = $paypalService->captureOrder($store, $order->paypal_order_id);
+            $capture = $paypalService->captureOrder($store, $request->paypal_order_id);
             $status  = $capture['status'] ?? '';
 
             if ($status === 'COMPLETED') {
                 $captureId = $capture['purchase_units'][0]['payments']['captures'][0]['id'] ?? null;
+                // Only a completed capture ever reaches here — the PendingCheckout stays
+                // untouched (no order, no stock) if the customer closes the popup instead.
+                $order = $pending->materialize('paid', 'confirmed', decrementStock: true);
                 $order->update([
-                    'status'         => 'confirmed',
-                    'payment_status' => 'paid',
-                    'internal_notes' => trim(($order->internal_notes ?? '') . "\nPayPal Capture ID: " . ($captureId ?? 'N/A')),
+                    'payment_method'  => 'paypal',
+                    'internal_notes'  => 'PayPal Capture ID: ' . ($captureId ?? 'N/A'),
                 ]);
 
                 return response()->json([
                     'success'      => true,
                     'order_number' => $order->order_number,
-                    'redirect_url' => route('store.order.confirmation', [$store->slug, $order->id]),
+                    'redirect_url' => route('store.show', $store->slug) . '?pedido=' . $order->order_number,
                 ]);
             }
 
-            \Log::error('PayPal: captura no completada.', ['order_number' => $order->order_number, 'response' => $capture]);
-            $order->update([
-                'payment_status' => 'failed',
-                'internal_notes' => trim(($order->internal_notes ?? '') . "\nCaptura PayPal no completada: {$status}"),
+            \Log::error('PayPal: captura no completada.', ['reference' => $pending->reference, 'response' => $capture]);
+            $pending->materialize('failed', 'pending', decrementStock: false)->update([
+                'payment_method' => 'paypal',
+                'internal_notes' => "Captura PayPal no completada: {$status}",
             ]);
 
             return response()->json([
@@ -1049,12 +1069,12 @@ class StoreController extends Controller
             ]);
         } catch (\Throwable $e) {
             \Log::error('PayPal: error al capturar la orden', [
-                'order_number' => $order->order_number,
-                'message'      => $e->getMessage(),
+                'reference' => $pending->reference,
+                'message'   => $e->getMessage(),
             ]);
-            $order->update([
-                'payment_status' => 'failed',
-                'internal_notes' => trim(($order->internal_notes ?? '') . "\nError al capturar PayPal: " . $e->getMessage()),
+            $pending->materialize('failed', 'pending', decrementStock: false)->update([
+                'payment_method' => 'paypal',
+                'internal_notes' => 'Error al capturar PayPal: ' . $e->getMessage(),
             ]);
 
             return response()->json([
@@ -1090,39 +1110,27 @@ class StoreController extends Controller
             return response()->json(['status' => 'ignored'], 200);
         }
 
-        $order = Order::where('store_id', $store->id)->where('paypal_order_id', $paypalOrderId)->first();
-        if ($order && $order->payment_status !== 'paid') {
+        $pending = PendingCheckout::where('store_id', $store->id)->where('gateway_ref', $paypalOrderId)->first();
+        if ($pending && !$pending->order_id) {
             $paypalOrder = $paypalService->getOrder($store, $paypalOrderId);
             if (($paypalOrder['status'] ?? null) === 'COMPLETED') {
-                $order->update(['status' => 'confirmed', 'payment_status' => 'paid']);
+                $pending->materialize('paid', 'confirmed', decrementStock: true)
+                    ->update(['payment_method' => 'paypal']);
             }
         }
 
         return response()->json(['status' => 'ok'], 200);
     }
 
+    /**
+     * Legacy landing target kept only for confirmation emails sent before this store's
+     * checkout finished the redirect: by the time an email exists the order is already
+     * real, so this is a plain redirect — no gateway status left to process here.
+     */
     public function orderConfirmation(string $slug, Order $order)
     {
         $store = $this->getStore($slug);
         abort_unless($order->store_id === $store->id, 404);
-
-        // Procesar retorno de Mercado Pago si aplica
-        $collectionStatus = request()->query('collection_status') ?? request()->query('status');
-        $paymentId        = request()->query('payment_id') ?? request()->query('collection_id');
-
-        if ($order->payment_method === 'mercadopago' && $collectionStatus === 'approved') {
-            $order->update([
-                'status'         => 'confirmed',
-                'payment_status' => 'paid',
-                'payment_method' => 'mercadopago',
-                'internal_notes' => trim(($order->internal_notes ?? '') . "\nMercado Pago ID: " . $paymentId . " (Pago Aprobado)")
-            ]);
-        } elseif ($order->payment_method === 'mercadopago' && in_array($collectionStatus, ['rejected', 'cancelled'])) {
-            $order->update([
-                'payment_status' => 'failed',
-                'internal_notes' => trim(($order->internal_notes ?? '') . "\nMercado Pago Estado: " . $collectionStatus)
-            ]);
-        }
 
         if ($store->build_mode === 'custom_code') {
             $customView = "clientes_custom.{$store->slug}.confirmation";
@@ -1131,10 +1139,54 @@ class StoreController extends Controller
             }
         }
 
-        // No dedicated confirmation page: the buyer lands back on the store and
-        // app.js shows the real order status via SweetAlert (never "success" just
-        // because the order exists — Mercado Pago sends success/failure/pending here alike).
         return redirect(route('store.show', $store->slug) . '?pedido=' . urlencode($order->order_number));
+    }
+
+    /**
+     * Where Mercado Pago's Checkout Pro back_urls actually land. Unlike orderConfirmation
+     * above, there is usually no Order yet here — just the PendingCheckout drafted at
+     * checkout time — so this is the one place that decides whether the attempt becomes
+     * a real order at all. A customer who looked at the payment screen and went back
+     * without paying carries no recognizable collection_status, so nothing materializes
+     * and the store simply sees them return with an empty-looking cart request.
+     */
+    public function checkoutReturn(string $slug, string $reference)
+    {
+        $store = $this->getStore($slug);
+        $pending = PendingCheckout::where('store_id', $store->id)->where('reference', $reference)->firstOrFail();
+
+        if ($pending->order_id) {
+            return redirect(route('store.show', $store->slug) . '?pedido=' . urlencode($reference));
+        }
+
+        $collectionStatus = request()->query('collection_status') ?? request()->query('status');
+        $paymentId        = request()->query('payment_id') ?? request()->query('collection_id');
+
+        if ($collectionStatus === 'approved') {
+            $pending->materialize('paid', 'confirmed', decrementStock: true)->update([
+                'payment_method' => 'mercadopago',
+                'internal_notes' => 'Mercado Pago ID: ' . $paymentId . ' (Pago Aprobado)',
+            ]);
+            return redirect(route('store.show', $store->slug) . '?pedido=' . urlencode($reference));
+        }
+        if (in_array($collectionStatus, ['rejected', 'cancelled'], true)) {
+            $pending->materialize('failed', 'pending', decrementStock: false)->update([
+                'payment_method' => 'mercadopago',
+                'internal_notes' => 'Mercado Pago Estado: ' . $collectionStatus,
+            ]);
+            return redirect(route('store.show', $store->slug) . '?pedido=' . urlencode($reference));
+        }
+        // 'pending' (p.ej. voucher de PagoEfectivo emitido, aún no pagado) u otro valor no
+        // definitivo: no se descuenta stock, pero sí se registra el intento para que la
+        // tienda sepa que existe un cobro en curso.
+        if ($collectionStatus === 'pending') {
+            $pending->materialize('pending', 'pending', decrementStock: false)->update(['payment_method' => 'mercadopago']);
+            return redirect(route('store.show', $store->slug) . '?pedido=' . urlencode($reference));
+        }
+
+        // Sin collection_status reconocible: el cliente solo miró los medios de pago y
+        // volvió — nada se crea, el carrito sigue intacto tal como estaba.
+        return redirect(route('store.show', $store->slug));
     }
 
     public function orderStatus(string $orderNumber)
@@ -1163,25 +1215,23 @@ class StoreController extends Controller
                         'headers' => ['Authorization' => 'Bearer ' . trim($mpToken)]
                     ]);
                     $paymentData = json_decode($mpRes->getBody()->getContents(), true);
-                    
+
                     if (!empty($paymentData['external_reference'])) {
-                        $order = Order::where('order_number', $paymentData['external_reference'])
+                        $pending = PendingCheckout::where('reference', $paymentData['external_reference'])
                             ->where('store_id', $store->id)
                             ->first();
 
-                        if ($order) {
+                        if ($pending && !$pending->order_id) {
                             $status = $paymentData['status'] ?? '';
                             if ($status === 'approved') {
-                                $order->update([
-                                    'status'         => 'confirmed',
-                                    'payment_status' => 'paid',
+                                $pending->materialize('paid', 'confirmed', decrementStock: true)->update([
                                     'payment_method' => 'mercadopago',
-                                    'internal_notes' => trim(($order->internal_notes ?? '') . "\nIPN Webhook: Aprobado #{$id}")
+                                    'internal_notes' => "IPN Webhook: Aprobado #{$id}",
                                 ]);
                             } elseif (in_array($status, ['rejected', 'cancelled'])) {
-                                $order->update([
-                                    'payment_status' => 'failed',
-                                    'internal_notes' => trim(($order->internal_notes ?? '') . "\nIPN Webhook: {$status} #{$id}")
+                                $pending->materialize('failed', 'pending', decrementStock: false)->update([
+                                    'payment_method' => 'mercadopago',
+                                    'internal_notes' => "IPN Webhook: {$status} #{$id}",
                                 ]);
                             }
                         }

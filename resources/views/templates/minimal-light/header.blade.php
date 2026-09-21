@@ -190,8 +190,9 @@
                 </button>
                 
                 <!-- Mobile Hamburger Toggle -->
-                <button class="md:hidden text-[#1E1D1B] p-2 rounded-lg hover:bg-stone-100/70 transition" @click="mobileMenuOpen = !mobileMenuOpen" title="Menú">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                <button class="md:hidden relative text-[#1E1D1B] p-2.5 rounded-full hover:bg-stone-100/70 active:scale-95 transition cursor-pointer" @click="mobileMenuOpen = !mobileMenuOpen" :aria-expanded="mobileMenuOpen.toString()" aria-label="Menú" title="Menú">
+                    <svg x-show="!mobileMenuOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    <svg x-show="mobileMenuOpen" style="display:none" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
         </div>
@@ -225,99 +226,153 @@
         </nav>
     </div>
 
-    <!-- Mobile Menu Dropdown (Pastel Aesthetic) -->
-    <div class="md:hidden" x-show="mobileMenuOpen" style="display: none;"
-         x-transition:enter="transition ease-out duration-200"
-         x-transition:enter-start="opacity-0 -translate-y-2"
-         x-transition:enter-end="opacity-100 translate-y-0">
-        <div class="px-5 pt-3 pb-5 space-y-2.5 bg-[#FAF7F2] border-t border-stone-200 shadow-xl font-brand">
-            
-            <!-- Mobile Search Bar (Moved into Toggle Menu per user request) -->
-            <form action="{{ route('store.catalog', $store->slug) }}" method="GET" class="relative pb-1">
-                <input type="text" name="search" 
-                       placeholder="{{ $isEn ? 'Search products, brands...' : 'Buscar productos, marcas...' }}" 
-                       class="w-full pl-10 pr-4 py-2.5 bg-white border border-stone-200 rounded-xl text-xs sm:text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] transition shadow-2xs">
-                <button type="submit" class="absolute left-3 top-2.5 text-stone-400 hover:text-[#C8A68B]" title="Buscar">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+    <!-- Mobile Menu Overlay + Drawer (Pastel Aesthetic) -->
+    {{-- x-teleport escapes the header's own backdrop-blur (which otherwise traps position:fixed
+         descendants inside its box instead of the viewport, per Chromium containing-block rules) --}}
+    <template x-teleport="body">
+    <div x-show="mobileMenuOpen" style="display: none;" class="md:hidden fixed inset-0 z-[60] flex justify-end">
+
+        <!-- Backdrop -->
+        <div x-show="mobileMenuOpen"
+             x-transition:enter="transition-opacity ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition-opacity ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="absolute inset-0 bg-[#1E1D1B]/50 backdrop-blur-[2px]"
+             @click="mobileMenuOpen = false"></div>
+
+        <!-- Drawer Panel -->
+        <div x-show="mobileMenuOpen"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="translate-x-full"
+             x-transition:enter-end="translate-x-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="translate-x-0"
+             x-transition:leave-end="translate-x-full"
+             class="relative h-full w-[86%] max-w-sm bg-[#FAF7F2] border-l border-stone-200 shadow-2xl flex flex-col font-brand">
+
+            <!-- Drawer Header -->
+            <div class="flex items-center justify-between px-5 py-4 border-b border-stone-200/80 bg-white/50 shrink-0">
+                <span class="text-sm font-bold tracking-wide text-[#1E1D1B] uppercase">{{ $isEn ? 'Menu' : 'Menú' }}</span>
+                <button @click="mobileMenuOpen = false" class="p-2 rounded-full bg-stone-100 hover:bg-stone-200 text-[#1E1D1B] transition cursor-pointer" aria-label="{{ $isEn ? 'Close menu' : 'Cerrar menú' }}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
-            </form>
+            </div>
 
-            <!-- Tribio Account Button -->
-            <button @click="$dispatch('open-customer-modal'); mobileMenuOpen = false" 
-                    class="w-full text-left px-3.5 py-2.5 rounded-xl bg-white text-sm font-bold text-[#1E1D1B] hover:text-[#C8A68B] flex items-center justify-between border border-stone-200 mb-2">
-                <span class="flex items-center gap-2">
-                    <svg class="w-4 h-4 text-[#C8A68B]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                    {{ $isEn ? 'My Account / Tribio Orders' : 'Mi Cuenta / Pedidos Tribio' }}
-                </span>
-                    <svg class="w-4 h-4 text-[#C8A68B]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                    {{ $isEn ? 'My Account / Tribio Orders' : 'Mi Cuenta / Pedidos Tribio' }}
-                </span>
-                <span class="text-xs text-gray-400">→</span>
-            </button>
+            <!-- Drawer Body (scrollable) -->
+            <div class="flex-1 overflow-y-auto px-5 py-5 space-y-6">
 
-            <!-- Links -->
-            <a href="{{ route('store.show', $store->slug) }}" 
-               class="block px-3 py-2 text-base font-semibold {{ request()->routeIs('store.show') ? 'text-[#C8A68B]' : 'text-stone-800' }}">
-                {{ $isEn ? 'Home' : 'Inicio' }}
-            </a>
-            
-            <a href="{{ route('store.catalog', $store->slug) }}" 
-               class="block px-3 py-2 text-base font-semibold {{ (request()->routeIs('store.catalog') && !request()->has('category')) ? 'text-[#C8A68B]' : 'text-stone-800' }}">
-                {{ $isEn ? 'Shop' : 'Catálogo' }}
-            </a>
+                <!-- Mobile Search Bar (Moved into Toggle Menu per user request) -->
+                <form action="{{ route('store.catalog', $store->slug) }}" method="GET" class="relative">
+                    <input type="text" name="search"
+                           placeholder="{{ $isEn ? 'Search products, brands...' : 'Buscar productos, marcas...' }}"
+                           class="w-full pl-10 pr-4 py-2.5 bg-white border border-stone-200 rounded-full text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:border-[#C8A68B] focus:ring-2 focus:ring-[#C8A68B]/20 transition shadow-2xs">
+                    <button type="submit" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-[#C8A68B] transition cursor-pointer" title="Buscar">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </button>
+                </form>
 
-            @if($headerCategories->isNotEmpty())
-                <div class="border-t border-stone-200/80 pt-2.5 pb-1 my-1">
-                    <span class="px-3 text-[11px] font-bold text-stone-400 uppercase tracking-wider">
-                        {{ $isEn ? 'Categories' : 'Categorías' }}
+                <!-- Tribio Account Card -->
+                <button @click="$dispatch('open-customer-modal'); mobileMenuOpen = false"
+                        class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-gradient-to-r from-[#FDF1ED] to-[#F7F3EB] border border-[#F0DDD3] hover:shadow-md active:scale-[0.99] transition text-left cursor-pointer">
+                    <span class="flex items-center justify-center w-10 h-10 rounded-full bg-white text-[#C8A68B] shrink-0 shadow-2xs">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                     </span>
-                    @foreach($headerCategories as $cat)
-                        <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $cat->slug]) }}" 
-                           class="block px-3 py-2 text-[15px] font-medium text-stone-700 hover:text-[#C8A68B]">
-                            {{ $cat->getTranslatedName() }}
-                        </a>
-                    @endforeach
-                </div>
-            @endif
+                    <span class="flex-1 min-w-0">
+                        <span class="block text-sm font-bold text-[#1E1D1B] leading-tight">{{ $isEn ? 'My Account' : 'Mi Cuenta' }}</span>
+                        <span class="block text-xs text-[#8A6F5C] leading-tight mt-0.5">{{ $isEn ? 'Tribio orders & profile' : 'Pedidos Tribio y perfil' }}</span>
+                    </span>
+                    <svg class="w-4 h-4 text-[#C8A68B] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
 
-            <a href="{{ route('store.contact', $store->slug) }}" 
-               class="block px-3 py-2 text-base font-semibold {{ request()->routeIs('store.contact') ? 'text-[#C8A68B]' : 'text-stone-800' }}">
-                {{ $isEn ? 'Contact' : 'Contacto' }}
-            </a>
+                <!-- Primary Navigation -->
+                <nav class="space-y-1.5">
+                    <a href="{{ route('store.show', $store->slug) }}"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {{ request()->routeIs('store.show') ? 'bg-white shadow-2xs text-[#C8A68B]' : 'text-stone-700 hover:bg-white/70' }}">
+                        <span class="flex items-center justify-center w-8 h-8 rounded-full bg-[#F0F5EC] text-[#4A6038] shrink-0">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9.5L12 3l9 6.5M5 9v10a1 1 0 001 1h3a1 1 0 001-1v-4a2 2 0 114 0v4a1 1 0 001 1h3a1 1 0 001-1V9"></path></svg>
+                        </span>
+                        <span class="text-[15px] font-semibold">{{ $isEn ? 'Home' : 'Inicio' }}</span>
+                    </a>
 
-            <!-- Mobile Language Switcher (if enabled) -->
-            @if($store->is_multilanguage_enabled)
-                <div class="border-t border-gray-100 pt-3 mt-2 flex items-center justify-between px-3">
-                    <span class="text-xs font-medium text-gray-500">{{ $isEn ? 'Language' : 'Idioma' }}</span>
-                    <div class="inline-flex rounded-lg p-0.5 bg-stone-100 text-xs font-bold">
-                        <button type="button" 
-                                onclick="document.cookie='store_lang=es; path=/; max-age=31536000; SameSite=Lax'; document.cookie='googtrans=/es/es; path=/; max-age=31536000; SameSite=Lax'; window.location.reload();" 
-                                class="px-3 py-1 rounded-md transition {{ !$isEn ? 'bg-white text-[#1A1A1A] shadow-xs' : 'text-gray-500' }}">
-                            Español
-                        </button>
-                        <button type="button" 
-                                onclick="document.cookie='store_lang=en; path=/; max-age=31536000; SameSite=Lax'; document.cookie='googtrans=/es/en; path=/; max-age=31536000; SameSite=Lax'; window.location.reload();" 
-                                class="px-3 py-1 rounded-md transition {{ $isEn ? 'bg-white text-[#1A1A1A] shadow-xs' : 'text-gray-500' }}">
-                            English
-                        </button>
+                    <a href="{{ route('store.catalog', $store->slug) }}"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {{ (request()->routeIs('store.catalog') && !request()->has('category')) ? 'bg-white shadow-2xs text-[#C8A68B]' : 'text-stone-700 hover:bg-white/70' }}">
+                        <span class="flex items-center justify-center w-8 h-8 rounded-full bg-[#FDF1ED] text-[#964736] shrink-0">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h7v7H3V3zM14 3h7v7h-7V3zM3 14h7v7H3v-7zM14 14h7v7h-7v-7z"></path></svg>
+                        </span>
+                        <span class="text-[15px] font-semibold">{{ $isEn ? 'Shop' : 'Catálogo' }}</span>
+                    </a>
+
+                    <a href="{{ route('store.contact', $store->slug) }}"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {{ request()->routeIs('store.contact') ? 'bg-white shadow-2xs text-[#C8A68B]' : 'text-stone-700 hover:bg-white/70' }}">
+                        <span class="flex items-center justify-center w-8 h-8 rounded-full bg-[#F7F3EB] text-[#7A6245] shrink-0">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                        </span>
+                        <span class="text-[15px] font-semibold">{{ $isEn ? 'Contact' : 'Contacto' }}</span>
+                    </a>
+                </nav>
+
+                <!-- Categories -->
+                @if($headerCategories->isNotEmpty())
+                    <div>
+                        <span class="block px-1 mb-2 text-[11px] font-bold text-stone-400 uppercase tracking-wider">
+                            {{ $isEn ? 'Categories' : 'Categorías' }}
+                        </span>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($headerCategories as $cat)
+                                <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $cat->slug]) }}"
+                                   class="px-3.5 py-1.5 rounded-full text-[13px] font-semibold bg-white border border-stone-200 text-stone-700 hover:border-[#C8A68B] hover:text-[#C8A68B] transition">
+                                    {{ $cat->getTranslatedName() }}
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                <!-- Preferences -->
+                <div class="rounded-2xl bg-white border border-stone-200 divide-y divide-stone-100 overflow-hidden">
+                    @if($store->is_multilanguage_enabled)
+                        <div class="flex items-center justify-between px-4 py-3">
+                            <span class="text-xs font-semibold text-stone-500">{{ $isEn ? 'Language' : 'Idioma' }}</span>
+                            <div class="inline-flex rounded-full p-0.5 bg-stone-100 text-xs font-bold">
+                                <button type="button"
+                                        onclick="document.cookie='store_lang=es; path=/; max-age=31536000; SameSite=Lax'; document.cookie='googtrans=/es/es; path=/; max-age=31536000; SameSite=Lax'; window.location.reload();"
+                                        class="px-3 py-1.5 rounded-full transition cursor-pointer {{ !$isEn ? 'bg-[#1E1D1B] text-white shadow-xs' : 'text-gray-500' }}">
+                                    ES
+                                </button>
+                                <button type="button"
+                                        onclick="document.cookie='store_lang=en; path=/; max-age=31536000; SameSite=Lax'; document.cookie='googtrans=/es/en; path=/; max-age=31536000; SameSite=Lax'; window.location.reload();"
+                                        class="px-3 py-1.5 rounded-full transition cursor-pointer {{ $isEn ? 'bg-[#1E1D1B] text-white shadow-xs' : 'text-gray-500' }}">
+                                    EN
+                                </button>
+                            </div>
+                        </div>
+                    @endif
+
+                    <div class="flex items-center justify-between px-4 py-3">
+                        <span class="text-xs font-semibold text-stone-500">{{ $isEn ? 'Country / Currency' : 'País / Moneda' }}</span>
+                        <select onchange="const [c, cur] = this.value.split(':'); document.cookie='user_country=' + c + '; path=/; max-age=31536000; SameSite=Lax'; document.cookie='store_currency=' + cur + '; path=/; max-age=31536000; SameSite=Lax'; if(window.TribioCart && window.TribioCart.items && window.TribioCart.items.length > 0) window.TribioCart.clear(); window.location.reload();"
+                                class="bg-stone-100 border-none text-xs font-bold rounded-full pl-3 pr-7 py-1.5 text-[#1E1D1B] outline-none cursor-pointer">
+                            @foreach($headerCountries as $hCode => $hData)
+                                <option value="{{ $hCode }}:{{ $hData['currency'] }}" {{ $currentCountry === $hCode ? 'selected' : '' }}>
+                                    {{ $hData['flag'] }} {{ $hData['currency'] }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
-            @endif
 
-            <!-- Mobile Country & Currency Switcher -->
-            <div class="border-t border-gray-100 pt-3 mt-2 flex items-center justify-between px-3">
-                <span class="text-xs font-medium text-gray-500">{{ $isEn ? 'Country / Currency' : 'País / Moneda' }}</span>
-                <select onchange="const [c, cur] = this.value.split(':'); document.cookie='user_country=' + c + '; path=/; max-age=31536000; SameSite=Lax'; document.cookie='store_currency=' + cur + '; path=/; max-age=31536000; SameSite=Lax'; if(window.TribioCart && window.TribioCart.items && window.TribioCart.items.length > 0) window.TribioCart.clear(); window.location.reload();"
-                        class="bg-stone-100 border border-stone-200 text-xs font-bold rounded-lg px-2.5 py-1 text-[#1A1A1A] outline-none cursor-pointer">
-                    @foreach($headerCountries as $hCode => $hData)
-                        <option value="{{ $hCode }}:{{ $hData['currency'] }}" {{ $currentCountry === $hCode ? 'selected' : '' }}>
-                            {{ $hData['flag'] }} {{ $hData['name'] }} ({{ $hData['currency'] }} {{ $hData['symbol'] }})
-                        </option>
-                    @endforeach
-                </select>
+                <!-- Trust Badge -->
+                <div class="flex items-center justify-center gap-2 text-[11px] font-semibold text-[#4A6038] bg-[#EAF1E4] rounded-xl py-2.5">
+                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-[#7DA268]"></span>
+                    {{ $isEn ? '100% secure checkout' : 'Compra 100% protegida' }}
+                </div>
             </div>
         </div>
     </div>
+    </template>
 
     <!-- Search Overlay -->
     <div x-show="searchOpen" style="display: none;" 

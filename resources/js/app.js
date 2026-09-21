@@ -29,6 +29,10 @@ import 'sweetalert2/dist/sweetalert2.min.css';
 
         let config;
         if (order.payment_status === 'paid') {
+            // Whatsapp/card orders already cleared the cart synchronously at checkout;
+            // for a gateway redirect this is the first moment payment is actually
+            // confirmed, so it's the first safe moment to clear it here too.
+            window.TribioCart?.clear();
             config = { icon: 'success', title: '¡Pago confirmado!', text: `Tu pedido ${order.order_number} fue pagado y ya está en preparación.` };
         } else if (isGatewayOrder && order.payment_status === 'failed') {
             config = { icon: 'error', title: 'El pago no se completó', text: `Tu pedido ${order.order_number} sigue disponible. Contacta a la tienda para coordinar otra forma de pago.` };
@@ -253,10 +257,16 @@ window.TribioCart = {
             const data = await response.json();
 
             if (response.ok && data.success) {
-                this.clear();
                 if (data.payment_url) {
+                    // Redirecting to a gateway, not confirming a sale — keep the cart
+                    // until the buyer actually pays. It's cleared on return once the
+                    // SweetAlert above sees a 'paid' status; if they just come back
+                    // without paying, the cart must still be exactly as they left it.
                     window.location.href = data.payment_url;
-                } else if (data.whatsapp_url) {
+                    return true;
+                }
+                this.clear();
+                if (data.whatsapp_url) {
                     window.open(data.whatsapp_url, '_blank');
                     window.location.href = data.redirect_url;
                 } else {
