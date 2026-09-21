@@ -35,6 +35,14 @@
                     <span class="text-2xl font-black text-slate-900 tracking-tight">TRI<span class="text-sky-500">BIO</span></span>
                 </a>
 
+                @if(request()->routeIs('home'))
+                <div class="hidden lg:flex items-center gap-8 text-sm font-semibold text-slate-600">
+                    <a href="#demo" class="hover:text-sky-600 transition-colors">Cómo funciona</a>
+                    <a href="#guia-compra" class="hover:text-sky-600 transition-colors">Guía de compra</a>
+                    <a href="#precios" class="hover:text-sky-600 transition-colors">Planes</a>
+                </div>
+                @endif
+
                 {{-- CTA Button --}}
                 <div class="flex items-center gap-4">
                     @auth
@@ -49,7 +57,7 @@
                         @endif
                     @else
                         <a href="{{ route('login') }}" class="text-slate-600 hover:text-slate-900 text-sm font-semibold transition-colors hidden sm:inline">Ingresar</a>
-                        <a href="{{ route('tribio-pass') }}" class="text-slate-600 hover:text-slate-900 text-sm font-semibold transition-colors">Tribio Pass</a>
+                        <a href="{{ route('tribio-pass') }}" class="text-slate-600 hover:text-slate-900 text-sm font-semibold transition-colors hidden sm:inline">Tribio Pass</a>
                         <a href="{{ route('register') }}" class="btn-primary">Crear mi tienda</a>
                     @endauth
                 </div>
