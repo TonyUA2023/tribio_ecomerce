@@ -255,7 +255,7 @@
                                     
                                     <!-- Add to Cart Hover Button -->
                                     <div class="absolute inset-x-0 bottom-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-4 group-hover:translate-y-0">
-                                        <button onclick="event.preventDefault(); event.stopPropagation(); window.TribioCart && window.TribioCart.add({{ $p->id }}, '{{ addslashes($p->name) }}', {{ $p->resolvePrice() }}, '{{ $p->image_url }}'); window.dispatchEvent(new CustomEvent('open-cart-drawer'));"
+                                        <button onclick="event.preventDefault(); event.stopPropagation(); window.TribioCart && window.TribioCart.add({{ $p->id }}, '{{ addslashes($p->name) }}', {{ $p->resolvePrice() }}, '{{ $p->image_url }}', null, this); window.dispatchEvent(new CustomEvent('open-cart-drawer'));"
                                                 class="w-full py-3 bg-white/90 backdrop-blur-sm text-[#1A1A1A] font-bold text-sm rounded-xl shadow-lg hover:bg-[#1A1A1A] hover:text-white transition-colors flex items-center justify-center gap-2">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
                                             {{ \App\Helpers\TranslationHelper::trans('add_to_cart', 'Añadir al carrito') }}

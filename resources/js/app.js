@@ -49,9 +49,12 @@ import 'sweetalert2/dist/sweetalert2.min.css';
 })();
 
 // ── Intersection Observer para animaciones al hacer scroll ──
-document.addEventListener('DOMContentLoaded', () => {
-
-    // Animate elements when they come into view
+// Corre de inmediato, no en 'DOMContentLoaded': al ser type="module" este script ya
+// se difiere hasta que el DOM existe, pero sin esperar además a otros <script defer>
+// de terceros (p. ej. Alpine por CDN). Esa espera extra dejaba una ventana visible en
+// la que las tarjetas ya se habían pintado a opacidad normal, para recién ahí saltar
+// de golpe a opacity:0 antes de reaparecer animadas — el parpadeo al hacer scroll.
+(() => {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -66,6 +69,9 @@ document.addEventListener('DOMContentLoaded', () => {
         el.style.opacity = '0';
         observer.observe(el);
     });
+})();
+
+document.addEventListener('DOMContentLoaded', () => {
 
     // ── Color picker sync ──
     document.querySelectorAll('input[type="color"][data-sync]').forEach(picker => {
@@ -138,7 +144,12 @@ window.TribioCart = {
         window.dispatchEvent(new CustomEvent('cart-updated', { detail: JSON.parse(JSON.stringify(this.items)) }));
     },
 
-    add(id, name, price, image = '', variant = null) {
+    // `originEl` is the clicked "add to cart" element, used as the start point for the
+    // fly-to-cart animation. Leave it unset (not even `null`) to get the default
+    // fly-from-cart-icon fallback; pass `null` explicitly to skip the animation for
+    // this call (used when a single click adds more than one unit in a loop, so only
+    // one flight plays instead of one per unit).
+    add(id, name, price, image = '', variant = null, originEl) {
         const variantId = variant && variant.id ? variant.id : null;
         const variantTitle = variant && variant.title ? variant.title : null;
         const variantAttributes = variant && variant.attributes ? variant.attributes : null;
@@ -162,8 +173,9 @@ window.TribioCart = {
             });
         }
         this.save();
-        const displayName = variantTitle ? `${name} (${variantTitle})` : name;
-        this.showNotification(`🛍️ ${displayName} añadido al carrito`);
+        if (originEl !== null) {
+            this.flyToCart(image, originEl);
+        }
     },
 
     remove(cartKeyOrId) {
@@ -211,13 +223,39 @@ window.TribioCart = {
         window.dispatchEvent(new CustomEvent('cart-updated', { detail: JSON.parse(JSON.stringify(this.items)) }));
     },
 
-    showNotification(msg) {
-        const el = document.createElement('div');
-        el.className = 'fixed bottom-6 right-6 z-[9999] px-5 py-3 rounded-2xl text-white text-sm font-medium shadow-2xl';
-        el.style.cssText = 'background: rgba(26,26,46,0.95); border: 1px solid rgba(124,58,237,0.4); backdrop-filter: blur(20px); animation: slide-up 0.3s ease;';
-        el.textContent = msg;
-        document.body.appendChild(el);
-        setTimeout(() => el.remove(), 3000);
+    // "Fly to cart": shrinks a clone of the product thumbnail from the clicked button
+    // into the cart icon, instead of a toast — the old toast sat over the cart button
+    // itself and was too intrusive for something that happens on every single add.
+    flyToCart(imageUrl, originEl) {
+        const cartIcon = document.querySelector('[data-cart-count]');
+        if (!cartIcon) return;
+
+        const source = (originEl && originEl.getBoundingClientRect) ? originEl : cartIcon;
+        const originRect = source.getBoundingClientRect();
+        const cartRect = cartIcon.getBoundingClientRect();
+        const size = 56;
+
+        const flier = document.createElement('div');
+        flier.className = 'tribio-fly-to-cart';
+        Object.assign(flier.style, {
+            left: `${originRect.left + originRect.width / 2 - size / 2}px`,
+            top: `${originRect.top + originRect.height / 2 - size / 2}px`,
+            width: `${size}px`,
+            height: `${size}px`,
+        });
+        if (imageUrl) flier.style.backgroundImage = `url("${imageUrl}")`;
+        flier.style.setProperty('--fly-dx', `${(cartRect.left + cartRect.width / 2) - (originRect.left + originRect.width / 2)}px`);
+        flier.style.setProperty('--fly-dy', `${(cartRect.top + cartRect.height / 2) - (originRect.top + originRect.height / 2)}px`);
+
+        document.body.appendChild(flier);
+        void flier.offsetWidth; // force layout so the animation class reliably transitions
+        flier.classList.add('tribio-fly-to-cart-active');
+
+        flier.addEventListener('animationend', () => {
+            flier.remove();
+            cartIcon.classList.add('tribio-cart-bump');
+            setTimeout(() => cartIcon.classList.remove('tribio-cart-bump'), 300);
+        }, { once: true });
     },
 
     async checkout(storeSlug, customerData) {

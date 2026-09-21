@@ -135,7 +135,7 @@
                     }
                     return this.baseStock <= 0;
                 },
-                addToCart() {
+                addToCart(event = null) {
                     if (this.isOutOfStock) return;
                     const variant = this.currentVariant ? {
                         id: this.currentVariant.id,
@@ -145,20 +145,22 @@
                     } : null;
 
                     if (window.TribioCart) {
+                        const originEl = event?.currentTarget || null;
                         for (let i = 0; i < this.quantity; i++) {
                             window.TribioCart.add(
                                 {{ $product->id }},
                                 @js($product->name),
                                 this.currentPrice,
                                 @js($product->image_url),
-                                variant
+                                variant,
+                                i === 0 ? originEl : null
                             );
                         }
                         window.dispatchEvent(new CustomEvent('open-cart-drawer'));
                     }
                 },
-                buyNow() {
-                    this.addToCart();
+                buyNow(event = null) {
+                    this.addToCart(event);
                 }
             }">
                 <!-- Breadcrumbs -->

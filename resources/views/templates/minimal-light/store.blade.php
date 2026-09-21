@@ -467,7 +467,7 @@
 
                             <!-- Quick add overlay on hover (Desktop) -->
                             <div class="absolute inset-x-0 bottom-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-4 group-hover:translate-y-0 hidden md:block">
-                                <button onclick="event.preventDefault(); window.TribioCart && window.TribioCart.add({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->resolvePrice() }}, '{{ $product->image_path ? $product->image_url : '' }}')" 
+                                <button onclick="event.preventDefault(); window.TribioCart && window.TribioCart.add({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->resolvePrice() }}, '{{ $product->image_path ? $product->image_url : '' }}', null, this)"
                                         class="w-full py-3 bg-[#1E1D1B] hover:bg-[#C8A68B] text-white rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-md cursor-pointer font-brand">
                                     Add to cart
                                 </button>
@@ -487,7 +487,7 @@
                             </div>
 
                             <!-- Mobile Quick Add -->
-                            <button onclick="window.TribioCart && window.TribioCart.add({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->resolvePrice() }}, '{{ $product->image_path ? $product->image_url : '' }}')" 
+                            <button onclick="window.TribioCart && window.TribioCart.add({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->resolvePrice() }}, '{{ $product->image_path ? $product->image_url : '' }}', null, this)"
                                     class="mt-3 md:hidden w-full py-2.5 bg-[#1E1D1B] text-white rounded-xl text-xs font-semibold hover:bg-[#C8A68B] transition-colors font-brand cursor-pointer">
                                 Add to cart
                             </button>
