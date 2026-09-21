@@ -20,10 +20,16 @@ class AuthController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
+            $googleOnly = $user && $user->google_id;
+
             return response()->json([
-                'message' => 'Las credenciales proporcionadas son incorrectas.',
+                'message' => $googleOnly
+                    ? 'Esta cuenta usa Google para iniciar sesión. Por ahora, ingresa desde tribioshop.com con el botón de Google.'
+                    : 'Las credenciales proporcionadas son incorrectas.',
                 'errors' => [
-                    'email' => ['Las credenciales no coinciden con nuestros registros.']
+                    'email' => [$googleOnly
+                        ? 'Esta cuenta está conectada con Google — no tiene contraseña.'
+                        : 'Las credenciales no coinciden con nuestros registros.']
                 ]
             ], 422);
         }

@@ -142,6 +142,22 @@ class CustomerIdentityService
     }
 
     /**
+     * Links an ALREADY-AUTHENTICATED account to a Google identity (dashboard
+     * "Conectar con Google" — distinct from findOrCreateFromGoogle(), which is the
+     * guest door). Also wipes the password to the same random-unusable-hash
+     * mechanism a fresh Google signup gets, so password login stops working for
+     * this account from this point on, by explicit design — the account can only
+     * regain a real password via the normal "cambiar contraseña" flow.
+     */
+    public function linkGoogleToUser(User $user, string $googleId): void
+    {
+        $user->update([
+            'google_id' => $googleId,
+            'password'  => Hash::make(Str::random(40)),
+        ]);
+    }
+
+    /**
      * Purchase history for the Tribio Pass hub / mobile "Mis Compras": orders
      * matched by user_id or customer_email, across every store.
      */

@@ -136,4 +136,35 @@ class GoogleAuthTest extends TestCase
         $this->postJson('/customer/login', ['email' => $owner->email, 'password' => 'secret123'])
             ->assertOk()->assertJsonPath('success', true);
     }
+
+    public function test_google_signin_from_a_store_checkout_drawer_returns_to_that_store(): void
+    {
+        $owner = User::factory()->create(['role' => 'store_owner']);
+        $store = Store::create(['user_id' => $owner->id, 'name' => 'Tienda Drawer', 'slug' => 'tienda-drawer', 'status' => 'active']);
+
+        $this->get('/auth/google/redirect?store=tienda-drawer');
+
+        Socialite::shouldReceive('driver->user')->andReturn($this->fakeGoogleUser([
+            'id' => 'g-drawer-1', 'email' => 'comprador.drawer@example.test', 'name' => 'Comprador Drawer',
+        ]));
+
+        $response = $this->get('/auth/google/callback');
+
+        $response->assertRedirect($store->url . '?tribio_pass_login=1');
+        $this->assertAuthenticated();
+    }
+
+    public function test_google_signin_failure_from_a_store_drawer_returns_to_that_store_without_the_reopen_flag(): void
+    {
+        $owner = User::factory()->create(['role' => 'store_owner']);
+        $store = Store::create(['user_id' => $owner->id, 'name' => 'Tienda Drawer 2', 'slug' => 'tienda-drawer-2', 'status' => 'active']);
+
+        $this->get('/auth/google/redirect?store=tienda-drawer-2');
+        Socialite::shouldReceive('driver->user')->andThrow(new \Exception('invalid_state'));
+
+        $response = $this->get('/auth/google/callback');
+
+        $response->assertRedirect($store->url);
+        $response->assertSessionHasErrors('google');
+    }
 }

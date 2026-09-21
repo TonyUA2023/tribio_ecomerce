@@ -108,9 +108,13 @@ class CustomerPortalController extends Controller
             ]);
         }
 
+        $googleOnly = User::where('email', $credentials['email'])->whereNotNull('google_id')->exists();
+
         return response()->json([
             'success' => false,
-            'message' => 'El correo o la contraseña ingresados son incorrectos.',
+            'message' => $googleOnly
+                ? 'Esta cuenta está conectada con Google. Inicia sesión con el botón "Continuar con Google".'
+                : 'El correo o la contraseña ingresados son incorrectos.',
         ], 422);
     }
 

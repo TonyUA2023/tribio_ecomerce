@@ -2,6 +2,10 @@
 @php
     $payAccent = $payAccent ?? ($store->accent_color ?: config("tribio.templates.{$store->template_name}.default_accent", '#1A1A1A'));
     $paySecondary = $paySecondary ?? ($store->secondary_color ?: config("tribio.templates.{$store->template_name}.default_secondary", '#C8A68B'));
+    // Computed locally (not passed from the controller) since this component is
+    // @include'd from many different StoreController view methods — self-contained
+    // avoids threading googleReady through every one of them.
+    $googleReady = filled(config('services.google.client_id'));
 @endphp
 <div id="tribioCustomerModal"
      style="--pay-accent: {{ $payAccent }}; --pay-accent-soft: {{ $paySecondary }};"
@@ -54,6 +58,9 @@
             window.openCustomerModal = (tab = null, extra = {}) => {
                 window.dispatchEvent(new CustomEvent('open-customer-modal', { detail: { tab, ...extra } }));
             };
+            if (new URLSearchParams(window.location.search).get('tribio_pass_login') === '1') {
+                window.openCustomerModal();
+            }
         },
 
         async checkSession() {
@@ -362,6 +369,22 @@
                         <h3 class="font-bold text-[var(--pay-text)] text-xl">Bienvenido a Tribio</h3>
                         <p class="text-xs text-[var(--pay-text-muted)] mt-1">Inicia sesión con tu cuenta universal para gestionar tus compras y direcciones.</p>
                     </div>
+                    @if($googleReady)
+                    <a href="{{ route('auth.google.redirect', ['store' => $store->slug]) }}" class="w-full flex items-center justify-center gap-2.5 py-3 border rounded-xl text-sm font-bold transition-all hover:bg-[var(--pay-surface-muted)]" style="border-color: var(--pay-border); color: var(--pay-text);">
+                        <svg class="w-4 h-4" viewBox="0 0 48 48">
+                            <path fill="#FFC107" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.6 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.4-.1-2.8-.4-4.5z"/>
+                            <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34.6 5.1 29.6 3 24 3 16.3 3 9.7 7.3 6.3 14.7z"/>
+                            <path fill="#4CAF50" d="M24 45c5.5 0 10.4-1.9 14.1-5.1l-6.5-5.5C29.6 36 26.9 37 24 37c-5.2 0-9.6-3.3-11.2-8l-6.6 5C9.6 40.6 16.3 45 24 45z"/>
+                            <path fill="#1976D2" d="M43.6 20.5h-1.9V20H24v8h11.3c-.8 2.3-2.3 4.3-4.2 5.6l6.5 5.5c-.5.4 7.4-5.4 7.4-15.6 0-1.4-.1-2.8-.4-4.5z"/>
+                        </svg>
+                        Continuar con Google
+                    </a>
+                    <div class="flex items-center gap-3 my-1">
+                        <div class="flex-1 h-px" style="background: var(--pay-border);"></div>
+                        <span class="text-[10px] font-bold uppercase tracking-wider" style="color: var(--pay-text-muted);">o</span>
+                        <div class="flex-1 h-px" style="background: var(--pay-border);"></div>
+                    </div>
+                    @endif
                     <div>
                         <label class="block text-xs font-bold text-[var(--pay-text-muted)] mb-1">Correo Electrónico</label>
                         <input type="email" x-model="loginData.email" required placeholder="tu@correo.com"
@@ -394,6 +417,23 @@
                             <h3 class="font-bold text-[var(--pay-text)] text-xl">Crear Cuenta Comprador Tribio</h3>
                             <p class="text-xs text-[var(--pay-text-muted)] mt-1">Regístrate una sola vez y disfruta de compras en 1-click y seguimiento en tiempo real.</p>
                         </div>
+
+                        @if($googleReady)
+                        <a href="{{ route('auth.google.redirect', ['store' => $store->slug]) }}" class="w-full flex items-center justify-center gap-2.5 py-3 border rounded-xl text-sm font-bold transition-all hover:bg-[var(--pay-surface-muted)]" style="border-color: var(--pay-border); color: var(--pay-text);">
+                            <svg class="w-4 h-4" viewBox="0 0 48 48">
+                                <path fill="#FFC107" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.6 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.4-.1-2.8-.4-4.5z"/>
+                                <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34.6 5.1 29.6 3 24 3 16.3 3 9.7 7.3 6.3 14.7z"/>
+                                <path fill="#4CAF50" d="M24 45c5.5 0 10.4-1.9 14.1-5.1l-6.5-5.5C29.6 36 26.9 37 24 37c-5.2 0-9.6-3.3-11.2-8l-6.6 5C9.6 40.6 16.3 45 24 45z"/>
+                                <path fill="#1976D2" d="M43.6 20.5h-1.9V20H24v8h11.3c-.8 2.3-2.3 4.3-4.2 5.6l6.5 5.5c-.5.4 7.4-5.4 7.4-15.6 0-1.4-.1-2.8-.4-4.5z"/>
+                            </svg>
+                            Continuar con Google
+                        </a>
+                        <div class="flex items-center gap-3 my-1">
+                            <div class="flex-1 h-px" style="background: var(--pay-border);"></div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider" style="color: var(--pay-text-muted);">o regístrate con tu correo</span>
+                            <div class="flex-1 h-px" style="background: var(--pay-border);"></div>
+                        </div>
+                        @endif
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>

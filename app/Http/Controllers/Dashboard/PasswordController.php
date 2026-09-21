@@ -9,7 +9,9 @@ class PasswordController extends Controller
 {
     public function edit()
     {
-        return view('dashboard.password.edit');
+        return view('dashboard.password.edit', [
+            'googleReady' => filled(config('services.google.client_id')),
+        ]);
     }
 
     public function update(Request $request)

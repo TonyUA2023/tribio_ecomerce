@@ -78,6 +78,8 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     // Cuenta
     Route::get('/mi-cuenta/contrasena', [\App\Http\Controllers\Dashboard\PasswordController::class, 'edit'])->name('password.edit');
     Route::post('/mi-cuenta/contrasena', [\App\Http\Controllers\Dashboard\PasswordController::class, 'update'])->name('password.update');
+    Route::get('/mi-cuenta/google/conectar', [\App\Http\Controllers\Dashboard\GoogleAccountController::class, 'connect'])->name('google.connect');
+    Route::get('/mi-cuenta/google/callback', [\App\Http\Controllers\Dashboard\GoogleAccountController::class, 'callback'])->name('google.callback');
 
     // Shipping
     Route::get('/tienda/envios', [\App\Http\Controllers\Dashboard\ShippingController::class, 'index'])->name('shipping.index');
