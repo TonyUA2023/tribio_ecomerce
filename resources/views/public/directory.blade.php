@@ -32,7 +32,7 @@
                 <p class="text-5xl mb-4">🏪</p>
                 <p class="text-slate-850 text-base font-semibold">Aún no hay negocios registrados.</p>
                 <p class="text-slate-400 text-sm mt-1">¡Sé el primero en crear tu tienda virtual en Tribio!</p>
-                <a href="{{ route('register') }}" class="btn-primary mt-6">Registrar mi negocio</a>
+                <a href="{{ route('home') }}#precios" class="btn-primary mt-6">Registrar mi negocio</a>
             </div>
         @else
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">

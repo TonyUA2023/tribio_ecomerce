@@ -230,7 +230,7 @@
                     @endforeach
                     @if(method_exists($store, 'galleryItems') && $store->galleryItems()->exists())
                         <li class="pt-1 border-t border-white/5">
-                            <a href="{{ route('gallery', $store->slug) }}" class="hover:text-[#C8A68B] transition flex items-center gap-1.5">
+                            <a href="{{ route('store.gallery', $store->slug) }}" class="hover:text-[#C8A68B] transition flex items-center gap-1.5">
                                 {{ $isEn ? 'Photo Gallery' : 'Galería de Fotos' }}
                             </a>
                         </li>

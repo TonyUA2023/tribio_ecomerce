@@ -47,7 +47,7 @@
 
             <p class="text-center text-slate-400 text-sm mt-6">
                 ¿No tienes cuenta?
-                <a href="{{ route('register') }}" class="text-sky-500 hover:text-sky-600 transition-colors font-semibold">Registrar mi negocio</a>
+                <a href="{{ route('home') }}#precios" class="text-sky-500 hover:text-sky-600 transition-colors font-semibold">Registrar mi negocio</a>
             </p>
         </div>
     </div>

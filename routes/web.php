@@ -3,7 +3,6 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\PublicController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\StoreSettingsController;
@@ -43,13 +42,16 @@ Route::get('/tribio-pass', [\App\Http\Controllers\TribioPassController::class, '
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'showForm'])->name('login');
     Route::post('/login', [LoginController::class, 'login']);
-
-    // Registro multi-step
-    Route::get('/registro', [RegisterController::class, 'showForm'])->name('register');
-    Route::post('/registro', [RegisterController::class, 'register']);
 });
 
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
+
+// Legacy standalone store registration — retired 2026-09-21: it created an active
+// store with a free 30-day trial and never checked for an existing Tribio Pass
+// session, bypassing both Culqi billing and identity unification. Every "Crear mi
+// tienda" link now points straight at the pricing flow (#precios); this redirect
+// is only a safety net for old bookmarks/indexed links.
+Route::get('/registro', fn () => redirect(route('home') . '#precios'))->name('register');
 
 // Google Sign-In — one button, find-or-creates a Tribio Pass account (see CustomerIdentityService).
 Route::prefix('auth/google')->name('auth.google.')->group(function () {

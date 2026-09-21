@@ -58,7 +58,7 @@
                     @else
                         <a href="{{ route('login') }}" class="text-slate-600 hover:text-slate-900 text-sm font-semibold transition-colors hidden sm:inline">Ingresar</a>
                         <a href="{{ route('tribio-pass') }}" class="text-slate-600 hover:text-slate-900 text-sm font-semibold transition-colors hidden sm:inline">Tribio Pass</a>
-                        <a href="{{ route('register') }}" class="btn-primary">Crear mi tienda</a>
+                        <a href="{{ route('home') }}#precios" class="btn-primary">Crear mi tienda</a>
                     @endauth
                 </div>
 
@@ -112,7 +112,7 @@
                     <h4 class="text-slate-900 font-semibold mb-4 text-sm uppercase tracking-wider">Plataforma</h4>
                     <ul class="space-y-2">
                         <li><a href="{{ route('directory') }}" class="text-slate-500 hover:text-slate-900 text-sm transition-colors">Directorio de tiendas</a></li>
-                        <li><a href="{{ route('register') }}" class="text-slate-500 hover:text-slate-900 text-sm transition-colors">Crear mi tienda</a></li>
+                        <li><a href="{{ route('home') }}#precios" class="text-slate-500 hover:text-slate-900 text-sm transition-colors">Crear mi tienda</a></li>
                         <li><a href="#precios" class="text-slate-500 hover:text-slate-900 text-sm transition-colors">Precios</a></li>
                     </ul>
                 </div>
