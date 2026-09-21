@@ -193,42 +193,6 @@ class StoreSettingsController extends Controller
         return back()->with('success', 'Portada actualizada correctamente.');
     }
 
-    public function uploadHeroImage2(Request $request)
-    {
-        $request->validate([
-            'hero_image_2' => 'required|image|mimes:png,jpg,jpeg,webp|max:5120',
-        ]);
-
-        $store = $this->getStore();
-
-        if ($store->hero_image_2_path) {
-            Storage::disk('public')->delete($store->hero_image_2_path);
-        }
-
-        $path = $request->file('hero_image_2')->store('hero', 'public');
-        $store->update(['hero_image_2_path' => $path]);
-
-        return back()->with('success', 'Imagen del carrusel actualizada correctamente.');
-    }
-
-    public function uploadHeroImage3(Request $request)
-    {
-        $request->validate([
-            'hero_image_3' => 'required|image|mimes:png,jpg,jpeg,webp|max:5120',
-        ]);
-
-        $store = $this->getStore();
-
-        if ($store->hero_image_3_path) {
-            Storage::disk('public')->delete($store->hero_image_3_path);
-        }
-
-        $path = $request->file('hero_image_3')->store('hero', 'public');
-        $store->update(['hero_image_3_path' => $path]);
-
-        return back()->with('success', 'Imagen del carrusel actualizada correctamente.');
-    }
-
     public function updateTemplate(Request $request)
     {
         $request->validate([

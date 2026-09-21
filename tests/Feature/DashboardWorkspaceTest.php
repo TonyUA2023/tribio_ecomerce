@@ -87,12 +87,18 @@ class DashboardWorkspaceTest extends TestCase
         $this->get(route('dashboard.productos.edit', $product))->assertOk()->assertSee($product->image_url)
             ->assertSee('data-image-picker', false)->assertSee('Deshacer selección');
 
-        foreach (['logo', 'cover', 'hero_image_2', 'hero_image_3'] as $field) {
+        foreach (['logo', 'cover'] as $field) {
             $this->post(route('dashboard.store.' . $field), [$field => $upload()])->assertSessionHasNoErrors()->assertRedirect();
             Storage::disk('public')->assertExists($store->fresh()->{$field . '_path'});
         }
         $this->post(route('dashboard.galeria.store'), ['images' => [$upload(), $upload()]])->assertSessionHasNoErrors()->assertRedirect();
         $this->assertSame(2, $store->galleryItems()->count());
+
+        $galleryItem = $store->galleryItems()->first();
+        $this->post(route('dashboard.galeria.toggle-hero', $galleryItem))->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertSame('hero', $galleryItem->fresh()->type);
+        $this->post(route('dashboard.galeria.toggle-hero', $galleryItem))->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertSame('photo', $galleryItem->fresh()->type);
 
         $category = Category::create(['store_id' => $store->id, 'name' => 'Categoría con foto', 'slug' => 'categoria-foto']);
         $this->put(route('dashboard.categorias.update', $category), ['name' => $category->name, 'image' => $upload()])->assertSessionHasNoErrors()->assertRedirect();

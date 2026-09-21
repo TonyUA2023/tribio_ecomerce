@@ -62,4 +62,17 @@ class GalleryController extends Controller
         }
         return response()->json(['success' => true]);
     }
+
+    public function toggleHero(GalleryItem $item)
+    {
+        $store = $this->getStore();
+        abort_if($item->store_id !== $store->id, 403);
+
+        $isNowHero = $item->type !== 'hero';
+        $item->update(['type' => $isNowHero ? 'hero' : 'photo']);
+
+        return back()->with('success', $isNowHero
+            ? 'Imagen agregada al carrusel principal (Hero).'
+            : 'Imagen quitada del carrusel principal (Hero).');
+    }
 }

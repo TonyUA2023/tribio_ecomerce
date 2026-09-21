@@ -14,7 +14,7 @@ class Store extends Model
     protected $fillable = [
         'flow_enabled', 'flow_api_key', 'flow_secret_key', 'flow_mode', 'flow_currency',
         'user_id', 'name', 'slug', 'description', 'tagline', 'category',
-        'logo_path', 'cover_path', 'hero_image_2_path', 'hero_image_3_path', 'favicon_path',
+        'logo_path', 'cover_path', 'favicon_path',
         'template_name', 'build_mode', 'accent_color', 'secondary_color', 'text_color', 'bg_color',
         'hero_carousel', 'hero_style', 'custom_css_vars', 'distributors',
         'whatsapp_phone', 'phone', 'email', 'address', 'city', 'country',
@@ -101,20 +101,6 @@ class Store extends Model
     {
         return $this->cover_path
             ? asset('storage/' . $this->cover_path)
-            : asset('images/default-cover.jpg');
-    }
-
-    public function getHeroImage2UrlAttribute(): string
-    {
-        return $this->hero_image_2_path
-            ? asset('storage/' . $this->hero_image_2_path)
-            : asset('images/default-cover.jpg');
-    }
-
-    public function getHeroImage3UrlAttribute(): string
-    {
-        return $this->hero_image_3_path
-            ? asset('storage/' . $this->hero_image_3_path)
             : asset('images/default-cover.jpg');
     }
 

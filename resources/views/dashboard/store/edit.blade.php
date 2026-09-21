@@ -433,20 +433,14 @@
          primer </form> que encuentra y todo lo que sigue queda fuera de él (sin
          enviarse nunca). Por eso viven como hermanos del formulario, no dentro. --}}
     <div class="glass-card p-5 sm:p-8">
-        <h3 class="text-white font-bold text-lg mb-1 flex items-center gap-2">🖼️ Logo y Carrusel Principal (Hero)</h3>
-        <p class="text-xs text-white/50 mb-6">Personaliza el logo y las 3 imágenes que rotan en el banner principal de tu tienda. Se guardan de inmediato, por separado del resto del formulario.</p>
+        <h3 class="text-white font-bold text-lg mb-1 flex items-center gap-2">🖼️ Logo y Portada</h3>
+        <p class="text-xs text-white/50 mb-6">Personaliza la apariencia visual de tu tienda. Se guardan de inmediato, por separado del resto del formulario.</p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
             <form method="POST" action="{{ route('dashboard.store.logo') }}" enctype="multipart/form-data" class="space-y-4 bg-white/3 p-6 rounded-xl border border-white/5">@csrf
                 <x-image-picker name="logo" label="Logo de tu tienda" :current="$store?->logo_path ? $store->logo_url : null" :max-mb="2" save-label="Guardar logo" />
             </form>
             <form method="POST" action="{{ route('dashboard.store.cover') }}" enctype="multipart/form-data" class="space-y-4 bg-white/3 p-6 rounded-xl border border-white/5">@csrf
-                <x-image-picker name="cover" label="Portada de tu tienda — Imagen 1 del carrusel" :current="$store?->cover_path ? $store->cover_url : null" :max-mb="5" :wide="true" save-label="Guardar portada" />
-            </form>
-            <form method="POST" action="{{ route('dashboard.store.hero_image_2') }}" enctype="multipart/form-data" class="space-y-4 bg-white/3 p-6 rounded-xl border border-white/5">@csrf
-                <x-image-picker name="hero_image_2" label="Imagen 2 del carrusel (Hero)" :current="$store?->hero_image_2_path ? $store->hero_image_2_url : null" :max-mb="5" :wide="true" save-label="Guardar imagen" />
-            </form>
-            <form method="POST" action="{{ route('dashboard.store.hero_image_3') }}" enctype="multipart/form-data" class="space-y-4 bg-white/3 p-6 rounded-xl border border-white/5">@csrf
-                <x-image-picker name="hero_image_3" label="Imagen 3 del carrusel (Hero)" :current="$store?->hero_image_3_path ? $store->hero_image_3_url : null" :max-mb="5" :wide="true" save-label="Guardar imagen" />
+                <x-image-picker name="cover" label="Portada de tu tienda" :current="$store?->cover_path ? $store->cover_url : null" :max-mb="5" :wide="true" save-label="Guardar portada" />
             </form>
         </div>
     </div>

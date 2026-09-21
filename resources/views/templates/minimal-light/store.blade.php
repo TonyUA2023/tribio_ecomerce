@@ -69,25 +69,29 @@
 
     <main class="flex-grow bg-[#FAF7F2]">
         <!-- Full-Width Professional Hero Banner -->
-        <section class="relative w-full h-[60vh] md:h-[80vh] min-h-[500px] overflow-hidden bg-[#FAF7F2]" x-data="{ currentSlide: 1, totalSlides: 3 }">
-            <!-- Background Images (Curated Aesthetic Carousel) -->
+        @php
+            // El carrusel se arma con las fotos de Galería marcadas como "Hero" (type='hero'),
+            // en el orden en que se subieron/reordenaron. Si la tienda todavía no marcó ninguna,
+            // cae al mismo look de siempre (Portada + 2 fotos de stock) para no romper nada.
+            $heroGalleryItems = $store->galleryItems()->where('type', 'hero')->where('is_active', true)->orderBy('sort_order')->get();
+            $heroImageUrls = $heroGalleryItems->isNotEmpty()
+                ? $heroGalleryItems->pluck('image_url')->all()
+                : [
+                    $store->cover_path ? $store->cover_url : asset('images/hero_living_room_clean.jpg'),
+                    'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&q=85&w=1920',
+                    'https://images.unsplash.com/photo-1616046229478-9901c5536a45?auto=format&fit=crop&q=85&w=1920',
+                ];
+        @endphp
+        <section class="relative w-full h-[60vh] md:h-[80vh] min-h-[500px] overflow-hidden bg-[#FAF7F2]" x-data="{ currentSlide: 1, totalSlides: {{ count($heroImageUrls) }} }">
+            <!-- Background Images (Curated Aesthetic Carousel, powered by Galería photos tagged "Hero") -->
             <div class="absolute inset-0 w-full h-full">
-                <!-- Slide 1 (Bright, clean Scandinavian living room without sofa, natural wood & modern art) -->
-                <img x-show="currentSlide === 1" x-transition.opacity.duration.1000ms 
-                     src="{{ $store->cover_path ? $store->cover_url : asset('images/hero_living_room_clean.jpg') }}" 
-                     alt="{{ $store->name }} Slide 1" 
-                     class="absolute inset-0 w-full h-full object-cover">
-                <!-- Slide 2 (Bright lifestyle kitchen & home organization with warm neutral tones) -->
-                <img x-show="currentSlide === 2" x-transition.opacity.duration.1000ms
-                     src="{{ $store->hero_image_2_path ? $store->hero_image_2_url : 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&q=85&w=1920' }}"
-                     alt="{{ $store->name }} Slide 2"
-                     class="absolute inset-0 w-full h-full object-cover" style="display: none;">
-                <!-- Slide 3 (Cozy minimalist aesthetic home with sunlight & warm beige accents) -->
-                <img x-show="currentSlide === 3" x-transition.opacity.duration.1000ms
-                     src="{{ $store->hero_image_3_path ? $store->hero_image_3_url : 'https://images.unsplash.com/photo-1616046229478-9901c5536a45?auto=format&fit=crop&q=85&w=1920' }}"
-                     alt="{{ $store->name }} Slide 3"
-                     class="absolute inset-0 w-full h-full object-cover" style="display: none;">
-                
+                @foreach($heroImageUrls as $index => $heroImageUrl)
+                    <img x-show="currentSlide === {{ $index + 1 }}" x-transition.opacity.duration.1000ms
+                         src="{{ $heroImageUrl }}"
+                         alt="{{ $store->name }} Slide {{ $index + 1 }}"
+                         class="absolute inset-0 w-full h-full object-cover" @if($index > 0) style="display: none;" @endif>
+                @endforeach
+
                 <!-- Warm Gradient Overlay for Luminous Readability -->
                 <div class="absolute inset-0 bg-gradient-to-r from-[#1E1D1B]/75 via-[#23211E]/45 to-transparent"></div>
             </div>
@@ -133,7 +137,7 @@
             </div>
 
             <!-- Bottom Left Carousel Indicators -->
-            <div class="absolute bottom-8 left-4 sm:left-6 lg:left-12 md:ml-10 z-20 flex items-center gap-4 text-white/80 text-sm font-medium font-brand">
+            <div x-show="totalSlides > 1" class="absolute bottom-8 left-4 sm:left-6 lg:left-12 md:ml-10 z-20 flex items-center gap-4 text-white/80 text-sm font-medium font-brand">
                 <span x-text="String(currentSlide).padStart(2, '0')">01</span>
                 <div class="flex items-center gap-2">
                     <button @click="currentSlide = currentSlide > 1 ? currentSlide - 1 : totalSlides" class="hover:text-white transition-colors focus:outline-none cursor-pointer">

@@ -72,8 +72,6 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     Route::post('/tienda/configuracion', [StoreSettingsController::class, 'update'])->name('store.update');
     Route::post('/tienda/logo', [StoreSettingsController::class, 'uploadLogo'])->name('store.logo');
     Route::post('/tienda/portada', [StoreSettingsController::class, 'uploadCover'])->name('store.cover');
-    Route::post('/tienda/hero-imagen-2', [StoreSettingsController::class, 'uploadHeroImage2'])->name('store.hero_image_2');
-    Route::post('/tienda/hero-imagen-3', [StoreSettingsController::class, 'uploadHeroImage3'])->name('store.hero_image_3');
     Route::get('/tienda/plantillas', [StoreSettingsController::class, 'templates'])->name('store.templates');
     Route::post('/tienda/plantilla', [StoreSettingsController::class, 'updateTemplate'])->name('store.template');
 
@@ -119,6 +117,7 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     Route::post('/galeria', [GalleryController::class, 'store'])->name('galeria.store');
     Route::delete('/galeria/{item}', [GalleryController::class, 'destroy'])->name('galeria.destroy');
     Route::post('/galeria/reordenar', [GalleryController::class, 'reorder'])->name('galeria.reorder');
+    Route::post('/galeria/{item}/hero', [GalleryController::class, 'toggleHero'])->name('galeria.toggle-hero');
 
     // Pedidos
     Route::get('/pedidos', [DashboardOrderController::class, 'index'])->name('pedidos.index');
