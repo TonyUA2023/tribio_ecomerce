@@ -87,7 +87,7 @@ class DashboardWorkspaceTest extends TestCase
         $this->get(route('dashboard.productos.edit', $product))->assertOk()->assertSee($product->image_url)
             ->assertSee('data-image-picker', false)->assertSee('Deshacer selección');
 
-        foreach (['logo', 'cover'] as $field) {
+        foreach (['logo', 'cover', 'hero_image_2', 'hero_image_3'] as $field) {
             $this->post(route('dashboard.store.' . $field), [$field => $upload()])->assertSessionHasNoErrors()->assertRedirect();
             Storage::disk('public')->assertExists($store->fresh()->{$field . '_path'});
         }

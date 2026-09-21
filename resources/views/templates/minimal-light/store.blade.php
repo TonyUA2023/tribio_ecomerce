@@ -78,14 +78,14 @@
                      alt="{{ $store->name }} Slide 1" 
                      class="absolute inset-0 w-full h-full object-cover">
                 <!-- Slide 2 (Bright lifestyle kitchen & home organization with warm neutral tones) -->
-                <img x-show="currentSlide === 2" x-transition.opacity.duration.1000ms 
-                     src="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&q=85&w=1920" 
-                     alt="{{ $store->name }} Slide 2" 
+                <img x-show="currentSlide === 2" x-transition.opacity.duration.1000ms
+                     src="{{ $store->hero_image_2_path ? $store->hero_image_2_url : 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&q=85&w=1920' }}"
+                     alt="{{ $store->name }} Slide 2"
                      class="absolute inset-0 w-full h-full object-cover" style="display: none;">
                 <!-- Slide 3 (Cozy minimalist aesthetic home with sunlight & warm beige accents) -->
-                <img x-show="currentSlide === 3" x-transition.opacity.duration.1000ms 
-                     src="https://images.unsplash.com/photo-1616046229478-9901c5536a45?auto=format&fit=crop&q=85&w=1920" 
-                     alt="{{ $store->name }} Slide 3" 
+                <img x-show="currentSlide === 3" x-transition.opacity.duration.1000ms
+                     src="{{ $store->hero_image_3_path ? $store->hero_image_3_url : 'https://images.unsplash.com/photo-1616046229478-9901c5536a45?auto=format&fit=crop&q=85&w=1920' }}"
+                     alt="{{ $store->name }} Slide 3"
                      class="absolute inset-0 w-full h-full object-cover" style="display: none;">
                 
                 <!-- Warm Gradient Overlay for Luminous Readability -->
@@ -98,7 +98,7 @@
                     <!-- Brand Slogan Tag from Logo -->
                     <div class="inline-flex items-center gap-2 mb-3.5 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white text-[11px] md:text-xs font-bold tracking-[0.25em] uppercase shadow-xs font-brand">
                         <span class="w-2 h-2 rounded-full bg-[#7DA268]"></span>
-                        <span>— {{ \App\Helpers\TranslationHelper::isEn() ? 'PREMIUM QUALITY' : 'PRODUCTOS EXCLUSIVOS' }} —</span>
+                        <span>— {{ $store->hero_badge ?: (\App\Helpers\TranslationHelper::isEn() ? 'PREMIUM QUALITY' : 'PRODUCTOS EXCLUSIVOS') }} —</span>
                     </div>
 
                     <!-- Main Brand Name with Maetek Typography -->
@@ -107,9 +107,15 @@
                     </h1>
 
                     <!-- Hero Title with Maetek Typography -->
-                    <h2 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold mb-10 drop-shadow-sm leading-snug text-white/95 max-w-xl font-brand">
+                    <h2 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold {{ $store->hero_subtitle ? 'mb-3' : 'mb-10' }} drop-shadow-sm leading-snug text-white/95 max-w-xl font-brand">
                         {{ $store->hero_title ?: 'Innovación que inspira tu estilo de vida' }}
                     </h2>
+
+                    @if($store->hero_subtitle)
+                    <p class="text-sm sm:text-base text-white/80 mb-10 max-w-lg font-brand">
+                        {{ $store->hero_subtitle }}
+                    </p>
+                    @endif
 
                     <!-- Circular "Comprar Ahora" Button with Pastel Pink Accent -->
                     <div class="relative inline-flex items-center justify-center w-36 h-36 md:w-40 md:h-40 group cursor-pointer" onclick="window.location='{{ route('store.catalog', $store->slug) }}'">

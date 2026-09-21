@@ -70,8 +70,14 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     Route::post('/tienda/configuracion', [StoreSettingsController::class, 'update'])->name('store.update');
     Route::post('/tienda/logo', [StoreSettingsController::class, 'uploadLogo'])->name('store.logo');
     Route::post('/tienda/portada', [StoreSettingsController::class, 'uploadCover'])->name('store.cover');
+    Route::post('/tienda/hero-imagen-2', [StoreSettingsController::class, 'uploadHeroImage2'])->name('store.hero_image_2');
+    Route::post('/tienda/hero-imagen-3', [StoreSettingsController::class, 'uploadHeroImage3'])->name('store.hero_image_3');
     Route::get('/tienda/plantillas', [StoreSettingsController::class, 'templates'])->name('store.templates');
     Route::post('/tienda/plantilla', [StoreSettingsController::class, 'updateTemplate'])->name('store.template');
+
+    // Cuenta
+    Route::get('/mi-cuenta/contrasena', [\App\Http\Controllers\Dashboard\PasswordController::class, 'edit'])->name('password.edit');
+    Route::post('/mi-cuenta/contrasena', [\App\Http\Controllers\Dashboard\PasswordController::class, 'update'])->name('password.update');
 
     // Shipping
     Route::get('/tienda/envios', [\App\Http\Controllers\Dashboard\ShippingController::class, 'index'])->name('shipping.index');
