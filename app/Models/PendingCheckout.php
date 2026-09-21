@@ -104,12 +104,17 @@ class PendingCheckout extends Model
             if (!$product || !$product->track_stock) {
                 continue;
             }
-            // Mirrors the pre-refactor checkout logic: the parent product's own stock
-            // is decremented alongside the variant's, not instead of it.
+            // Clamped to available stock: a backorder sale (out_of_stock_message set,
+            // so checkout allows buying at 0 stock — see StoreController::checkout())
+            // must never push products.stock (unsigned) negative. That throws a
+            // QueryException that rolls back this whole transaction — including the
+            // Order just created — after a gateway may have already charged the
+            // customer, which is far worse than just leaving stock floored at 0.
             if (!empty($item['variant_id'])) {
-                ProductVariant::find($item['variant_id'])?->decrement('stock', $item['quantity']);
+                $variant = ProductVariant::find($item['variant_id']);
+                $variant?->decrement('stock', min($item['quantity'], $variant->stock));
             }
-            $product->decrement('stock', $item['quantity']);
+            $product->decrement('stock', min($item['quantity'], $product->stock));
         }
     }
 }

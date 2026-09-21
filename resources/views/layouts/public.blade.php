@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <script>document.documentElement.classList.add('js-anim');</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Tribio - Tu Negocio Vendiendo las 24 Horas')</title>
     <meta name="description" content="@yield('meta_description', 'Tribio te crea una tienda virtual para vender tus productos o servicios por internet sin complicaciones.')">

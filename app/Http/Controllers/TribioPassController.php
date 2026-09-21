@@ -22,7 +22,8 @@ class TribioPassController extends Controller
         }
 
         return view('public.tribio-pass', [
-            'hasStore' => $user?->hasStore() ?? false,
+            'hasStore'    => $user?->hasStore() ?? false,
+            'googleReady' => filled(config('services.google.client_id')),
         ]);
     }
 }

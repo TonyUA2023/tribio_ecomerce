@@ -772,21 +772,10 @@ class StoreController extends Controller
                     $status = $paymentData['status'] ?? '';
                     $pending->update(['gateway_ref' => isset($paymentData['id']) ? (string) $paymentData['id'] : null]);
 
-                    // Only an approved charge decrements stock — a declined or still-
-                    // processing card never should, same rule as every other gateway.
-                    if ($status === 'approved') {
-                        $order = $pending->materialize('paid', 'confirmed', decrementStock: true);
-                        $order->update([
-                            'payment_method' => 'mercadopago',
-                            'internal_notes' => 'Mercado Pago Payment ID: ' . ($paymentData['id'] ?? 'N/A') . ' (Aprobado — tarjeta embebida)',
-                        ]);
-                    } elseif (in_array($status, ['in_process', 'pending'], true)) {
-                        $order = $pending->materialize('pending', 'pending', decrementStock: false);
-                        $order->update([
-                            'payment_method' => 'mercadopago',
-                            'internal_notes' => 'Mercado Pago Payment ID: ' . ($paymentData['id'] ?? 'N/A') . " (En proceso: {$status})",
-                        ]);
-                    } else {
+                    if (!in_array($status, ['approved', 'in_process', 'pending'], true)) {
+                        // Rechazado: Mercado Pago nunca llegó a cobrar nada, así que un
+                        // fallo de aquí en adelante se puede seguir tratando como "no se
+                        // pudo cobrar" sin riesgo de esconder un cargo real.
                         $statusDetail = $paymentData['status_detail'] ?? 'desconocido';
                         \Log::error('Mercado Pago: pago con tarjeta rechazado.', [
                             'reference' => $pending->reference,
@@ -799,6 +788,44 @@ class StoreController extends Controller
                         return response()->json([
                             'success' => false,
                             'error'   => 'Tu tarjeta fue rechazada (' . $statusDetail . '). Verifica los datos o intenta con otro método de pago.',
+                        ]);
+                    }
+
+                    // A partir de aquí Mercado Pago ya aprobó o dejó en proceso el cobro:
+                    // el banco ya tomó (o está tomando) el dinero real del cliente. Un
+                    // fallo nuestro de aquí en adelante (guardar la orden, descontar stock,
+                    // etc.) JAMÁS debe borrar $pending ni responder "no se pudo iniciar el
+                    // pago" — eso perdería el único rastro local del cobro real (gateway_ref
+                    // ya quedó guardado arriba) e invitaría al cliente a pagar dos veces
+                    // reintentando. Este catch propio, separado del de más abajo, existe
+                    // solo para eso: un pago que la pasarela ya confirmó nunca cae en la
+                    // misma rama de error que un pago que nunca llegó a intentarse.
+                    try {
+                        // Only an approved charge decrements stock — a declined or still-
+                        // processing card never should, same rule as every other gateway.
+                        if ($status === 'approved') {
+                            $order = $pending->materialize('paid', 'confirmed', decrementStock: true);
+                            $order->update([
+                                'payment_method' => 'mercadopago',
+                                'internal_notes' => 'Mercado Pago Payment ID: ' . ($paymentData['id'] ?? 'N/A') . ' (Aprobado — tarjeta embebida)',
+                            ]);
+                        } else {
+                            $order = $pending->materialize('pending', 'pending', decrementStock: false);
+                            $order->update([
+                                'payment_method' => 'mercadopago',
+                                'internal_notes' => 'Mercado Pago Payment ID: ' . ($paymentData['id'] ?? 'N/A') . " (En proceso: {$status})",
+                            ]);
+                        }
+                    } catch (\Throwable $e) {
+                        \Log::critical('Mercado Pago: el cobro se realizó pero no se pudo registrar el pedido localmente.', [
+                            'reference'    => $pending->reference,
+                            'payment_data' => $paymentData,
+                            'exception'    => $e->getMessage(),
+                        ]);
+                        return response()->json([
+                            'success' => false,
+                            'error'   => 'Tu pago fue procesado correctamente, pero hubo un problema al registrar tu pedido. '
+                                       . 'Por favor contacta a la tienda con este número de referencia: ' . $pending->reference,
                         ]);
                     }
                     // Aprobado o pendiente: el cliente se queda en la tienda y ve la

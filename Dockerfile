@@ -22,6 +22,13 @@ WORKDIR /var/www/html
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 RUN install-php-extensions gd pdo_mysql zip
 
+# Supervisor: mantiene Apache y el worker de colas (php artisan queue:work) corriendo
+# juntos en el mismo contenedor. Sin esto, todo lo que se encola (QUEUE_CONNECTION=
+# database) se acumula en la tabla `jobs` y nunca se procesa — nada más en esta imagen
+# lo consume.
+RUN apt-get update && apt-get install -y --no-install-recommends supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
 # Configurar Apache
 RUN a2enmod rewrite
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
@@ -50,6 +57,8 @@ COPY docker-entrypoint.sh /usr/local/bin/
 RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
     && chmod +x /usr/local/bin/docker-entrypoint.sh
 
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
 EXPOSE 80
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["apache2-foreground"]
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

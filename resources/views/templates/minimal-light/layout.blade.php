@@ -2,6 +2,7 @@
 <html lang="{{ \App\Helpers\TranslationHelper::currentLang() }}">
 <head>
     <meta charset="UTF-8">
+    <script>document.documentElement.classList.add('js-anim');</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', $store->name . ' - Tienda Online')</title>

@@ -53,4 +53,13 @@ return [
         'api_key' => env('BREVO_API_KEY'),
     ],
 
+    // Google Sign-In for Tribio Pass (web only — see tribio_brain vault). One OAuth
+    // client, "Web application" type, from Google Cloud Console > APIs & Services >
+    // Credentials. Authorized redirect URI must match GOOGLE_REDIRECT_URI exactly.
+    'google' => [
+        'client_id'     => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect'      => env('GOOGLE_REDIRECT_URI', '/auth/google/callback'),
+    ],
+
 ];

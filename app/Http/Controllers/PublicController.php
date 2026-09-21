@@ -16,8 +16,9 @@ class PublicController extends Controller
 
         $totalStores   = Store::active()->count();
         $totalProducts = \App\Models\Product::where('is_active', true)->count();
+        $googleReady   = filled(config('services.google.client_id'));
 
-        return view('public.home', compact('featuredStores', 'totalStores', 'totalProducts'));
+        return view('public.home', compact('featuredStores', 'totalStores', 'totalProducts', 'googleReady'));
     }
 
     public function search()

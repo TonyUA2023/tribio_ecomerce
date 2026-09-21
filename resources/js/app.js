@@ -49,11 +49,13 @@ import 'sweetalert2/dist/sweetalert2.min.css';
 })();
 
 // ── Intersection Observer para animaciones al hacer scroll ──
-// Corre de inmediato, no en 'DOMContentLoaded': al ser type="module" este script ya
-// se difiere hasta que el DOM existe, pero sin esperar además a otros <script defer>
-// de terceros (p. ej. Alpine por CDN). Esa espera extra dejaba una ventana visible en
-// la que las tarjetas ya se habían pintado a opacidad normal, para recién ahí saltar
-// de golpe a opacity:0 antes de reaparecer animadas — el parpadeo al hacer scroll.
+// El opacity:0 inicial de [data-animate] ahora vive en CSS (bajo html.js-anim, ver
+// app.css), no aquí: cualquier ocultamiento hecho por JS llega después de que el HTML
+// ya se parseó y pudo pintarse una vez a opacidad normal, así el script corra donde
+// corra — eso es justo lo que causaba el parpadeo ("carga dos veces"): se veía la
+// tarjeta ya visible, recién ahí saltaba a invisible, y luego reaparecía animada. El
+// script inline en el <head> del layout marca html.js-anim antes de ese primer pintado,
+// así que aquí solo queda observar y revelar.
 (() => {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -65,10 +67,7 @@ import 'sweetalert2/dist/sweetalert2.min.css';
         });
     }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
 
-    document.querySelectorAll('[data-animate]').forEach(el => {
-        el.style.opacity = '0';
-        observer.observe(el);
-    });
+    document.querySelectorAll('[data-animate]').forEach(el => observer.observe(el));
 })();
 
 document.addEventListener('DOMContentLoaded', () => {

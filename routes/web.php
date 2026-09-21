@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\PublicController;
@@ -49,6 +50,12 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
+
+// Google Sign-In — one button, find-or-creates a Tribio Pass account (see CustomerIdentityService).
+Route::prefix('auth/google')->name('auth.google.')->group(function () {
+    Route::get('/redirect', [GoogleAuthController::class, 'redirect'])->middleware('guest')->name('redirect');
+    Route::get('/callback', [GoogleAuthController::class, 'callback'])->name('callback');
+});
 
 // ═══════════════════════════════════════════════════════════════
 //  DASHBOARD - VENDEDOR

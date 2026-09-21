@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * Tribio Pass buyer identity: OTP registration and purchase history, shared by
@@ -100,6 +101,42 @@ class CustomerIdentityService
         Order::whereNull('user_id')
             ->where('customer_email', $user->email)
             ->update(['user_id' => $user->id]);
+
+        return $user;
+    }
+
+    /**
+     * Finds the Tribio Pass account for a Google sign-in, auto-linking by email when
+     * an account with that (Google-verified) email already exists — whether buyer or
+     * store owner — so the same person never ends up with two disconnected accounts.
+     * Creates a fresh `cliente` account (matching the OTP registration default) only
+     * when neither the Google id nor the email match anything on file. The random
+     * password keeps `users.password` (not nullable) satisfied; the account can still
+     * set a real one later via the normal password-reset flow.
+     */
+    public function findOrCreateFromGoogle(string $googleId, string $email, string $name, ?string $avatar): User
+    {
+        if ($user = User::where('google_id', $googleId)->first()) {
+            return $user;
+        }
+
+        if ($user = User::where('email', $email)->first()) {
+            $user->update(['google_id' => $googleId]);
+            return $user;
+        }
+
+        $user = User::create([
+            'name'      => $name,
+            'email'     => $email,
+            'google_id' => $googleId,
+            'password'  => Hash::make(Str::random(40)),
+            'role'      => User::ROLE_CLIENTE,
+            'avatar'    => $avatar,
+        ]);
+
+        // email_verified_at isn't mass-assignable (by design, elsewhere in the app) —
+        // force it here specifically, since Google's own "email" scope already verified it.
+        $user->forceFill(['email_verified_at' => now()])->save();
 
         return $user;
     }

@@ -14,6 +14,12 @@
             <p class="text-slate-500 text-sm mt-3 max-w-xl mx-auto">Compra en cualquier tienda de la red y administra tu propio negocio, todo con el mismo Tribio Pass.</p>
         </div>
 
+        @if($errors->has('google'))
+        <div class="max-w-md mx-auto mb-6 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 text-xs text-center">
+            {{ $errors->first('google') }}
+        </div>
+        @endif
+
         {{-- Loading --}}
         <template x-if="checking">
             <div class="text-center py-16 text-slate-400 text-sm">Cargando tu Tribio Pass…</div>
@@ -27,6 +33,25 @@
                     <button type="button" @click="tab = 'login'" :class="tab === 'login' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-bold transition-all">Iniciar sesión</button>
                     <button type="button" @click="tab = 'register'" :class="tab === 'register' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-bold transition-all">Crear Tribio Pass</button>
                 </div>
+
+                @if($googleReady)
+                <div x-show="tab === 'login' || (tab === 'register' && regStep === 1)" class="mb-5">
+                    <a href="{{ route('auth.google.redirect', ['from' => 'tribio-pass']) }}" class="w-full flex items-center justify-center gap-2.5 py-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all">
+                        <svg class="w-4 h-4" viewBox="0 0 48 48">
+                            <path fill="#FFC107" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.6 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.4-.1-2.8-.4-4.5z"/>
+                            <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34.6 5.1 29.6 3 24 3 16.3 3 9.7 7.3 6.3 14.7z"/>
+                            <path fill="#4CAF50" d="M24 45c5.5 0 10.4-1.9 14.1-5.1l-6.5-5.5C29.6 36 26.9 37 24 37c-5.2 0-9.6-3.3-11.2-8l-6.6 5C9.6 40.6 16.3 45 24 45z"/>
+                            <path fill="#1976D2" d="M43.6 20.5h-1.9V20H24v8h11.3c-.8 2.3-2.3 4.3-4.2 5.6l6.5 5.5c-.5.4 7.4-5.4 7.4-15.6 0-1.4-.1-2.8-.4-4.5z"/>
+                        </svg>
+                        Continuar con Google
+                    </a>
+                    <div class="flex items-center gap-3 mt-5">
+                        <div class="flex-1 h-px bg-slate-100"></div>
+                        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">o</span>
+                        <div class="flex-1 h-px bg-slate-100"></div>
+                    </div>
+                </div>
+                @endif
 
                 <template x-if="formError">
                     <div class="p-3 mb-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 text-xs" x-text="formError"></div>

@@ -306,6 +306,15 @@ body {
     to   { opacity: 1; }
 }
 
+/* Ocultamiento inicial de [data-animate] para el reveal-on-scroll. Vive en CSS (no en
+   JS) para que aplique desde el primer pintado, antes de que cualquier script corra —
+   de lo contrario la tarjeta se pinta visible una vez y recién luego un script la
+   oculta, lo que se ve como un parpadeo o una "doble carga". Va detrás de html.js-anim
+   (agregada por un script inline al inicio del <head>, ver layout.blade.php) para que,
+   si JS estuviera deshabilitado, el contenido se quede visible en vez de oculto para
+   siempre. */
+html.js-anim [data-animate] { opacity: 0; }
+
 .animate-float       { animation: float 4s ease-in-out infinite; }
 .animate-pulse-glow  { animation: pulse-glow 3s ease-in-out infinite; }
 .animate-slide-up    { animation: slide-up 0.6s ease-out forwards; }
