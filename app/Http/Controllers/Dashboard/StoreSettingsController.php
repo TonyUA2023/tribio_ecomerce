@@ -18,15 +18,10 @@ class StoreSettingsController extends Controller
     public function edit()
     {
         $store = $this->getStore();
-        $templates = config('tribio.templates');
-        return view('dashboard.store.edit', compact('store', 'templates'));
-    }
-
-    public function templates()
-    {
-        $store = $this->getStore();
-        $templates = config('tribio.templates');
-        return view('dashboard.store.templates', compact('store', 'templates'));
+        // Stores on a customizable template edit their hero copy in the Plantillas module.
+        $heroManagedByTemplate = app(\App\Services\Storefront\TemplateRegistry::class)->isCustomizable($store?->template_name)
+            && !$store->template_locked;
+        return view('dashboard.store.edit', compact('store', 'heroManagedByTemplate'));
     }
 
     public function update(Request $request)
@@ -241,27 +236,5 @@ class StoreSettingsController extends Controller
         $store->update(['cover_path' => $path]);
 
         return back()->with('success', 'Portada actualizada correctamente.');
-    }
-
-    public function updateTemplate(Request $request)
-    {
-        $request->validate([
-            'template_name'    => 'required|string|in:elegant-dark,minimal-light,vibrant-fresh,industrial-light,elegant-refurbished',
-            'accent_color'     => 'nullable|string|max:7',
-            'secondary_color'  => 'nullable|string|max:7',
-            'hero_carousel'    => 'nullable|boolean',
-            'hero_style'       => 'nullable|string|in:full,split,minimal',
-        ]);
-
-        $store = $this->getStore();
-        $store->update([
-            'template_name'  => $request->template_name,
-            'accent_color'   => $request->accent_color ?? $store->accent_color,
-            'secondary_color'=> $request->secondary_color ?? $store->secondary_color,
-            'hero_carousel'  => $request->boolean('hero_carousel'),
-            'hero_style'     => $request->hero_style ?? $store->hero_style,
-        ]);
-
-        return back()->with('success', 'Diseño de tu tienda actualizado.');
     }
 }

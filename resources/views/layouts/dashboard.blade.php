@@ -89,7 +89,8 @@
                     ['dashboard.inventario.index', 'inventory', 'Inventario', null],
                     ['dashboard.shipping.index', 'truck', 'Zonas de envío', null],
                     ['dashboard.gateway.edit', 'wallet', 'Pasarela de pago', null],
-                    ['dashboard.store.edit', 'store', 'Mi tienda', 'Personalización'],
+                    ['dashboard.plantillas.index', 'palette', 'Plantillas', 'Personalización'],
+                    ['dashboard.store.edit', 'store', 'Mi tienda', null],
                 ];
             @endphp
             @foreach($navItems as [$route, $icon, $label, $group])

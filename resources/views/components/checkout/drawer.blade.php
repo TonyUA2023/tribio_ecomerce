@@ -6,8 +6,10 @@
     Requiere: $store en el scope (todas las vistas de tienda ya lo tienen).
 --}}
 @php
-    $payAccent = $store->accent_color ?: config("tribio.templates.{$store->template_name}.default_accent", '#1A1A1A');
-    $paySecondary = $store->secondary_color ?: config("tribio.templates.{$store->template_name}.default_secondary", '#C8A68B');
+    // $storefrontTheme only exists on customizable templates (Plantillas module); bespoke
+    // builds keep reading the store's own accent columns exactly as before.
+    $payAccent = isset($storefrontTheme) ? $storefrontTheme->color('primary') : ($store->accent_color ?: config("storefront.templates.{$store->template_name}.default_accent", '#1A1A1A'));
+    $paySecondary = isset($storefrontTheme) ? $storefrontTheme->color('primary-200') : ($store->secondary_color ?: config("storefront.templates.{$store->template_name}.default_secondary", '#C8A68B'));
     // Una tienda activa una sola pasarela a la vez (store->payment_gateway, elegida en Mi
     // Tienda) — de ahí el === en cada condición: evita que dos o tres gateways aparezcan
     // juntos como opciones si credenciales de una selección anterior quedaron guardadas.

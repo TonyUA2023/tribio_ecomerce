@@ -391,6 +391,12 @@
                             <a href="{{ route('dashboard.store.builder') }}" class="text-xs font-bold text-sky-300 hover:underline">Abrir configuración del hero →</a>
                         </div>
                     @endif
+                    @if($heroManagedByTemplate ?? false)
+                    <div class="rounded-xl border border-white/10 bg-white/5 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                        <p class="text-xs text-white/60 flex-1">Tu plantilla actual administra estos textos (y los colores) desde el módulo <strong class="text-white">Plantillas</strong>, con vista previa en vivo.</p>
+                        <a href="{{ route('dashboard.plantillas.customize') }}" class="btn-secondary text-xs whitespace-nowrap">Personalizar portada →</a>
+                    </div>
+                    @else
                     <div class="space-y-4">
                         <div>
                             <label class="input-label">Badge Promocional superior</label>
@@ -406,6 +412,7 @@
                             <textarea name="hero_subtitle" class="input-field" rows="2" placeholder="Ej: Compra hoy y recoge a partir de 60 min.">{{ old('hero_subtitle', $store?->hero_subtitle) }}</textarea>
                         </div>
                     </div>
+                    @endif
                 </div>
 
                 {{-- Red de Distribuidores --}}

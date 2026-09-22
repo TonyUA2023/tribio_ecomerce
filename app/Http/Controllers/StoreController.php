@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\User;
+use App\Services\Storefront\StorefrontHomeData;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -38,79 +39,14 @@ class StoreController extends Controller
         $store = $this->getStore($slug);
         $store->increment('total_views');
 
-        $featuredProducts = $store->featuredProducts()
-            ->where(fn($q) => $q->where('price', '>', 0)->orWhere('price_usd', '>', 0))
-            ->with(['categories', 'category'])
-            ->limit(8)
-            ->get();
-        // Cargar categorias principales con sus hijos, y 1 producto para la mega-imagen
-        $categories       = $store->categories()->whereNull('parent_id')
-                                ->with([
-                                    'children', 
-                                    'products' => function($q) { 
-                                        $q->where(fn($sq) => $sq->where('price', '>', 0)->orWhere('price_usd', '>', 0))->latest()->limit(1); 
-                                    }
-                                ])
-                                ->withCount([
-                                    'activeProducts' => function($q) {
-                                        $q->where(fn($sq) => $sq->where('price', '>', 0)->orWhere('price_usd', '>', 0));
-                                    }
-                                ])
-                                ->get();
-        
-        $galleryItems     = $store->galleryItems()->where('is_active', true)->limit(12)->get();
-        $allProducts      = $store->activeProducts()
-            ->where(fn($q) => $q->where('price', '>', 0)->orWhere('price_usd', '>', 0))
-            ->with(['categories', 'category'])
-            ->orderByDesc('is_featured')->orderBy('sort_order')->paginate(12);
-
         $isEditor = request()->query('editor') == 1 || request()->query('preview') == 1;
-
-        // Usar el layout publicado si existe y no estamos en el editor, sino usar las secciones del borrador
-        if (!$isEditor && is_array($store->published_layout)) {
-            $sections = collect($store->published_layout)->map(function($section) {
-                return (object) $section;
-            })->filter(function($section) {
-                return $section->is_active ?? true;
-            });
-        } else {
-            // Si es editor o no hay publicado, mostramos el borrador
-            $query = $store->sections()->orderBy('order');
-            if (!$isEditor) {
-                $query->where('is_active', true);
-            }
-            $sections = $query->get();
-        }
-
-        // Videos destacados para la portada (después del Hero)
-        // 1. Primero los seleccionados manualmente con show_video_on_home = true (máximo 3)
-        $homeVideoProducts = $store->activeProducts()
-            ->whereNotNull('video_path')
-            ->where('show_video_on_home', true)
-            ->where(fn($q) => $q->where('price', '>', 0)->orWhere('price_usd', '>', 0))
-            ->with(['categories', 'category'])
-            ->limit(3)
-            ->get();
-
-        // 2. Si hay menos de 3 fijados, completar aleatoriamente con otros productos con video
-        if ($homeVideoProducts->count() < 3) {
-            $needed = 3 - $homeVideoProducts->count();
-            $additional = $store->activeProducts()
-                ->whereNotNull('video_path')
-                ->whereNotIn('id', $homeVideoProducts->pluck('id'))
-                ->where(fn($q) => $q->where('price', '>', 0)->orWhere('price_usd', '>', 0))
-                ->with(['categories', 'category'])
-                ->inRandomOrder()
-                ->limit($needed)
-                ->get();
-            $homeVideoProducts = $homeVideoProducts->concat($additional);
-        }
+        $data = app(StorefrontHomeData::class)->build($store, $isEditor);
 
         // Si está en modo de código a medida, buscar la vista del cliente
         if ($store->build_mode === 'custom_code') {
             $customView = "clientes_custom.{$store->slug}.index";
             if (\Illuminate\Support\Facades\View::exists($customView)) {
-                return view($customView, compact('store', 'featuredProducts', 'categories', 'galleryItems', 'allProducts', 'homeVideoProducts'));
+                return view($customView, \Illuminate\Support\Arr::except($data, ['sections']));
             }
             abort(404, 'La vista personalizada para esta tienda aún no ha sido creada.');
         }
@@ -118,9 +54,7 @@ class StoreController extends Controller
         // Pasar la vista correcta según la plantilla elegida
         $template = $store->template_name;
 
-        return view("templates.{$template}.store", compact(
-            'store', 'featuredProducts', 'categories', 'galleryItems', 'allProducts', 'sections', 'homeVideoProducts'
-        ));
+        return view("templates.{$template}.store", $data);
     }
 
     public function catalog(Request $request, string $slug)
@@ -1276,7 +1210,15 @@ class StoreController extends Controller
     {
         $store = $this->getStore($slug);
         $categories = $store->categories()->whereNull('parent_id')->get();
-        return view('templates.minimal-light.contact', compact('store', 'categories'));
+
+        // Plantillas sin página de contacto propia usan la de soft-market (sin datos de
+        // otra tienda); minimal-light (Maetek) conserva la suya.
+        $view = "templates.{$store->template_name}.contact";
+        if (!\Illuminate\Support\Facades\View::exists($view)) {
+            $view = 'templates.soft-market.contact';
+        }
+
+        return view($view, compact('store', 'categories'));
     }
 
     public function submitContact(Request $request, string $slug)

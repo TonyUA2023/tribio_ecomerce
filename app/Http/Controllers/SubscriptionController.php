@@ -81,7 +81,7 @@ class SubscriptionController extends Controller
                 'name'           => $request->store_name,
                 'slug'           => $request->store_slug,
                 'category'       => $request->store_category,
-                'template_name'  => 'minimal-light',
+                'template_name'  => config('storefront.default_template', 'soft-market'),
                 'whatsapp_phone' => $request->whatsapp_phone,
                 'accent_color'   => '#0284c7',
                 'status'         => 'draft', // draft hasta que Culqi confirme el pago

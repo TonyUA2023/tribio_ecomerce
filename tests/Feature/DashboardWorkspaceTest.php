@@ -53,7 +53,7 @@ class DashboardWorkspaceTest extends TestCase
         foreach (['dashboard.productos.create', 'dashboard.categorias.index', 'dashboard.categorias.create',
             'dashboard.marcas.index', 'dashboard.marcas.create', 'dashboard.galeria.index',
             'dashboard.inventario.index', 'dashboard.shipping.index', 'dashboard.gateway.edit',
-            'dashboard.store.edit', 'dashboard.store.templates'] as $screen) {
+            'dashboard.store.edit', 'dashboard.plantillas.index'] as $screen) {
             $this->get(route($screen))->assertOk()->assertSee('dashboard-navigation');
         }
     }

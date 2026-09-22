@@ -20,6 +20,20 @@
         'wallet' => 'M3 6h17v15H3V6z M3 6V3h14v3 M15 11h7v5h-7z',
         'alert' => 'm12 3 10 18H2L12 3z M12 9v5 M12 17h.01',
         'check' => 'm5 12 4 4L19 6',
+        'palette' => 'M12 3a9 9 0 1 0 0 18c1.1 0 1.5-.8 1.5-1.6 0-.9-.6-1.4-.6-2.2 0-.9.7-1.6 1.6-1.6H17a4 4 0 0 0 4-4c0-4.7-4-8.6-9-8.6z M7.5 11.5h.01 M10 7.5h.01 M14.5 7.5h.01 M17 11h.01',
+        'megaphone' => 'M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z M15 9a3 3 0 0 1 0 6 M18 6a7 7 0 0 1 0 12',
+        'sparkles' => 'M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z',
+        'heading' => 'M6 4v16 M18 4v16 M6 12h12 M4 4h4 M16 4h4 M4 20h4 M16 20h4',
+        'shield' => 'M12 3l8 3v6c0 5-3.4 8.3-8 9-4.6-.7-8-4-8-9V6l8-3z M9 12l2 2 4-4',
+        'layout' => 'M3 4h18v16H3z M3 9h18 M9 9v11',
+        'eye' => 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6',
+        'desktop' => 'M3 4h18v12H3z M8 20h8 M12 16v4',
+        'tablet' => 'M6 3h12v18H6z M11 18h2',
+        'phone' => 'M8 2h8v20H8z M11 19h2',
+        'lock' => 'M6 11h12v10H6z M8 11V7a4 4 0 0 1 8 0v4',
+        'wand' => 'M3 21l12-12 M15 3v2 M15 9v2 M19 7h2 M11 7h2 M18.4 4.6 17 6 M18.4 9.4 17 8',
+        'refresh' => 'M20 11a8 8 0 1 0-2.3 5.7 M20 4v7h-7',
+        'back' => 'M19 12H5 M11 18l-6-6 6-6',
     ];
 @endphp
 <svg {{ $attributes->merge(['class' => 'dash-icon']) }} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ $paths[$name] ?? $paths['grid'] }}"/></svg>

@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\Dashboard\StoreBuilderController;
+use App\Http\Controllers\Dashboard\TemplateController;
 
 // ═══════════════════════════════════════════════════════════════
 //  PORTAL PÚBLICO TRIBIO
@@ -73,8 +74,19 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     Route::post('/tienda/logo', [StoreSettingsController::class, 'uploadLogo'])->name('store.logo');
     Route::post('/tienda/logo/paleta', [StoreSettingsController::class, 'refreshLogoPalette'])->name('store.logo.palette');
     Route::post('/tienda/portada', [StoreSettingsController::class, 'uploadCover'])->name('store.cover');
-    Route::get('/tienda/plantillas', [StoreSettingsController::class, 'templates'])->name('store.templates');
-    Route::post('/tienda/plantilla', [StoreSettingsController::class, 'updateTemplate'])->name('store.template');
+    // Antigua pantalla de plantillas: reemplazada por el módulo Plantillas (se conserva para enlaces viejos).
+    Route::get('/tienda/plantillas', fn () => redirect()->route('dashboard.plantillas.index'))->name('store.templates');
+
+    // Plantillas: catálogo de diseños, vista previa con los datos de la tienda y personalización
+    Route::prefix('plantillas')->name('plantillas.')->controller(TemplateController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/personalizar', 'customize')->name('customize');
+        Route::put('/personalizar', 'update')->name('update');
+        Route::delete('/personalizar', 'reset')->name('reset');
+        Route::get('/{template}/vista-previa', 'preview')->name('preview')->where('template', '[a-z0-9-]+');
+        Route::get('/{template}/lienzo', 'frame')->name('frame')->where('template', '[a-z0-9-]+')->middleware('throttle:120,1');
+        Route::post('/{template}/aplicar', 'apply')->name('apply')->where('template', '[a-z0-9-]+');
+    });
 
     // Cuenta
     Route::get('/mi-cuenta/contrasena', [\App\Http\Controllers\Dashboard\PasswordController::class, 'edit'])->name('password.edit');

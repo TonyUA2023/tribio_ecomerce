@@ -1,7 +1,7 @@
 {{-- Modal Universal de Cuenta de Comprador / Cliente Tribio (Tribio Pass) — compartido por las 5 plantillas --}}
 @php
-    $payAccent = $payAccent ?? ($store->accent_color ?: config("tribio.templates.{$store->template_name}.default_accent", '#1A1A1A'));
-    $paySecondary = $paySecondary ?? ($store->secondary_color ?: config("tribio.templates.{$store->template_name}.default_secondary", '#C8A68B'));
+    $payAccent = $payAccent ?? (isset($storefrontTheme) ? $storefrontTheme->color('primary') : ($store->accent_color ?: config("storefront.templates.{$store->template_name}.default_accent", '#1A1A1A')));
+    $paySecondary = $paySecondary ?? (isset($storefrontTheme) ? $storefrontTheme->color('primary-200') : ($store->secondary_color ?: config("storefront.templates.{$store->template_name}.default_secondary", '#C8A68B')));
     // Computed locally (not passed from the controller) since this component is
     // @include'd from many different StoreController view methods — self-contained
     // avoids threading googleReady through every one of them.

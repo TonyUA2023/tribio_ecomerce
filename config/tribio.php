@@ -13,68 +13,7 @@ return [
         'effective_date' => '22 de septiembre de 2026',
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Plantillas disponibles para las tiendas
-    |--------------------------------------------------------------------------
-    */
-    'templates' => [
-        'elegant-dark' => [
-            'name'        => 'Elegant Dark',
-            'description' => 'Diseño oscuro premium con glassmorphism. Ideal para tecnología, moda y productos de lujo.',
-            'preview'     => 'images/templates/elegant-dark-preview.jpg',
-            'hero_styles' => ['full', 'split', 'minimal'],
-            'supports_carousel' => true,
-            'default_accent'    => '#8B5CF6',
-            'default_secondary' => '#EC4899',
-            'default_bg'        => '#0F0F1A',
-            'tags'              => ['premium', 'oscuro', 'moderno'],
-        ],
-        'minimal-light' => [
-            'name'        => 'Minimal Light',
-            'description' => 'Estética limpia y minimalista con fondo blanco. Perfecta para joyería, boutiques y productos artesanales.',
-            'preview'     => 'images/templates/minimal-light-preview.jpg',
-            'hero_styles' => ['split', 'minimal'],
-            'supports_carousel' => false,
-            'default_accent'    => '#1F2937',
-            'default_secondary' => '#D97706',
-            'default_bg'        => '#FFFFFF',
-            'tags'              => ['minimalista', 'claro', 'elegante'],
-        ],
-        'vibrant-fresh' => [
-            'name'        => 'Vibrant Fresh',
-            'description' => 'Colores alegres y bordes redondeados. Ideal para alimentos, repostería, juguetes y artesanías.',
-            'preview'     => 'images/templates/vibrant-fresh-preview.jpg',
-            'hero_styles' => ['full', 'split'],
-            'supports_carousel' => true,
-            'default_accent'    => '#EC4899',
-            'default_secondary' => '#F59E0B',
-            'default_bg'        => '#FFF7F0',
-            'tags'              => ['colorido', 'alegre', 'juvenil'],
-        ],
-        'industrial-light' => [
-            'name'        => 'Industrial Light',
-            'description' => 'Diseño industrial premium con fondo claro y detalles en rojo y verde. Ideal para repuestos, maquinaria, herramientas y talleres.',
-            'preview'     => 'images/templates/industrial-light-preview.jpg',
-            'hero_styles' => ['full', 'split'],
-            'supports_carousel' => true,
-            'default_accent'    => '#DC2626',
-            'default_secondary' => '#16A34A',
-            'default_bg'        => '#FFFFFF',
-            'tags'              => ['industrial', 'claro', 'repuestos'],
-        ],
-        'elegant-refurbished' => [
-            'name'        => 'Elegant Refurbished',
-            'description' => 'Estilo Apple, elegante y minimalista. Especializado en productos premium reacondicionados (celulares, laptops) y tecnología importada.',
-            'preview'     => 'images/templates/elegant-refurbished-preview.jpg',
-            'hero_styles' => ['split', 'minimal'],
-            'supports_carousel' => true,
-            'default_accent'    => '#0071e3',
-            'default_secondary' => '#86868b',
-            'default_bg'        => '#FFFFFF',
-            'tags'              => ['apple-style', 'claro', 'tecnología'],
-        ],
-    ],
+    // Las plantillas de tienda viven en config/storefront.php (módulo "Plantillas").
 
     /*
     |--------------------------------------------------------------------------
