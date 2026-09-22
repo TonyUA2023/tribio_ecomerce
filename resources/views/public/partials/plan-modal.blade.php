@@ -201,6 +201,7 @@
                                 </svg>
                                 Continuar → Ver resumen y pagar
                             </button>
+                            <p class="text-[11px] leading-relaxed text-slate-500">Al continuar, confirmas que leíste los <a href="{{ route('legal.terms') }}" target="_blank" rel="noopener noreferrer" class="font-semibold text-sky-700 underline">Términos y Condiciones</a> y la <a href="{{ route('legal.privacy') }}" target="_blank" rel="noopener noreferrer" class="font-semibold text-sky-700 underline">Política de Privacidad y Tratamiento de Datos</a>.</p>
                         </form>
                     </div>
                 </div>

@@ -97,7 +97,7 @@
                                 <span x-text="loading ? 'Procesando...' : 'Pagar S/. {{ number_format($plan['price'], 2) }} con tarjeta'"></span>
                             </button>
 
-                            <p class="text-center text-[10px] text-slate-400 mt-4">Al pagar aceptas nuestros <a href="{{ route('legal.terms') }}" target="_blank" class="underline hover:text-slate-600">Términos y Condiciones</a> y nuestra <a href="{{ route('legal.privacy') }}" target="_blank" class="underline hover:text-slate-600">Política de Privacidad</a>.</p>
+                            <p class="text-center text-[10px] text-slate-500 mt-4">Al pagar aceptas los <a href="{{ route('legal.terms') }}" target="_blank" rel="noopener noreferrer" class="underline hover:text-slate-700">Términos y Condiciones</a> y confirmas que leíste la <a href="{{ route('legal.privacy') }}" target="_blank" rel="noopener noreferrer" class="underline hover:text-slate-700">Política de Privacidad y Tratamiento de Datos</a>.</p>
                         </div>
                     @endif
 

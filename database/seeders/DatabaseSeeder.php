@@ -19,7 +19,7 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Super Admin Tribio',
                 'password' => Hash::make('Tribio2026!'),
                 'role' => 'super_admin',
-                'phone' => '+51902699916',
+                'phone' => config('tribio.support.whatsapp_display'),
             ]
         );
 

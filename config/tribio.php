@@ -1,6 +1,18 @@
 <?php
 
 return [
+    'support' => [
+        'whatsapp_display' => '+51 938 808 435',
+        'whatsapp_number' => '51938808435',
+    ],
+    'legal' => [
+        'operator_name' => 'Tony Ulloa Alvinagorta',
+        'operator_ruc' => '10710764153',
+        'operator_location' => 'Huancayo, Junín, Perú',
+        'contact_email' => 'jstackinfo@gmail.com',
+        'effective_date' => '22 de septiembre de 2026',
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Plantillas disponibles para las tiendas
@@ -90,7 +102,7 @@ return [
     'plans' => [
         'basic' => [
             'label'        => 'Emprendedor',
-            'price'        => 59.00,
+            'price'        => 19.90,
             'max_products' => 100,
             'max_gallery'  => 50,
             'features'     => [
@@ -106,7 +118,7 @@ return [
         ],
         'professional' => [
             'label'        => 'Negocio / Pro',
-            'price'        => 149.00,
+            'price'        => 100.00,
             'max_products' => 1000,
             'max_gallery'  => 200,
             'features'     => [

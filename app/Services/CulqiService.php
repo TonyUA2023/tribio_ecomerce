@@ -64,17 +64,23 @@ class CulqiService
     }
 
     /**
-     * Culqi Plans are a one-time setup per Tribio plan key (basic/professional/enterprise),
-     * not per store. The returned plan id is cached indefinitely so we only create it once.
+     * A new price needs a new Culqi plan. Include the amount in the cache key so
+     * newly created subscriptions never reuse a plan with the previous price.
      */
     public function getOrCreatePlan(string $planKey): array
     {
-        $cacheKey = "culqi_plan_id_{$planKey}";
+        $planConfig = config("tribio.plans.{$planKey}");
+        if (!$planConfig) {
+            throw new \InvalidArgumentException("Plan Tribio desconocido: {$planKey}");
+        }
+
+        $amount = (int) round($planConfig['price'] * 100);
+        $cacheKey = "culqi_plan_id_{$planKey}_{$amount}";
         $cachedId = Cache::get($cacheKey);
 
         if ($cachedId) {
             $existing = $this->client()->get("/plans/{$cachedId}");
-            if ($existing->successful()) {
+            if ($existing->successful() && (int) $existing->json('amount') === $amount) {
                 return $existing->json();
             }
             // Stale cache entry (plan deleted in CulqiPanel, key rotated to another Culqi
@@ -82,16 +88,11 @@ class CulqiService
             Cache::forget($cacheKey);
         }
 
-        $planConfig = config("tribio.plans.{$planKey}");
-        if (!$planConfig) {
-            throw new \InvalidArgumentException("Plan Tribio desconocido: {$planKey}");
-        }
-
         $response = $this->client()->post('/plans', [
             'name'               => Str::limit("Tribio - {$planConfig['label']}", 50, ''),
             'short_name'         => Str::limit("Tribio {$planConfig['label']}", 50, ''),
             'description'        => Str::limit("Suscripción mensual Tribio, plan {$planConfig['label']}.", 200, ''),
-            'amount'             => (int) round($planConfig['price'] * 100),
+            'amount'             => $amount,
             'currency'           => 'PEN',
             'interval_unit_time' => 3, // Mensual
             'interval_count'     => 0, // 0 = cobro indefinido hasta cancelación

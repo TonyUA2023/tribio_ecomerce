@@ -17,7 +17,7 @@ class FooterBlock implements BlockInterface
             'link_1' => 'INICIO',
             'link_2' => 'CATÁLOGO',
             'col3_title' => 'CONTACTO',
-            'whatsapp' => '++51902699916',
+            'whatsapp' => null,
             'address' => 'PERÚ',
             'col4_title' => 'REDES SOCIALES',
             'facebook_link' => '',

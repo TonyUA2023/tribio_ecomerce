@@ -499,6 +499,7 @@
                             <span x-show="loading" class="pay-spinner"></span>
                             <span x-text="loading ? 'Enviando...' : 'Completar Registro'"></span>
                         </button>
+                        <p class="text-[11px] leading-relaxed text-[var(--pay-text-muted)]">Al crear tu cuenta, confirmas que leíste los <a href="{{ route('legal.terms') }}" target="_blank" rel="noopener noreferrer" class="underline font-semibold">Términos y Condiciones de Tribio</a> y la <a href="{{ route('legal.privacy') }}" target="_blank" rel="noopener noreferrer" class="underline font-semibold">Política de Privacidad y Tratamiento de Datos</a>.</p>
 
                         <div class="text-center">
                             <p class="text-xs text-[var(--pay-text-muted)]">¿Ya estás registrado?

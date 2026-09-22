@@ -1,54 +1,64 @@
 @extends('layouts.public')
 
-@section('title', 'Política de Privacidad | Tribio')
+@section('title', 'Política de Privacidad y Tratamiento de Datos | Tribio')
+@section('meta_description', 'Conoce qué datos personales trata Tribio, para qué los utiliza, con quién los comparte y cómo ejercer tus derechos.')
 
 @section('content')
 <section class="pt-28 pb-20 bg-white">
     <div class="container-tribio max-w-3xl">
-        <p class="text-xs font-bold uppercase tracking-widest text-sky-500 mb-2">Legal</p>
-        <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-2">Política de Privacidad</h1>
-        <p class="text-slate-400 text-sm mb-10">Última actualización: {{ now()->format('d/m/Y') }}</p>
+        <p class="text-xs font-bold uppercase tracking-widest text-sky-500 mb-2">Legal · Tribio</p>
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-2">Política de Privacidad y Tratamiento de Datos Personales</h1>
+        <p class="text-slate-500 text-sm mb-10">Vigente desde el {{ config('tribio.legal.effective_date') }}.</p>
 
         <div class="prose prose-slate prose-sm sm:prose-base max-w-none">
-            <p>En Tribio protegemos los datos personales de nuestros usuarios (Negocios y Clientes) conforme a la Ley N° 29733, Ley de Protección de Datos Personales del Perú, y su reglamento.</p>
+            <p>Esta política explica cómo Tribio trata los datos de quienes visitan la plataforma, crean una tienda, usan Tribio Pass o compran en una tienda alojada aquí. Aplicamos la Ley N.° 29733 y su Reglamento, aprobado por el Decreto Supremo N.° 016-2024-JUS. La tienda que vende un producto o servicio también debe informar al comprador sobre el tratamiento que realice por su propia cuenta.</p>
 
-            <h2>1. Datos que recopilamos</h2>
+            <h2>1. Responsable y canal de contacto</h2>
+            <p>El titular de Tribio es <strong>{{ config('tribio.legal.operator_name') }}</strong>, persona natural con RUC <strong>{{ config('tribio.legal.operator_ruc') }}</strong>, ubicado en {{ config('tribio.legal.operator_location') }}. Es responsable del tratamiento de los datos necesarios para gestionar la plataforma, las cuentas Tribio Pass, las suscripciones, la seguridad y la atención de consultas. Para consultas o solicitudes sobre tus datos, escribe a <a href="mailto:{{ config('tribio.legal.contact_email') }}">{{ config('tribio.legal.contact_email') }}</a> o al WhatsApp <a href="https://wa.me/{{ config('tribio.support.whatsapp_number') }}">{{ config('tribio.support.whatsapp_display') }}</a> e indica “Privacidad y datos personales”.</p>
+
+            <h2>2. Datos que tratamos</h2>
             <ul>
-                <li><strong>Datos de cuenta (Tribio Pass):</strong> nombre, correo electrónico, teléfono y contraseña (almacenada de forma cifrada, nunca en texto plano).</li>
-                <li><strong>Datos de negocio:</strong> nombre de tienda, categoría, logo, dirección y redes sociales que el Negocio decide publicar.</li>
-                <li><strong>Datos de compra:</strong> dirección de envío, productos comprados e historial de pedidos.</li>
-                <li><strong>Datos de pago:</strong> Tribio <u>nunca</u> almacena el número completo de tu tarjeta. La tokenización de tarjetas para el pago de suscripciones la realiza directamente Culqi, y el pago de pedidos dentro de cada tienda lo procesa Mercado Pago; ambos son procesadores certificados PCI-DSS.</li>
-                <li><strong>Datos técnicos:</strong> dirección IP, tipo de navegador y páginas visitadas, con fines de seguridad y analítica básica.</li>
+                <li><strong>Cuenta e identidad:</strong> nombre, correo, teléfono, identificador de Google si eliges ese acceso, credenciales protegidas y datos de inicio de sesión. Las contraseñas se guardan mediante hash; no se muestran en texto legible.</li>
+                <li><strong>Negocio:</strong> nombre y categoría de la tienda, datos de contacto, dirección, logo, imágenes, catálogo, precios y configuración que el emprendedor carga o publica.</li>
+                <li><strong>Compras y atención:</strong> productos elegidos, importes, dirección de entrega, datos del pedido, estado de pago o envío y mensajes que nos envías para soporte.</li>
+                <li><strong>Suscripciones y pagos:</strong> plan contratado, importes, identificadores de la operación y estado de la suscripción. Los datos completos de tarjeta se ingresan en el entorno del proveedor de pagos correspondiente; Tribio conserva los identificadores necesarios para gestionar la transacción.</li>
+                <li><strong>Uso y seguridad:</strong> dirección IP, navegador, identificadores de sesión y registros técnicos necesarios para operar, diagnosticar errores y prevenir abuso.</li>
             </ul>
 
-            <h2>2. Uso de los datos</h2>
-            <p>Usamos tus datos para: crear y operar tu cuenta Tribio Pass, procesar pedidos y suscripciones, enviarte notificaciones transaccionales (confirmación de pedido, código de verificación), prevenir fraude y mejorar el Servicio. No vendemos tus datos personales a terceros.</p>
+            <h2>3. Finalidades y carácter de los datos</h2>
+            <p>Usamos los datos para crear y proteger la cuenta; abrir y administrar tiendas; mostrar catálogos; gestionar carrito, pedidos, pagos y suscripciones; enviar códigos y mensajes vinculados al servicio; prestar soporte; resolver incidentes y reclamos; cumplir obligaciones legales y mantener la seguridad de la plataforma. Los campos señalados como obligatorios en cada formulario son necesarios para esa operación; si no los proporcionas, no podremos completar el registro, pedido o pago correspondiente.</p>
+            <p>La información necesaria para prestar el servicio y cumplir obligaciones legales se trata para esas finalidades. Cuando una finalidad adicional requiera consentimiento, lo solicitaremos de forma específica. No utilizamos la aceptación de estos términos como autorización general para publicidad.</p>
 
-            <h2>3. Terceros con los que compartimos datos</h2>
-            <ul>
-                <li><strong>Culqi</strong> — procesamiento de pagos de suscripción de Negocios.</li>
-                <li><strong>Mercado Pago</strong> — procesamiento de pagos de pedidos dentro de cada tienda.</li>
-                <li><strong>Brevo</strong> — envío de correos transaccionales (confirmaciones, códigos de verificación).</li>
-                <li><strong>WhatsApp</strong> — solo cuando tú decides enviar un pedido por ese medio; el mensaje se comparte directamente entre tu dispositivo y el del Negocio.</li>
-            </ul>
-            <p>Cada uno de estos terceros procesa los datos según sus propias políticas de privacidad.</p>
+            <h2>4. Quién recibe la información</h2>
+            <p>El negocio que recibe un pedido accede a los datos necesarios para prepararlo, entregarlo y atender al comprador. Según el medio elegido, podemos comunicar datos estrictamente necesarios a Culqi (suscripciones de Tribio), al proveedor de pago configurado por la tienda —como Mercado Pago, Flow o PayPal—, al proveedor de correo transaccional Brevo, o a Google si usas su inicio de sesión. Cuando decides abrir WhatsApp para soporte o contactar a una tienda, el uso de ese servicio también se rige por las condiciones de WhatsApp/Meta. Los proveedores tecnológicos que alojan u operan la plataforma pueden tratar datos bajo nuestras instrucciones.</p>
+            <p>No vendemos bases de datos personales. También podremos comunicar información cuando una autoridad competente lo requiera conforme a ley.</p>
 
-            <h2>4. Tus derechos (ARCO)</h2>
-            <p>Puedes solicitar acceso, rectificación, cancelación u oposición al tratamiento de tus datos personales escribiéndonos por WhatsApp. Atenderemos tu solicitud dentro de los plazos que establece la ley peruana.</p>
+            <h2>5. Transferencias y servicios fuera del Perú</h2>
+            <p>Algunos proveedores tecnológicos pueden tratar o almacenar información fuera del Perú. En esos casos aplicaremos las condiciones y medidas exigidas por la normativa de protección de datos para la transferencia o el encargo de tratamiento, según corresponda.</p>
 
-            <h2>5. Cookies</h2>
-            <p>Usamos cookies estrictamente necesarias para mantener tu sesión iniciada (Tribio Pass) y el contenido de tu carrito de compras. No usamos cookies de publicidad de terceros.</p>
+            <h2>6. Plazo de conservación</h2>
+            <p>Conservamos los datos mientras sean necesarios para prestar el servicio y mantener la cuenta. Después, conservaremos únicamente los registros necesarios para obligaciones contables o legales, atención de reclamos, seguridad o defensa de derechos durante los plazos aplicables. Cumplida la finalidad, los eliminaremos o anonimizaremos, salvo conservación legal obligatoria. La cancelación de una cuenta puede no borrar pedidos o comprobantes que debamos conservar.</p>
 
-            <h2>6. Conservación de datos</h2>
-            <p>Conservamos tus datos mientras tu cuenta esté activa. Si solicitas la eliminación de tu cuenta, eliminaremos o anonimizaremos tus datos personales salvo que la ley nos obligue a conservar registros de transacciones por un período determinado.</p>
+            <h2>7. Cookies y recursos externos</h2>
+            <p>Tribio usa cookies de sesión y seguridad para identificar tu cuenta y proteger formularios. El navegador puede contactar servicios externos al cargar fuentes, recursos de interfaz, autenticación o medios de pago. Si incorporamos herramientas opcionales de publicidad o medición que requieran autorización, informaremos de ello y habilitaremos los controles correspondientes antes de activarlas.</p>
 
-            <h2>7. Contacto</h2>
-            <p>Para ejercer tus derechos o consultas sobre privacidad, escríbenos a <a href="https://wa.me/51902699916">+51 902 699 916</a>.</p>
+            <h2>8. Seguridad y acceso</h2>
+            <p>Aplicamos controles técnicos y organizativos razonables para limitar el acceso no autorizado, proteger las cuentas y registrar incidentes. Ningún sistema conectado a internet ofrece seguridad absoluta. Si detectas un acceso indebido o un problema con tus datos, avísanos por el canal indicado para investigarlo.</p>
+
+            <h2>9. Tus derechos sobre los datos</h2>
+            <p>Puedes pedir información y acceso a tus datos, su rectificación, cancelación u oposición al tratamiento, así como retirar un consentimiento cuando corresponda. Envía tu solicitud a <a href="mailto:{{ config('tribio.legal.contact_email') }}">{{ config('tribio.legal.contact_email') }}</a> o al WhatsApp <a href="https://wa.me/{{ config('tribio.support.whatsapp_number') }}">{{ config('tribio.support.whatsapp_display') }}</a> con la descripción de lo que solicitas. Para proteger tu información podremos verificar tu identidad antes de responder. El trámite es gratuito; el plazo ordinario es de 20 días hábiles para acceso y 10 días hábiles para rectificación, cancelación u oposición, sujeto a las reglas legales aplicables.</p>
+            <p>Si no atendemos tu solicitud o no estás conforme con la respuesta, puedes acudir a la <a href="https://www.gob.pe/9269" target="_blank" rel="noopener noreferrer">Autoridad Nacional de Protección de Datos Personales</a>.</p>
+
+            <h2>10. Datos de menores</h2>
+            <p>La creación y administración de tiendas está dirigida a personas con capacidad legal para contratar. Si advertimos que se proporcionaron datos de un menor sin la autorización exigida por ley, adoptaremos las medidas correspondientes para restringir su tratamiento.</p>
+
+            <h2>11. Cambios en esta política</h2>
+            <p>Publicaremos la versión vigente con su fecha de entrada en vigor. Cuando un cambio afecte materialmente el uso de los datos, lo comunicaremos por un medio adecuado y recabaremos el consentimiento que sea necesario antes de aplicar nuevas finalidades.</p>
         </div>
 
         <div class="mt-10 pt-6 border-t border-slate-100 flex flex-wrap gap-4 text-sm">
             <a href="{{ route('legal.terms') }}" class="text-sky-600 font-semibold hover:underline">Términos y Condiciones</a>
-            <a href="{{ route('legal.refunds') }}" class="text-sky-600 font-semibold hover:underline">Política de Reembolsos y Cancelación</a>
+            <a href="{{ route('legal.refunds') }}" class="text-sky-600 font-semibold hover:underline">Reembolsos y Cancelaciones</a>
         </div>
     </div>
 </section>

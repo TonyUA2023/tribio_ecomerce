@@ -99,6 +99,7 @@
                         <button type="button" @click="sendOtp()" :disabled="busy" class="w-full py-3 mt-2 font-bold bg-sky-500 hover:bg-sky-600 disabled:opacity-50 text-white text-xs uppercase tracking-wider rounded-xl transition-all">
                             <span x-text="busy ? 'Enviando...' : 'Enviar código de verificación'"></span>
                         </button>
+                        <p class="text-[11px] leading-relaxed text-slate-500">Al crear tu cuenta, confirmas que leíste los <a href="{{ route('legal.terms') }}" target="_blank" rel="noopener noreferrer" class="font-semibold text-sky-700 underline">Términos y Condiciones</a> y la <a href="{{ route('legal.privacy') }}" target="_blank" rel="noopener noreferrer" class="font-semibold text-sky-700 underline">Política de Privacidad y Tratamiento de Datos</a>.</p>
                     </div>
                 </template>
 

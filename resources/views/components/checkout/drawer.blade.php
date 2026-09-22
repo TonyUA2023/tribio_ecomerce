@@ -797,7 +797,7 @@
 
                     <div class="pay-trust-strip">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                        <span>Tus datos viajan cifrados. Compra protegida por Tribio.</span>
+                        <span>Tribio facilita el pedido; el Negocio vendedor atiende tu compra.</span>
                     </div>
 
                     <div>
@@ -839,6 +839,7 @@
                     <span class="font-black text-xl" x-text="formatMoney(cartTotal)"></span>
                 </div>
                 <p x-show="checkoutStep === 2 && paymentMethod === 'paypal'" x-cloak class="text-[11px] text-[var(--pay-text-muted)] text-right mb-3">PayPal te cobrará el equivalente en USD, no en soles.</p>
+                <p x-show="checkoutStep === 2" x-cloak class="text-[11px] leading-relaxed text-[var(--pay-text-muted)] mb-3">Al continuar, consulta los <a href="{{ route('legal.terms') }}" target="_blank" rel="noopener noreferrer" class="underline font-semibold">Términos de Tribio</a> y su <a href="{{ route('legal.privacy') }}" target="_blank" rel="noopener noreferrer" class="underline font-semibold">Política de Privacidad y Tratamiento de Datos</a>. El vendedor es el Negocio identificado en esta tienda.</p>
 
                 <template x-if="checkoutStep === 1">
                     <button @click="checkoutStep = 2" style="background: var(--pay-accent);" class="w-full py-3 rounded-xl font-bold text-white transition-all shadow-md flex items-center justify-center gap-2 hover:opacity-90">
