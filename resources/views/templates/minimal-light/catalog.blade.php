@@ -57,17 +57,17 @@
                         </div>
                         <div class="space-y-1">
                             <button type="button" onclick="setCategoryFilter('')" 
-                                    class="w-full flex justify-between items-center text-sm py-1.5 px-2.5 rounded-lg transition text-left {{ !request('category') ? 'text-[#C8A68B] font-bold bg-[#C8A68B]/10' : 'text-gray-600 hover:text-[#1A1A1A] hover:bg-stone-100/60' }}">
+                                    class="w-full flex justify-between items-center text-sm py-1.5 px-2.5 rounded-lg transition text-left {{ !request('category') ? 'text-[#7DA268] font-bold bg-[#7DA268]/10' : 'text-gray-600 hover:text-[#1A1A1A] hover:bg-stone-100/60' }}">
                                 <span>{{ \App\Helpers\TranslationHelper::isEn() ? 'All' : 'Todas' }}</span>
                             </button>
                             @foreach($categories as $cat)
                                 @php
                                     $isSelected = request('category') === $cat->slug || request('category') == $cat->id;
                                 @endphp
-                                <button type="button" onclick="setCategoryFilter('{{ $isSelected ? '' : $cat->slug }}')" 
-                                        class="w-full flex justify-between items-center text-sm py-1.5 px-2.5 rounded-lg transition text-left {{ $isSelected ? 'text-[#C8A68B] font-bold bg-[#C8A68B]/10' : 'text-gray-600 hover:text-[#1A1A1A] hover:bg-stone-100/60' }}">
+                                <button type="button" onclick="setCategoryFilter('{{ $isSelected ? '' : $cat->slug }}')"
+                                        class="w-full flex justify-between items-center text-sm py-1.5 px-2.5 rounded-lg transition text-left {{ $isSelected ? 'text-[#7DA268] font-bold bg-[#7DA268]/10' : 'text-gray-600 hover:text-[#1A1A1A] hover:bg-stone-100/60' }}">
                                     <span class="truncate pr-2">{{ $cat->getTranslatedName() }}</span>
-                                    <span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0 transition {{ $isSelected ? 'bg-[#C8A68B] text-white font-bold' : 'bg-gray-100 text-gray-500' }}">
+                                    <span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0 transition {{ $isSelected ? 'bg-[#7DA268] text-white font-bold' : 'bg-gray-100 text-gray-500' }}">
                                         {{ $cat->active_products_count }}
                                     </span>
                                 </button>
@@ -86,17 +86,17 @@
                         </div>
                         <div class="space-y-1 max-h-52 overflow-y-auto pr-1">
                             <button type="button" onclick="setBrandFilter('')" 
-                                    class="w-full flex justify-between items-center text-sm py-1.5 px-2.5 rounded-lg transition text-left {{ !request('brand') ? 'text-[#C8A68B] font-bold bg-[#C8A68B]/10' : 'text-gray-600 hover:text-[#1A1A1A] hover:bg-stone-100/60' }}">
+                                    class="w-full flex justify-between items-center text-sm py-1.5 px-2.5 rounded-lg transition text-left {{ !request('brand') ? 'text-[#7DA268] font-bold bg-[#7DA268]/10' : 'text-gray-600 hover:text-[#1A1A1A] hover:bg-stone-100/60' }}">
                                 <span>{{ \App\Helpers\TranslationHelper::isEn() ? 'All brands' : 'Todas las marcas' }}</span>
                             </button>
                             @foreach($brands as $b)
                                 @php
                                     $isBrandSelected = request('brand') === $b->slug || request('brand') == $b->id;
                                 @endphp
-                                <button type="button" onclick="setBrandFilter('{{ $isBrandSelected ? '' : $b->slug }}')" 
-                                        class="w-full flex justify-between items-center text-sm py-1.5 px-2.5 rounded-lg transition text-left {{ $isBrandSelected ? 'text-[#C8A68B] font-bold bg-[#C8A68B]/10' : 'text-gray-600 hover:text-[#1A1A1A] hover:bg-stone-100/60' }}">
+                                <button type="button" onclick="setBrandFilter('{{ $isBrandSelected ? '' : $b->slug }}')"
+                                        class="w-full flex justify-between items-center text-sm py-1.5 px-2.5 rounded-lg transition text-left {{ $isBrandSelected ? 'text-[#7DA268] font-bold bg-[#7DA268]/10' : 'text-gray-600 hover:text-[#1A1A1A] hover:bg-stone-100/60' }}">
                                     <span class="truncate pr-2">{{ $b->name }}</span>
-                                    <span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0 transition {{ $isBrandSelected ? 'bg-[#C8A68B] text-white font-bold' : 'bg-gray-100 text-gray-500' }}">
+                                    <span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0 transition {{ $isBrandSelected ? 'bg-[#7DA268] text-white font-bold' : 'bg-gray-100 text-gray-500' }}">
                                         {{ $b->products_count }}
                                     </span>
                                 </button>
@@ -116,30 +116,30 @@
                         <div class="flex items-center gap-2 mb-2.5">
                             <div class="relative flex-1">
                                 <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">{{ $currencySymbol }}</span>
-                                <input type="number" step="any" name="min_price" id="minPriceInput" value="{{ request('min_price') }}" placeholder="Min" class="w-full pl-7 pr-2 py-2 text-xs bg-white border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#C8A68B] focus:border-[#C8A68B] outline-none">
+                                <input type="number" step="any" name="min_price" id="minPriceInput" value="{{ request('min_price') }}" placeholder="Min" class="w-full pl-7 pr-2 py-2 text-xs bg-white border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#7DA268] focus:border-[#7DA268] outline-none">
                             </div>
                             <span class="text-gray-400 font-bold">-</span>
                             <div class="relative flex-1">
                                 <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">{{ $currencySymbol }}</span>
-                                <input type="number" step="any" name="max_price" id="maxPriceInput" value="{{ request('max_price') }}" placeholder="Max" class="w-full pl-7 pr-2 py-2 text-xs bg-white border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#C8A68B] focus:border-[#C8A68B] outline-none">
+                                <input type="number" step="any" name="max_price" id="maxPriceInput" value="{{ request('max_price') }}" placeholder="Max" class="w-full pl-7 pr-2 py-2 text-xs bg-white border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#7DA268] focus:border-[#7DA268] outline-none">
                             </div>
                         </div>
                         {{-- Presets rápidos de precio --}}
                         <div class="grid grid-cols-3 gap-1.5">
-                            <button type="button" onclick="setQuickPrice('', 50)" class="px-2 py-1 text-[11px] font-medium border border-gray-200 rounded-lg bg-white hover:border-[#C8A68B] hover:text-[#C8A68B] transition text-center {{ request('max_price') == 50 && !request('min_price') ? 'border-[#C8A68B] text-[#C8A68B] font-bold bg-[#C8A68B]/10' : '' }}">&lt; 50</button>
-                            <button type="button" onclick="setQuickPrice(50, 100)" class="px-2 py-1 text-[11px] font-medium border border-gray-200 rounded-lg bg-white hover:border-[#C8A68B] hover:text-[#C8A68B] transition text-center {{ request('min_price') == 50 && request('max_price') == 100 ? 'border-[#C8A68B] text-[#C8A68B] font-bold bg-[#C8A68B]/10' : '' }}">50 - 100</button>
-                            <button type="button" onclick="setQuickPrice(100, '')" class="px-2 py-1 text-[11px] font-medium border border-gray-200 rounded-lg bg-white hover:border-[#C8A68B] hover:text-[#C8A68B] transition text-center {{ request('min_price') == 100 && !request('max_price') ? 'border-[#C8A68B] text-[#C8A68B] font-bold bg-[#C8A68B]/10' : '' }}">&gt; 100</button>
+                            <button type="button" onclick="setQuickPrice('', 50)" class="px-2 py-1 text-[11px] font-medium border border-gray-200 rounded-lg bg-white hover:border-[#7DA268] hover:text-[#7DA268] transition text-center {{ request('max_price') == 50 && !request('min_price') ? 'border-[#7DA268] text-[#7DA268] font-bold bg-[#7DA268]/10' : '' }}">&lt; 50</button>
+                            <button type="button" onclick="setQuickPrice(50, 100)" class="px-2 py-1 text-[11px] font-medium border border-gray-200 rounded-lg bg-white hover:border-[#7DA268] hover:text-[#7DA268] transition text-center {{ request('min_price') == 50 && request('max_price') == 100 ? 'border-[#7DA268] text-[#7DA268] font-bold bg-[#7DA268]/10' : '' }}">50 - 100</button>
+                            <button type="button" onclick="setQuickPrice(100, '')" class="px-2 py-1 text-[11px] font-medium border border-gray-200 rounded-lg bg-white hover:border-[#7DA268] hover:text-[#7DA268] transition text-center {{ request('min_price') == 100 && !request('max_price') ? 'border-[#7DA268] text-[#7DA268] font-bold bg-[#7DA268]/10' : '' }}">&gt; 100</button>
                         </div>
                     </div>
 
                     <!-- Disponibilidad y Ofertas -->
                     <div class="pt-4 border-t border-gray-200/60 space-y-2">
                         <label class="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer hover:text-black">
-                            <input type="checkbox" name="on_sale" value="1" {{ request('on_sale') ? 'checked' : '' }} onchange="this.form.submit()" class="rounded border-gray-300 text-[#1A1A1A] focus:ring-[#C8A68B]">
+                            <input type="checkbox" name="on_sale" value="1" {{ request('on_sale') ? 'checked' : '' }} onchange="this.form.submit()" class="rounded border-gray-300 text-[#1A1A1A] focus:ring-[#7DA268]">
                             <span>{{ \App\Helpers\TranslationHelper::isEn() ? '🔥 On sale / Discount' : '🔥 En oferta / descuento' }}</span>
                         </label>
                         <label class="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer hover:text-black">
-                            <input type="checkbox" name="in_stock" value="1" {{ request('in_stock') ? 'checked' : '' }} onchange="this.form.submit()" class="rounded border-gray-300 text-[#1A1A1A] focus:ring-[#C8A68B]">
+                            <input type="checkbox" name="in_stock" value="1" {{ request('in_stock') ? 'checked' : '' }} onchange="this.form.submit()" class="rounded border-gray-300 text-[#1A1A1A] focus:ring-[#7DA268]">
                             <span>{{ \App\Helpers\TranslationHelper::isEn() ? '📦 In stock only' : '📦 Solo con stock disponible' }}</span>
                         </label>
                     </div>
@@ -147,7 +147,7 @@
                     <!-- Ordenar -->
                     <div class="pt-4 border-t border-gray-200/60">
                         <h3 class="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider mb-2.5">{{ \App\Helpers\TranslationHelper::trans('sort_by', 'Ordenar por') }}</h3>
-                        <select name="sort" class="w-full text-xs py-2.5 px-3 bg-white border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#C8A68B] focus:border-[#C8A68B] outline-none" onchange="this.form.submit()">
+                        <select name="sort" class="w-full text-xs py-2.5 px-3 bg-white border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#7DA268] focus:border-[#7DA268] outline-none" onchange="this.form.submit()">
                             <option value="position" {{ request('sort') == 'position' ? 'selected' : '' }}>{{ \App\Helpers\TranslationHelper::isEn() ? 'Featured / Recommended' : 'Recomendados' }}</option>
                             <option value="price_asc" {{ request('sort') == 'price_asc' ? 'selected' : '' }}>{{ \App\Helpers\TranslationHelper::isEn() ? 'Price: Low to High' : 'Precio: Menor a Mayor' }}</option>
                             <option value="price_desc" {{ request('sort') == 'price_desc' ? 'selected' : '' }}>{{ \App\Helpers\TranslationHelper::isEn() ? 'Price: High to Low' : 'Precio: Mayor a Menor' }}</option>
@@ -157,7 +157,7 @@
                     </div>
 
                     <div class="space-y-2 pt-2">
-                        <button type="submit" class="w-full py-3 bg-[#1A1A1A] hover:bg-[#C8A68B] text-white font-bold text-sm rounded-lg transition-colors shadow-sm">
+                        <button type="submit" class="w-full py-3 bg-[#1A1A1A] hover:bg-[#7DA268] text-white font-bold text-sm rounded-lg transition-colors shadow-sm">
                             {{ \App\Helpers\TranslationHelper::isEn() ? 'Apply Filters' : 'Aplicar Filtros' }}
                         </button>
                         @if(request()->hasAny(['category', 'brand', 'min_price', 'max_price', 'on_sale', 'in_stock', 'q']))
@@ -194,7 +194,7 @@
                             @php
                                 $activeCatName = $categories->firstWhere('slug', request('category'))?->getTranslatedName() ?? request('category');
                             @endphp
-                            <a href="{{ request()->fullUrlWithQuery(['category' => null]) }}" class="inline-flex items-center gap-1.5 px-3 py-1 bg-[#C8A68B]/15 text-[#C8A68B] rounded-full text-xs font-bold transition hover:bg-[#C8A68B]/25">
+                            <a href="{{ request()->fullUrlWithQuery(['category' => null]) }}" class="inline-flex items-center gap-1.5 px-3 py-1 bg-[#7DA268]/15 text-[#7DA268] rounded-full text-xs font-bold transition hover:bg-[#7DA268]/25">
                                 <span>{{ \App\Helpers\TranslationHelper::trans('categories', 'Categoría') }}: {{ $activeCatName }}</span>
                                 <span class="font-bold">✕</span>
                             </a>
@@ -204,7 +204,7 @@
                             @php
                                 $activeBrandName = $brands->firstWhere('slug', request('brand'))?->name ?? request('brand');
                             @endphp
-                            <a href="{{ request()->fullUrlWithQuery(['brand' => null]) }}" class="inline-flex items-center gap-1.5 px-3 py-1 bg-[#C8A68B]/15 text-[#C8A68B] rounded-full text-xs font-bold transition hover:bg-[#C8A68B]/25">
+                            <a href="{{ request()->fullUrlWithQuery(['brand' => null]) }}" class="inline-flex items-center gap-1.5 px-3 py-1 bg-[#7DA268]/15 text-[#7DA268] rounded-full text-xs font-bold transition hover:bg-[#7DA268]/25">
                                 <span>{{ \App\Helpers\TranslationHelper::trans('brands', 'Marca') }}: {{ $activeBrandName }}</span>
                                 <span class="font-bold">✕</span>
                             </a>
@@ -241,7 +241,7 @@
                         <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                         <h3 class="text-xl font-bold text-gray-800 mb-2">{{ \App\Helpers\TranslationHelper::isEn() ? 'No products found' : 'No se encontraron productos' }}</h3>
                         <p class="text-gray-500 mb-6">{{ \App\Helpers\TranslationHelper::isEn() ? 'Try adjusting your filters or search to find what you are looking for.' : 'Intenta ajustar tus filtros o búsqueda para encontrar lo que buscas.' }}</p>
-                        <a href="{{ route('store.catalog', $store->slug) }}" class="inline-block bg-[#1A1A1A] text-white px-6 py-2 rounded-full font-medium hover:bg-[#C8A68B] transition">{{ \App\Helpers\TranslationHelper::isEn() ? 'Clear Filters' : 'Limpiar Filtros' }}</a>
+                        <a href="{{ route('store.catalog', $store->slug) }}" class="inline-block bg-[#1A1A1A] text-white px-6 py-2 rounded-full font-medium hover:bg-[#7DA268] transition">{{ \App\Helpers\TranslationHelper::isEn() ? 'Clear Filters' : 'Limpiar Filtros' }}</a>
                     </div>
                 @else
                     <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
@@ -266,7 +266,7 @@
                                     <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 truncate">{{ $p->categories && $p->categories->isNotEmpty() ? $p->categories->map(fn($c) => $c->getTranslatedName())->implode(', ') : ($p->category ? $p->category->getTranslatedName() : (\App\Helpers\TranslationHelper::isEn() ? 'Catalog' : 'Catálogo')) }}</p>
                                     <h3 class="text-[#1A1A1A] font-semibold text-sm md:text-base mb-1 truncate">{{ $p->name }}</h3>
                                     <div class="flex items-center gap-2">
-                                        <p class="text-[#C8A68B] font-bold text-sm md:text-base">
+                                        <p class="text-[#7DA268] font-bold text-sm md:text-base">
                                              {{ \App\Helpers\CurrencyHelper::symbol() }} {{ number_format($p->resolvePrice(), 2) }}
                                         </p>
                                         @if($p->resolveComparePrice() > $p->resolvePrice())

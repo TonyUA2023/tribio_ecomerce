@@ -43,31 +43,31 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-1">Nombre Completo</label>
-                            <input type="text" name="name" required class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none">
+                            <input type="text" name="name" required class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:border-[#7DA268] focus:ring-1 focus:ring-[#7DA268] outline-none">
                         </div>
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-1">Correo Electrónico</label>
-                            <input type="email" name="email" required class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none">
+                            <input type="email" name="email" required class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:border-[#7DA268] focus:ring-1 focus:ring-[#7DA268] outline-none">
                         </div>
                     </div>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-1">Teléfono</label>
-                            <input type="text" name="phone" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none">
+                            <input type="text" name="phone" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:border-[#7DA268] focus:ring-1 focus:ring-[#7DA268] outline-none">
                         </div>
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-1">Asunto</label>
-                            <input type="text" name="subject" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none">
+                            <input type="text" name="subject" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:border-[#7DA268] focus:ring-1 focus:ring-[#7DA268] outline-none">
                         </div>
                     </div>
 
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-1">Mensaje</label>
-                        <textarea name="message" rows="4" required class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:border-[#C8A68B] focus:ring-1 focus:ring-[#C8A68B] outline-none"></textarea>
+                        <textarea name="message" rows="4" required class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:border-[#7DA268] focus:ring-1 focus:ring-[#7DA268] outline-none"></textarea>
                     </div>
 
-                    <button type="submit" class="w-full py-4 bg-[#1A1A1A] hover:bg-[#C8A68B] text-white font-bold rounded-xl transition-colors shadow-md">
+                    <button type="submit" class="w-full py-4 bg-[#1A1A1A] hover:bg-[#7DA268] text-white font-bold rounded-xl transition-colors shadow-md">
                         Enviar Mensaje
                     </button>
                 </form>

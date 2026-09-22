@@ -70,7 +70,7 @@
                         }
                     }">
                     <button @click="langOpen = !langOpen" @click.away="langOpen = false" 
-                            class="flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-white hover:bg-stone-50 text-[#1E1D1B] hover:text-[#C8A68B] text-[11px] sm:text-xs font-bold tracking-wider transition border border-stone-200 shadow-2xs whitespace-nowrap cursor-pointer">
+                            class="flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-white hover:bg-stone-50 text-[#1E1D1B] hover:text-[#7DA268] text-[11px] sm:text-xs font-bold tracking-wider transition border border-stone-200 shadow-2xs whitespace-nowrap cursor-pointer">
                         <span class="text-xs">🌐</span>
                         <span x-text="currentLang"></span>
                         <svg class="w-2.5 h-2.5 text-stone-400 transition-transform duration-200" :class="langOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -82,15 +82,15 @@
                          class="absolute left-0 mt-2 w-32 bg-white rounded-xl shadow-xl border border-stone-100 py-1.5 z-50 overflow-hidden">
                         <button type="button" @click="switchLanguage('ES')" 
                                 class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-stone-50 flex items-center justify-between" 
-                                :class="currentLang === 'ES' ? 'text-[#C8A68B] font-bold bg-[#FAF7F2]' : 'text-[#1E1D1B]'">
+                                :class="currentLang === 'ES' ? 'text-[#7DA268] font-bold bg-[#FAF7F2]' : 'text-[#1E1D1B]'">
                             <span>Español</span>
-                            <span x-show="currentLang === 'ES'" class="text-[#C8A68B] text-xs font-bold">✓</span>
+                            <span x-show="currentLang === 'ES'" class="text-[#7DA268] text-xs font-bold">✓</span>
                         </button>
                         <button type="button" @click="switchLanguage('EN')" 
                                 class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-stone-50 flex items-center justify-between" 
-                                :class="currentLang === 'EN' ? 'text-[#C8A68B] font-bold bg-[#FAF7F2]' : 'text-[#1E1D1B]'">
+                                :class="currentLang === 'EN' ? 'text-[#7DA268] font-bold bg-[#FAF7F2]' : 'text-[#1E1D1B]'">
                             <span>English</span>
-                            <span x-show="currentLang === 'EN'" class="text-[#C8A68B] text-xs font-bold">✓</span>
+                            <span x-show="currentLang === 'EN'" class="text-[#7DA268] text-xs font-bold">✓</span>
                         </button>
                     </div>
                 </div>
@@ -113,7 +113,7 @@
                         }
                     }">
                     <button @click="currOpen = !currOpen" @click.away="currOpen = false" 
-                            class="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-white hover:bg-stone-50 text-[#1E1D1B] hover:text-[#C8A68B] text-[11px] sm:text-xs font-bold tracking-wider transition border border-stone-200 shadow-2xs cursor-pointer whitespace-nowrap flex-nowrap shrink-0"
+                            class="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-white hover:bg-stone-50 text-[#1E1D1B] hover:text-[#7DA268] text-[11px] sm:text-xs font-bold tracking-wider transition border border-stone-200 shadow-2xs cursor-pointer whitespace-nowrap flex-nowrap shrink-0"
                             title="{{ $isEn ? 'Select country / currency' : 'Seleccionar país / moneda' }}">
                         <img src="{{ $currentCountryInfo['flag_url'] ?? \App\Helpers\CurrencyHelper::flagUrl($currentCountry) }}" 
                              alt="{{ $currentCountryInfo['name'] ?? '' }}" 
@@ -129,7 +129,7 @@
                         @foreach($headerCountries as $hCode => $hData)
                             <button type="button" @click="switchCountry('{{ $hCode }}', '{{ $hData['currency'] }}')" 
                                     class="w-full text-left px-3 py-2 text-xs font-semibold hover:bg-stone-50 flex items-center justify-between transition cursor-pointer" 
-                                    :class="currentCountry === '{{ $hCode }}' ? 'text-[#C8A68B] font-bold bg-[#FAF7F2]' : 'text-[#1E1D1B]'">
+                                    :class="currentCountry === '{{ $hCode }}' ? 'text-[#7DA268] font-bold bg-[#FAF7F2]' : 'text-[#1E1D1B]'">
                                 <div class="flex items-center gap-2">
                                     <img src="{{ $hData['flag_url'] ?? \App\Helpers\CurrencyHelper::flagUrl($hCode) }}" 
                                          alt="{{ $hData['name'] }}" 
@@ -138,7 +138,7 @@
                                 </div>
                                 <div class="flex items-center gap-1.5">
                                     <span class="text-[10px] text-stone-400 font-mono">{{ $hData['currency'] }}</span>
-                                    <span x-show="currentCountry === '{{ $hCode }}'" class="text-[#C8A68B] text-xs font-bold">✓</span>
+                                    <span x-show="currentCountry === '{{ $hCode }}'" class="text-[#7DA268] text-xs font-bold">✓</span>
                                 </div>
                             </button>
                         @endforeach
@@ -153,11 +153,11 @@
                         <img class="h-9 sm:h-11 md:h-14 w-auto object-contain transition-transform duration-200 group-hover:scale-105" src="{{ $store->logo_url }}" alt="{{ $store->name }}">
                     @else
                         <div class="flex flex-col items-center relative py-1">
-                            <span class="font-bold text-2xl sm:text-3xl md:text-4xl tracking-tight text-[#1E1D1B] group-hover:text-[#C8A68B] transition-colors font-brand leading-none">
+                            <span class="font-bold text-2xl sm:text-3xl md:text-4xl tracking-tight text-[#1E1D1B] group-hover:text-[#7DA268] transition-colors font-brand leading-none">
                                 {{ $store->name }}
                             </span>
                             <!-- Maetek warm caramel smile arc curve -->
-                            <svg class="w-16 sm:w-20 md:w-24 h-2 mt-0.5 text-[#C8A68B]" viewBox="0 0 100 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <svg class="w-16 sm:w-20 md:w-24 h-2 mt-0.5 text-[#7DA268]" viewBox="0 0 100 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M4 3C30 11 70 11 96 3" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
                             </svg>
                         </div>
@@ -169,24 +169,24 @@
             <div class="flex-1 flex items-center justify-end space-x-1.5 sm:space-x-3 md:space-x-4">
                 <!-- Tribio Pass / Customer Portal (Desktop only) -->
                 <button @click="$dispatch('open-customer-modal')" 
-                        class="text-[#1E1D1B] hover:text-[#C8A68B] p-2 rounded-full hover:bg-stone-100/70 transition hidden md:flex items-center gap-1.5 cursor-pointer" 
+                        class="text-[#1E1D1B] hover:text-[#7DA268] p-2 rounded-full hover:bg-stone-100/70 transition hidden md:flex items-center gap-1.5 cursor-pointer" 
                         title="{{ $isEn ? 'My Account / My Orders' : 'Mi Cuenta / Mis Pedidos' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                 </button>
 
                 <!-- Search (Desktop only; on mobile it is in the toggle menu) -->
                 <button @click="searchOpen = true" 
-                        class="text-[#1E1D1B] hover:text-[#C8A68B] p-2 rounded-full hover:bg-stone-100/70 transition hidden md:flex items-center justify-center cursor-pointer" 
+                        class="text-[#1E1D1B] hover:text-[#7DA268] p-2 rounded-full hover:bg-stone-100/70 transition hidden md:flex items-center justify-center cursor-pointer" 
                         title="{{ $isEn ? 'Search' : 'Buscar' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </button>
 
                 <!-- Cart Drawer Trigger (Pastel Caramel Badge) -->
                 <button onclick="window.dispatchEvent(new CustomEvent('open-cart-drawer'))"
-                        class="text-[#1E1D1B] hover:text-[#C8A68B] p-2 rounded-full hover:bg-stone-100/70 transition relative cursor-pointer" 
+                        class="text-[#1E1D1B] hover:text-[#7DA268] p-2 rounded-full hover:bg-stone-100/70 transition relative cursor-pointer" 
                         title="{{ $isEn ? 'Cart' : 'Carrito' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-                    <span data-cart-count class="absolute -top-0.5 -right-0.5 bg-[#C8A68B] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-xs font-brand">0</span>
+                    <span data-cart-count class="absolute -top-0.5 -right-0.5 bg-[#7DA268] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-xs font-brand">0</span>
                 </button>
                 
                 <!-- Mobile Hamburger Toggle -->
@@ -200,12 +200,12 @@
         <!-- Bottom Row: Navigation (Desktop) with Fredoka Typography -->
         <nav class="hidden md:flex flex-wrap justify-center items-center gap-x-7 lg:gap-x-9 gap-y-2 mt-4 pb-1 font-brand">
             <a href="{{ route('store.show', $store->slug) }}" 
-               class="text-base lg:text-[17px] font-semibold transition-colors duration-200 {{ request()->routeIs('store.show') ? 'text-[#C8A68B] font-bold border-b-2 border-[#C8A68B] pb-1' : 'text-[#363430] hover:text-[#C8A68B]' }}">
+               class="text-base lg:text-[17px] font-semibold transition-colors duration-200 {{ request()->routeIs('store.show') ? 'text-[#7DA268] font-bold border-b-2 border-[#7DA268] pb-1' : 'text-[#363430] hover:text-[#7DA268]' }}">
                 {{ $isEn ? 'Home' : 'Inicio' }}
             </a>
             
             <a href="{{ route('store.catalog', $store->slug) }}" 
-               class="text-base lg:text-[17px] font-semibold transition-colors duration-200 {{ (request()->routeIs('store.catalog') && !request()->has('category')) ? 'text-[#C8A68B] font-bold border-b-2 border-[#C8A68B] pb-1' : 'text-[#363430] hover:text-[#C8A68B]' }}">
+               class="text-base lg:text-[17px] font-semibold transition-colors duration-200 {{ (request()->routeIs('store.catalog') && !request()->has('category')) ? 'text-[#7DA268] font-bold border-b-2 border-[#7DA268] pb-1' : 'text-[#363430] hover:text-[#7DA268]' }}">
                 {{ $isEn ? 'Shop' : 'Catálogo' }}
             </a>
             
@@ -214,13 +214,13 @@
                     $isCatActive = request()->routeIs('store.catalog') && (request('category') == $cat->slug || request('category') == $cat->id);
                 @endphp
                 <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $cat->slug]) }}" 
-                   class="text-base lg:text-[17px] font-semibold transition-colors duration-200 {{ $isCatActive ? 'text-[#C8A68B] font-bold border-b-2 border-[#C8A68B] pb-1' : 'text-[#363430] hover:text-[#C8A68B]' }}">
+                   class="text-base lg:text-[17px] font-semibold transition-colors duration-200 {{ $isCatActive ? 'text-[#7DA268] font-bold border-b-2 border-[#7DA268] pb-1' : 'text-[#363430] hover:text-[#7DA268]' }}">
                     {{ $cat->getTranslatedName() }}
                 </a>
             @endforeach
             
             <a href="{{ route('store.contact', $store->slug) }}" 
-               class="text-base lg:text-[17px] font-semibold transition-colors duration-200 {{ request()->routeIs('store.contact') ? 'text-[#C8A68B] font-bold border-b-2 border-[#C8A68B] pb-1' : 'text-[#363430] hover:text-[#C8A68B]' }}">
+               class="text-base lg:text-[17px] font-semibold transition-colors duration-200 {{ request()->routeIs('store.contact') ? 'text-[#7DA268] font-bold border-b-2 border-[#7DA268] pb-1' : 'text-[#363430] hover:text-[#7DA268]' }}">
                 {{ $isEn ? 'Contact' : 'Contacto' }}
             </a>
         </nav>
@@ -268,29 +268,29 @@
                 <form action="{{ route('store.catalog', $store->slug) }}" method="GET" class="relative">
                     <input type="text" name="search"
                            placeholder="{{ $isEn ? 'Search products, brands...' : 'Buscar productos, marcas...' }}"
-                           class="w-full pl-10 pr-4 py-2.5 bg-white border border-stone-200 rounded-full text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:border-[#C8A68B] focus:ring-2 focus:ring-[#C8A68B]/20 transition shadow-2xs">
-                    <button type="submit" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-[#C8A68B] transition cursor-pointer" title="Buscar">
+                           class="w-full pl-10 pr-4 py-2.5 bg-white border border-stone-200 rounded-full text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:border-[#7DA268] focus:ring-2 focus:ring-[#7DA268]/20 transition shadow-2xs">
+                    <button type="submit" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-[#7DA268] transition cursor-pointer" title="Buscar">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </button>
                 </form>
 
                 <!-- Tribio Account Card -->
                 <button @click="$dispatch('open-customer-modal'); mobileMenuOpen = false"
-                        class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-gradient-to-r from-[#FDF1ED] to-[#F7F3EB] border border-[#F0DDD3] hover:shadow-md active:scale-[0.99] transition text-left cursor-pointer">
-                    <span class="flex items-center justify-center w-10 h-10 rounded-full bg-white text-[#C8A68B] shrink-0 shadow-2xs">
+                        class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-gradient-to-r from-[#F0F5EC] to-[#F7F3EB] border border-[#CCDBC0] hover:shadow-md active:scale-[0.99] transition text-left cursor-pointer">
+                    <span class="flex items-center justify-center w-10 h-10 rounded-full bg-white text-[#7DA268] shrink-0 shadow-2xs">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                     </span>
                     <span class="flex-1 min-w-0">
                         <span class="block text-sm font-bold text-[#1E1D1B] leading-tight">{{ $isEn ? 'My Account' : 'Mi Cuenta' }}</span>
-                        <span class="block text-xs text-[#8A6F5C] leading-tight mt-0.5">{{ $isEn ? 'Tribio orders & profile' : 'Pedidos Tribio y perfil' }}</span>
+                        <span class="block text-xs text-[#4A6038] leading-tight mt-0.5">{{ $isEn ? 'Tribio orders & profile' : 'Pedidos Tribio y perfil' }}</span>
                     </span>
-                    <svg class="w-4 h-4 text-[#C8A68B] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    <svg class="w-4 h-4 text-[#7DA268] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </button>
 
                 <!-- Primary Navigation -->
                 <nav class="space-y-1.5">
                     <a href="{{ route('store.show', $store->slug) }}"
-                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {{ request()->routeIs('store.show') ? 'bg-white shadow-2xs text-[#C8A68B]' : 'text-stone-700 hover:bg-white/70' }}">
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {{ request()->routeIs('store.show') ? 'bg-white shadow-2xs text-[#7DA268]' : 'text-stone-700 hover:bg-white/70' }}">
                         <span class="flex items-center justify-center w-8 h-8 rounded-full bg-[#F0F5EC] text-[#4A6038] shrink-0">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9.5L12 3l9 6.5M5 9v10a1 1 0 001 1h3a1 1 0 001-1v-4a2 2 0 114 0v4a1 1 0 001 1h3a1 1 0 001-1V9"></path></svg>
                         </span>
@@ -298,15 +298,15 @@
                     </a>
 
                     <a href="{{ route('store.catalog', $store->slug) }}"
-                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {{ (request()->routeIs('store.catalog') && !request()->has('category')) ? 'bg-white shadow-2xs text-[#C8A68B]' : 'text-stone-700 hover:bg-white/70' }}">
-                        <span class="flex items-center justify-center w-8 h-8 rounded-full bg-[#FDF1ED] text-[#964736] shrink-0">
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {{ (request()->routeIs('store.catalog') && !request()->has('category')) ? 'bg-white shadow-2xs text-[#7DA268]' : 'text-stone-700 hover:bg-white/70' }}">
+                        <span class="flex items-center justify-center w-8 h-8 rounded-full bg-[#F0F5EC] text-[#4A6038] shrink-0">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h7v7H3V3zM14 3h7v7h-7V3zM3 14h7v7H3v-7zM14 14h7v7h-7v-7z"></path></svg>
                         </span>
                         <span class="text-[15px] font-semibold">{{ $isEn ? 'Shop' : 'Catálogo' }}</span>
                     </a>
 
                     <a href="{{ route('store.contact', $store->slug) }}"
-                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {{ request()->routeIs('store.contact') ? 'bg-white shadow-2xs text-[#C8A68B]' : 'text-stone-700 hover:bg-white/70' }}">
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {{ request()->routeIs('store.contact') ? 'bg-white shadow-2xs text-[#7DA268]' : 'text-stone-700 hover:bg-white/70' }}">
                         <span class="flex items-center justify-center w-8 h-8 rounded-full bg-[#F7F3EB] text-[#7A6245] shrink-0">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                         </span>
@@ -323,7 +323,7 @@
                         <div class="flex flex-wrap gap-2">
                             @foreach($headerCategories as $cat)
                                 <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $cat->slug]) }}"
-                                   class="px-3.5 py-1.5 rounded-full text-[13px] font-semibold bg-white border border-stone-200 text-stone-700 hover:border-[#C8A68B] hover:text-[#C8A68B] transition">
+                                   class="px-3.5 py-1.5 rounded-full text-[13px] font-semibold bg-white border border-stone-200 text-stone-700 hover:border-[#7DA268] hover:text-[#7DA268] transition">
                                     {{ $cat->getTranslatedName() }}
                                 </a>
                             @endforeach

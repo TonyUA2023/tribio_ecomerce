@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\StoreSection;
+use App\Services\LogoPaletteService;
 
 class StoreBuilderController extends Controller
 {
@@ -37,6 +38,9 @@ class StoreBuilderController extends Controller
         }
 
         $defaultData = $block->getDefaultData();
+        if ($request->type === 'hero' && $store->logo_palette) {
+            $defaultData = app(LogoPaletteService::class)->applyToHero($defaultData, $store->logo_palette);
+        }
 
         $section = $store->sections()->create([
             'type' => $request->type,

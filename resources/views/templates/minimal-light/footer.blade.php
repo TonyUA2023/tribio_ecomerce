@@ -10,7 +10,7 @@
     $storePromos = $store->activePromoMessages($isEn);
 @endphp
 
-<footer class="bg-[#1E1D1B] text-stone-300 font-sans border-t border-stone-800 selection:bg-[#C8A68B] selection:text-white"
+<footer class="bg-[#1E1D1B] text-stone-300 font-sans border-t border-stone-800 selection:bg-[#7DA268] selection:text-white"
         x-data="{
             reclamacionesOpen: false,
             faqOpen: false,
@@ -64,7 +64,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
             <div class="flex flex-col lg:flex-row items-center justify-between gap-6">
                 <div class="text-center lg:text-left max-w-xl">
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C8A68B]/20 text-[#E0C3AB] text-xs font-bold uppercase tracking-wider mb-2 border border-[#C8A68B]/30 font-brand">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#7DA268]/20 text-[#C8D7BA] text-xs font-bold uppercase tracking-wider mb-2 border border-[#7DA268]/30 font-brand">
                         {{ $isEn ? 'Join the Club' : 'Club Exclusivo' }}
                     </span>
 
@@ -99,10 +99,10 @@
                                 </span>
                                 <input type="email" x-model="newsletterEmail" required
                                        placeholder="{{ $isEn ? 'Enter your email address...' : 'Ingresa tu correo electrónico...' }}"
-                                       class="w-full bg-white/10 border border-white/20 text-white placeholder-stone-400 text-xs sm:text-sm rounded-xl py-3 pl-10 pr-4 outline-none focus:border-[#C8A68B] focus:ring-2 focus:ring-[#C8A68B]/30 transition">
+                                       class="w-full bg-white/10 border border-white/20 text-white placeholder-stone-400 text-xs sm:text-sm rounded-xl py-3 pl-10 pr-4 outline-none focus:border-[#7DA268] focus:ring-2 focus:ring-[#7DA268]/30 transition">
                             </div>
                             <button type="submit"
-                                    class="px-6 py-3 bg-[#C8A68B] hover:bg-[#B89578] text-[#1E1D1B] font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer font-brand">
+                                    class="px-6 py-3 bg-[#7DA268] hover:bg-[#4A6038] text-[#1E1D1B] font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer font-brand">
                                 <span>{{ $isEn ? 'Subscribe' : '¡Suscribirme!' }}</span>
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                             </button>
@@ -138,7 +138,7 @@
                             <span class="font-bold text-2xl md:text-3xl tracking-tight text-white font-brand">
                                 {{ $store->name }}
                             </span>
-                            <svg class="w-16 h-2 mt-0.5 text-[#C8A68B]" viewBox="0 0 100 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <svg class="w-16 h-2 mt-0.5 text-[#7DA268]" viewBox="0 0 100 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M4 3C30 11 70 11 96 3" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
                             </svg>
                         </div>
@@ -154,7 +154,7 @@
 
                     {{-- Email --}}
                     <a href="mailto:{{ $store->contact_email ?: 'maetek.pe@gmail.com' }}"
-                       class="flex items-center gap-2.5 text-gray-300 hover:text-[#C8A68B] transition">
+                       class="flex items-center gap-2.5 text-gray-300 hover:text-[#7DA268] transition">
                         <span class="w-7 h-7 rounded-full bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                         </span>
@@ -210,12 +210,12 @@
 
             {{-- Columna 2: Catálogo & Colecciones --}}
             <div>
-                <h4 class="text-xs font-bold uppercase tracking-wider text-white mb-4 border-l-2 border-[#C8A68B] pl-2.5">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-white mb-4 border-l-2 border-[#7DA268] pl-2.5">
                     {{ $isEn ? 'Collections' : 'Catálogo' }}
                 </h4>
                 <ul class="space-y-2.5 text-xs text-gray-400">
                     <li>
-                        <a href="{{ route('store.catalog', $store->slug) }}" class="hover:text-[#C8A68B] transition flex items-center gap-1.5 font-semibold text-gray-200">
+                        <a href="{{ route('store.catalog', $store->slug) }}" class="hover:text-[#7DA268] transition flex items-center gap-1.5 font-semibold text-gray-200">
                             {{ $isEn ? 'All Products' : 'Todos los Productos' }}
                         </a>
                     </li>
@@ -230,7 +230,7 @@
                     @endforeach
                     @if(method_exists($store, 'galleryItems') && $store->galleryItems()->exists())
                         <li class="pt-1 border-t border-white/5">
-                            <a href="{{ route('store.gallery', $store->slug) }}" class="hover:text-[#C8A68B] transition flex items-center gap-1.5">
+                            <a href="{{ route('store.gallery', $store->slug) }}" class="hover:text-[#7DA268] transition flex items-center gap-1.5">
                                 {{ $isEn ? 'Photo Gallery' : 'Galería de Fotos' }}
                             </a>
                         </li>
@@ -240,13 +240,13 @@
 
             {{-- Columna 3: Atención al Cliente & Cuenta --}}
             <div>
-                <h4 class="text-xs font-bold uppercase tracking-wider text-white mb-4 border-l-2 border-[#C8A68B] pl-2.5">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-white mb-4 border-l-2 border-[#7DA268] pl-2.5">
                     {{ $isEn ? 'Customer Care' : 'Atención al Cliente' }}
                 </h4>
                 <ul class="space-y-2.5 text-xs text-gray-400">
                     <li>
                         <button type="button" @click="window.openCustomerModal ? window.openCustomerModal('orders') : null"
-                                class="hover:text-[#C8A68B] transition flex items-center gap-1.5 text-left cursor-pointer font-medium text-gray-300">
+                                class="hover:text-[#7DA268] transition flex items-center gap-1.5 text-left cursor-pointer font-medium text-gray-300">
                             {{ $isEn ? 'Track My Order' : 'Rastrear mi Pedido' }}
                         </button>
                     </li>
@@ -278,17 +278,17 @@
 
             {{-- Columna 4: Confianza, Libro de Reclamaciones & Pagos --}}
             <div>
-                <h4 class="text-xs font-bold uppercase tracking-wider text-white mb-4 border-l-2 border-[#C8A68B] pl-2.5">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-white mb-4 border-l-2 border-[#7DA268] pl-2.5">
                     {{ $isEn ? 'Trust & Security' : 'Garantía y Legal' }}
                 </h4>
                 
                 {{-- Libro de Reclamaciones --}}
                 <div class="mb-5">
                     <button type="button" @click="reclamacionesOpen = true" 
-                            class="w-full p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#C8A68B]/40 transition text-left cursor-pointer group">
+                            class="w-full p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#7DA268]/40 transition text-left cursor-pointer group">
                         <div class="flex items-center gap-2.5">
                             <div>
-                                <span class="text-xs font-bold text-white block group-hover:text-[#C8A68B] transition">Libro de Reclamaciones</span>
+                                <span class="text-xs font-bold text-white block group-hover:text-[#7DA268] transition">Libro de Reclamaciones</span>
                                 <span class="text-[10px] text-gray-400 block font-mono">D.S. 011-2011-PCM</span>
                             </div>
                         </div>
@@ -402,7 +402,7 @@
                     <p>© {{ date('Y') }} <span class="text-white font-semibold">{{ $store->name }}</span>. {{ $isEn ? 'All rights reserved.' : 'Todos los derechos reservados.' }}</p>
                     <p class="text-[11px] text-gray-600 mt-0.5">
                         {{ $isEn ? 'Powered by' : 'Impulsado por' }} 
-                        <a href="https://tribio.com" target="_blank" rel="noopener" class="text-gray-400 hover:text-[#C8A68B] font-bold transition">Tribio eCommerce</a>
+                        <a href="https://tribio.com" target="_blank" rel="noopener" class="text-gray-400 hover:text-[#7DA268] font-bold transition">Tribio eCommerce</a>
                     </p>
                 </div>
 
@@ -454,28 +454,28 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label class="block font-bold text-gray-300 mb-1">Nombres y Apellidos *</label>
-                            <input type="text" x-model="reclamo.nombres" required class="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-[#C8A68B]">
+                            <input type="text" x-model="reclamo.nombres" required class="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-[#7DA268]">
                         </div>
                         <div>
                             <label class="block font-bold text-gray-300 mb-1">Documento (DNI / CE / Pasaporte) *</label>
-                            <input type="text" x-model="reclamo.documento_num" required class="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-[#C8A68B]" placeholder="Ej: 74581234">
+                            <input type="text" x-model="reclamo.documento_num" required class="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-[#7DA268]" placeholder="Ej: 74581234">
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label class="block font-bold text-gray-300 mb-1">Correo Electrónico *</label>
-                            <input type="email" x-model="reclamo.email" required class="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-[#C8A68B]" placeholder="tu@correo.com">
+                            <input type="email" x-model="reclamo.email" required class="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-[#7DA268]" placeholder="tu@correo.com">
                         </div>
                         <div>
                             <label class="block font-bold text-gray-300 mb-1">Teléfono / WhatsApp *</label>
-                            <input type="text" x-model="reclamo.telefono" required class="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-[#C8A68B]" placeholder="999 999 999">
+                            <input type="text" x-model="reclamo.telefono" required class="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-[#7DA268]" placeholder="999 999 999">
                         </div>
                     </div>
 
                     <div>
                         <label class="block font-bold text-gray-300 mb-1">Dirección / Ciudad</label>
-                        <input type="text" x-model="reclamo.direccion" class="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-[#C8A68B]">
+                        <input type="text" x-model="reclamo.direccion" class="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-[#7DA268]">
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-white/5">
@@ -483,36 +483,36 @@
                             <label class="block font-bold text-gray-300 mb-1">Tipo de Solicitud</label>
                             <div class="flex gap-4 pt-1">
                                 <label class="flex items-center gap-1.5 cursor-pointer">
-                                    <input type="radio" value="Reclamo" x-model="reclamo.tipo" class="text-[#C8A68B]">
+                                    <input type="radio" value="Reclamo" x-model="reclamo.tipo" class="text-[#7DA268]">
                                     <span>Reclamo (Disconformidad con producto)</span>
                                 </label>
                                 <label class="flex items-center gap-1.5 cursor-pointer">
-                                    <input type="radio" value="Queja" x-model="reclamo.tipo" class="text-[#C8A68B]">
+                                    <input type="radio" value="Queja" x-model="reclamo.tipo" class="text-[#7DA268]">
                                     <span>Queja (Atención al cliente)</span>
                                 </label>
                             </div>
                         </div>
                         <div>
                             <label class="block font-bold text-gray-300 mb-1">Monto o N° Pedido (Opcional)</label>
-                            <input type="text" x-model="reclamo.monto" class="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-[#C8A68B]" placeholder="Ej: Pedido #1024 o S/ 150.00">
+                            <input type="text" x-model="reclamo.monto" class="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-[#7DA268]" placeholder="Ej: Pedido #1024 o S/ 150.00">
                         </div>
                     </div>
 
                     <div>
                         <label class="block font-bold text-gray-300 mb-1">Detalle del Reclamo o Queja *</label>
-                        <textarea rows="3" x-model="reclamo.detalle" required class="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-[#C8A68B]" placeholder="Describe claramente lo ocurrido..."></textarea>
+                        <textarea rows="3" x-model="reclamo.detalle" required class="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-[#7DA268]" placeholder="Describe claramente lo ocurrido..."></textarea>
                     </div>
 
                     <div>
                         <label class="block font-bold text-gray-300 mb-1">Pedido del Consumidor</label>
-                        <textarea rows="2" x-model="reclamo.pedido" class="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-[#C8A68B]" placeholder="Qué solución solicitas (ej: cambio de producto, reembolso, etc.)..."></textarea>
+                        <textarea rows="2" x-model="reclamo.pedido" class="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-[#7DA268]" placeholder="Qué solución solicitas (ej: cambio de producto, reembolso, etc.)..."></textarea>
                     </div>
 
                     <div class="pt-3 flex justify-end gap-3">
                         <button type="button" @click="reclamacionesOpen = false" class="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 font-semibold cursor-pointer">
                             Cancelar
                         </button>
-                        <button type="submit" class="px-6 py-2.5 rounded-xl bg-[#C8A68B] hover:bg-[#b89578] text-[#141414] font-bold transition shadow-lg cursor-pointer">
+                        <button type="submit" class="px-6 py-2.5 rounded-xl bg-[#7DA268] hover:bg-[#4A6038] text-[#141414] font-bold transition shadow-lg cursor-pointer">
                             Enviar Hoja de Reclamación
                         </button>
                     </div>
@@ -526,13 +526,13 @@
                 </div>
                 <h4 class="text-lg font-bold text-white mb-1">Reclamación Registrada con Éxito</h4>
                 <p class="text-xs text-gray-400 mb-4">Se ha generado tu código de seguimiento de atención:</p>
-                <div class="inline-block px-4 py-2 rounded-xl bg-white/5 border border-[#C8A68B]/40 font-mono text-[#C8A68B] font-bold text-base mb-4">
+                <div class="inline-block px-4 py-2 rounded-xl bg-white/5 border border-[#7DA268]/40 font-mono text-[#7DA268] font-bold text-base mb-4">
                     <span x-text="reclamo.folio"></span>
                 </div>
                 <p class="text-xs text-gray-400 max-w-md mx-auto mb-6">
                     Conforme a ley, el proveedor dará respuesta en un plazo no mayor a quince (15) días hábiles al correo ingresado (<strong class="text-white" x-text="reclamo.email"></strong>).
                 </p>
-                <button type="button" @click="reclamacionesOpen = false; resetReclamo();" class="px-6 py-2.5 rounded-xl bg-[#C8A68B] text-[#141414] font-bold text-xs cursor-pointer">
+                <button type="button" @click="reclamacionesOpen = false; resetReclamo();" class="px-6 py-2.5 rounded-xl bg-[#7DA268] text-[#141414] font-bold text-xs cursor-pointer">
                     Entendido / Cerrar
                 </button>
             </div>
@@ -566,7 +566,7 @@
                 <div class="p-3.5 rounded-xl bg-white/5 border border-white/10">
                     <button type="button" @click="activeAccordion = activeAccordion === 1 ? null : 1" class="w-full flex items-center justify-between font-bold text-left text-white cursor-pointer">
                         <span>¿Cuánto tardan los envíos en llegar?</span>
-                        <span x-text="activeAccordion === 1 ? '−' : '+'" class="text-base text-[#C8A68B]"></span>
+                        <span x-text="activeAccordion === 1 ? '−' : '+'" class="text-base text-[#7DA268]"></span>
                     </button>
                     <div x-show="activeAccordion === 1" class="mt-2.5 text-gray-400 leading-relaxed pt-2 border-t border-white/5">
                         Para envíos con stock en Perú las entregas son de 24 a 48 horas. Para provincias a nivel nacional, los envíos se despachan vía Shalom u Olva Courier y toman de 2 a 4 días hábiles dependiendo del destino. Envíos internacionales toman de 15 a 20 días.
@@ -577,7 +577,7 @@
                 <div class="p-3.5 rounded-xl bg-white/5 border border-white/10">
                     <button type="button" @click="activeAccordion = activeAccordion === 2 ? null : 2" class="w-full flex items-center justify-between font-bold text-left text-white cursor-pointer">
                         <span>¿Cuáles son las formas de pago aceptadas?</span>
-                        <span x-text="activeAccordion === 2 ? '−' : '+'" class="text-base text-[#C8A68B]"></span>
+                        <span x-text="activeAccordion === 2 ? '−' : '+'" class="text-base text-[#7DA268]"></span>
                     </button>
                     <div x-show="activeAccordion === 2" class="mt-2.5 text-gray-400 leading-relaxed pt-2 border-t border-white/5">
                         Aceptamos tarjetas de débito y crédito (Visa, Mastercard, Amex) a través de pasarelas 100% seguras y encriptadas, billeteras digitales como Yape y Plin, y transferencias bancarias directas (BCP, BBVA, Interbank).
@@ -588,7 +588,7 @@
                 <div class="p-3.5 rounded-xl bg-white/5 border border-white/10">
                     <button type="button" @click="activeAccordion = activeAccordion === 3 ? null : 3" class="w-full flex items-center justify-between font-bold text-left text-white cursor-pointer">
                         <span>¿Cómo puedo hacer seguimiento a mi pedido?</span>
-                        <span x-text="activeAccordion === 3 ? '−' : '+'" class="text-base text-[#C8A68B]"></span>
+                        <span x-text="activeAccordion === 3 ? '−' : '+'" class="text-base text-[#7DA268]"></span>
                     </button>
                     <div x-show="activeAccordion === 3" class="mt-2.5 text-gray-400 leading-relaxed pt-2 border-t border-white/5">
                         Una vez completada tu compra recibirás un correo y mensaje con tu código de seguimiento. Puedes ingresar en la sección "Rastrear mi Pedido" en este portal o escribirnos directamente a nuestro WhatsApp oficial con tu número de orden.
@@ -599,7 +599,7 @@
                 <div class="p-3.5 rounded-xl bg-white/5 border border-white/10">
                     <button type="button" @click="activeAccordion = activeAccordion === 4 ? null : 4" class="w-full flex items-center justify-between font-bold text-left text-white cursor-pointer">
                         <span>¿Los productos tienen garantía?</span>
-                        <span x-text="activeAccordion === 4 ? '−' : '+'" class="text-base text-[#C8A68B]"></span>
+                        <span x-text="activeAccordion === 4 ? '−' : '+'" class="text-base text-[#7DA268]"></span>
                     </button>
                     <div x-show="activeAccordion === 4" class="mt-2.5 text-gray-400 leading-relaxed pt-2 border-t border-white/5">
                         Sí, todos nuestros artículos cuentan con garantía directa contra defectos de fabricación. Si tu pedido llega con algún inconveniente, nos contactas dentro de los primeros días de recepción para gestionar el cambio inmediato o solución sin costo adicional.
@@ -668,7 +668,7 @@
             </div>
 
             <div class="mt-6 pt-4 border-t border-white/10 text-right">
-                <button type="button" @click="shippingPolicyOpen = false" class="px-5 py-2 rounded-xl bg-[#C8A68B] text-[#141414] font-bold text-xs cursor-pointer">
+                <button type="button" @click="shippingPolicyOpen = false" class="px-5 py-2 rounded-xl bg-[#7DA268] text-[#141414] font-bold text-xs cursor-pointer">
                     Entendido
                 </button>
             </div>

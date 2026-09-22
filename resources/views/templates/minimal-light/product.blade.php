@@ -58,9 +58,9 @@
                     @if($product->video_path)
                     <button type="button" @click="activeMedia = 'video'" 
                             class="relative w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 border-2 transition-all cursor-pointer bg-stone-900 text-white flex flex-col items-center justify-center shadow-xs"
-                            :class="activeMedia === 'video' ? 'border-[#C8A68B] ring-2 ring-[#C8A68B]/30 scale-105' : 'border-stone-300 opacity-75 hover:opacity-100'">
+                            :class="activeMedia === 'video' ? 'border-[#7DA268] ring-2 ring-[#7DA268]/30 scale-105' : 'border-stone-300 opacity-75 hover:opacity-100'">
                         <span class="text-xl">🎬</span>
-                        <span class="text-[9px] font-black uppercase tracking-wider mt-0.5 text-[#C8A68B]">Video</span>
+                        <span class="text-[9px] font-black uppercase tracking-wider mt-0.5 text-[#7DA268]">Video</span>
                     </button>
                     @endif
 
@@ -274,7 +274,7 @@
                     <p class="text-sm text-stone-700 leading-relaxed font-normal">
                         {{ $shortText }}
                     </p>
-                    <a href="#detalles-producto" class="inline-flex items-center gap-1 text-xs font-bold text-[#C8A68B] hover:text-[#1A1A1A] mt-2 transition">
+                    <a href="#detalles-producto" class="inline-flex items-center gap-1 text-xs font-bold text-[#7DA268] hover:text-[#1A1A1A] mt-2 transition">
                         <span>{{ \App\Helpers\TranslationHelper::isEn() ? 'View full specifications & description ↓' : 'Ver características completas y ficha técnica ↓' }}</span>
                     </a>
                 </div>
@@ -287,7 +287,7 @@
                         <div>
                             <div class="flex items-center justify-between text-xs font-bold mb-2">
                                 <span class="text-stone-700 uppercase tracking-wider" x-text="opt.name"></span>
-                                <span class="text-[#C8A68B] font-mono" x-text="selectedAttributes[opt.name] || ''"></span>
+                                <span class="text-[#7DA268] font-mono" x-text="selectedAttributes[opt.name] || ''"></span>
                             </div>
                             
                             <div class="flex flex-wrap gap-2">
@@ -340,7 +340,7 @@
                     <button type="button" 
                             @click="buyNow()" 
                             :disabled="isOutOfStock"
-                            class="w-full bg-[#C8A68B] hover:bg-[#b08e73] text-white font-extrabold text-sm sm:text-base rounded-2xl transition-all shadow-md py-3.5 px-6 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                            class="w-full bg-[#7DA268] hover:bg-[#4A6038] text-white font-extrabold text-sm sm:text-base rounded-2xl transition-all shadow-md py-3.5 px-6 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                             :class="isOutOfStock ? 'hidden' : ''">
                         <span>⚡ {{ \App\Helpers\TranslationHelper::trans('buy_now', 'Comprar Ahora') }}</span>
                     </button>
@@ -556,7 +556,7 @@
     <div class="bg-[#FDF8EF] py-20 border-t border-stone-200/60 mt-16">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center max-w-xl mx-auto mb-12">
-                <span class="text-xs font-bold uppercase tracking-widest text-[#C8A68B] mb-2 block">{{ \App\Helpers\TranslationHelper::isEn() ? 'Recommended for you' : 'Recomendados para ti' }}</span>
+                <span class="text-xs font-bold uppercase tracking-widest text-[#7DA268] mb-2 block">{{ \App\Helpers\TranslationHelper::isEn() ? 'Recommended for you' : 'Recomendados para ti' }}</span>
                 <h2 class="text-3xl sm:text-4xl font-black text-[#1A1A1A]">{{ \App\Helpers\TranslationHelper::trans('related_products', 'También te podría gustar') }}</h2>
                 <p class="text-stone-500 text-sm mt-2">{{ \App\Helpers\TranslationHelper::isEn() ? 'Curated items that complement your choice.' : 'Productos seleccionados que complementan tu elección.' }}</p>
             </div>
@@ -578,7 +578,7 @@
                             @if($related->category)
                                 <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider block mb-0.5">{{ $related->category->getTranslatedName() }}</span>
                             @endif
-                            <h3 class="text-[#1A1A1A] font-bold text-sm line-clamp-2 mb-2 group-hover:text-[#C8A68B] transition-colors leading-snug">{{ $related->name }}</h3>
+                            <h3 class="text-[#1A1A1A] font-bold text-sm line-clamp-2 mb-2 group-hover:text-[#7DA268] transition-colors leading-snug">{{ $related->name }}</h3>
                         </div>
                     </div>
                     <div class="px-1 pt-2 border-t border-stone-100 flex items-center justify-between">

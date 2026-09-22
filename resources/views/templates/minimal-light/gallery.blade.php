@@ -28,7 +28,7 @@
                     <img src="{{ Storage::url($item->image_path) }}" alt="{{ $item->title ?? 'Galería' }}" class="w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-700">
                     <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                         @if($item->link_url)
-                            <a href="{{ $item->link_url }}" target="_blank" class="px-6 py-2 bg-white text-[#1A1A1A] font-bold rounded-full hover:bg-[#C8A68B] hover:text-white transition-colors transform translate-y-4 group-hover:translate-y-0 duration-300">
+                            <a href="{{ $item->link_url }}" target="_blank" class="px-6 py-2 bg-white text-[#1A1A1A] font-bold rounded-full hover:bg-[#7DA268] hover:text-white transition-colors transform translate-y-4 group-hover:translate-y-0 duration-300">
                                 Ver Detalle
                             </a>
                         @endif

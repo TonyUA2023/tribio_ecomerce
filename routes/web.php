@@ -71,6 +71,7 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     Route::get('/tienda/configuracion', [StoreSettingsController::class, 'edit'])->name('store.edit');
     Route::post('/tienda/configuracion', [StoreSettingsController::class, 'update'])->name('store.update');
     Route::post('/tienda/logo', [StoreSettingsController::class, 'uploadLogo'])->name('store.logo');
+    Route::post('/tienda/logo/paleta', [StoreSettingsController::class, 'refreshLogoPalette'])->name('store.logo.palette');
     Route::post('/tienda/portada', [StoreSettingsController::class, 'uploadCover'])->name('store.cover');
     Route::get('/tienda/plantillas', [StoreSettingsController::class, 'templates'])->name('store.templates');
     Route::post('/tienda/plantilla', [StoreSettingsController::class, 'updateTemplate'])->name('store.template');

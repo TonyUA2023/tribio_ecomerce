@@ -379,6 +379,18 @@
                 <div class="border-t border-white/5 pt-5">
                     <h4 class="text-white font-bold text-sm mb-2">📢 Textos del Banner Principal (Hero)</h4>
                     <p class="text-xs text-white/50 mb-3">Configura los mensajes y títulos que aparecen en la primera pantalla de tu tienda.</p>
+                    @if($store->logo_palette)
+                        <div class="mb-5 rounded-xl border border-sky-400/30 bg-sky-400/10 p-4">
+                            <p class="text-sm font-bold text-white">Colores detectados en tu logo</p>
+                            <p class="text-xs text-white/60 mt-1">Ya tienes una propuesta inicial para el hero. Puedes ajustarla en el constructor y publicarla cuando esté lista.</p>
+                            <div class="flex gap-3 my-3" aria-label="Paleta extraída del logo">
+                                @foreach(['primary' => 'Principal', 'secondary' => 'Secundario', 'background' => 'Fondo', 'text' => 'Texto'] as $colorKey => $colorLabel)
+                                    <div><span class="block h-9 w-12 rounded-md border border-white/20" style="background-color: {{ $store->logo_palette[$colorKey] }}"></span><span class="text-[10px] text-white/60">{{ $colorLabel }}</span></div>
+                                @endforeach
+                            </div>
+                            <a href="{{ route('dashboard.store.builder') }}" class="text-xs font-bold text-sky-300 hover:underline">Abrir configuración del hero →</a>
+                        </div>
+                    @endif
                     <div class="space-y-4">
                         <div>
                             <label class="input-label">Badge Promocional superior</label>
@@ -438,6 +450,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
             <form method="POST" action="{{ route('dashboard.store.logo') }}" enctype="multipart/form-data" class="space-y-4 bg-white/3 p-6 rounded-xl border border-white/5">@csrf
                 <x-image-picker name="logo" label="Logo de tu tienda" :current="$store?->logo_path ? $store->logo_url : null" :max-mb="2" save-label="Guardar logo" />
+                <p class="text-xs text-white/50">Al guardar, Tribio extrae los colores del logo y prepara una propuesta para el hero de tu tienda.</p>
             </form>
             <form method="POST" action="{{ route('dashboard.store.cover') }}" enctype="multipart/form-data" class="space-y-4 bg-white/3 p-6 rounded-xl border border-white/5">@csrf
                 <x-image-picker name="cover" label="Portada de tu tienda" :current="$store?->cover_path ? $store->cover_url : null" :max-mb="5" :wide="true" save-label="Guardar portada" />

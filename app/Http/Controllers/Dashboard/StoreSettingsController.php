@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use App\Services\LogoPaletteService;
 
 class StoreSettingsController extends Controller
 {
@@ -157,22 +158,71 @@ class StoreSettingsController extends Controller
         return back()->with('success', 'Información de la tienda actualizada correctamente.');
     }
 
-    public function uploadLogo(Request $request)
+    public function uploadLogo(Request $request, LogoPaletteService $paletteService)
     {
         $request->validate([
             'logo' => 'required|image|mimes:png,jpg,jpeg,webp|max:2048',
         ]);
 
         $store = $this->getStore();
-
-        if ($store->logo_path) {
-            Storage::disk('public')->delete($store->logo_path);
-        }
-
+        $previousPath = $store->logo_path;
+        $palette = $paletteService->extract($request->file('logo')->getRealPath());
         $path = $request->file('logo')->store('logos', 'public');
         $store->update(['logo_path' => $path]);
 
-        return back()->with('success', 'Logotipo actualizado correctamente.');
+        if ($palette) {
+            $this->applyLogoPalette($store, $palette, $paletteService);
+        } else {
+            $store->update(['logo_palette' => null]);
+        }
+
+        if ($previousPath) {
+            Storage::disk('public')->delete($previousPath);
+        }
+
+        return back()->with('success', $palette
+            ? 'Logo guardado. Preparamos una paleta para tu hero; revísala y publica los cambios desde el constructor.'
+            : 'Logo guardado. No pudimos identificar colores visibles; puedes configurar el hero manualmente.');
+    }
+
+    public function refreshLogoPalette(LogoPaletteService $paletteService)
+    {
+        $store = $this->getStore();
+        if (!$store->logo_path || !Storage::disk('public')->exists($store->logo_path)) {
+            return back()->withErrors(['logo' => 'Sube primero un logo para crear la paleta.']);
+        }
+
+        $palette = $paletteService->extract(Storage::disk('public')->path($store->logo_path));
+        if (!$palette) {
+            return back()->withErrors(['logo' => 'No encontramos colores visibles en el logo. Prueba con otra imagen.']);
+        }
+
+        $this->applyLogoPalette($store, $palette, $paletteService);
+
+        return back()->with('success', 'Paleta generada desde tu logo. Revisa el hero y publica los cambios cuando esté listo.');
+    }
+
+    private function applyLogoPalette(\App\Models\Store $store, array $palette, LogoPaletteService $paletteService): void
+    {
+        $previousPalette = $store->logo_palette;
+        $changes = ['logo_palette' => $palette];
+        if (!$previousPalette || strcasecmp($store->accent_color ?? '', $previousPalette['primary']) === 0) {
+            $changes['accent_color'] = $palette['primary'];
+        }
+        if (!$previousPalette || strcasecmp($store->secondary_color ?? '', $previousPalette['secondary']) === 0) {
+            $changes['secondary_color'] = $palette['secondary'];
+        }
+        $store->update($changes);
+
+        foreach ($store->sections()->where('type', 'hero')->get() as $hero) {
+            $data = $hero->data ?? [];
+            $mode = $data['palette_mode'] ?? null;
+            $untouched = ($data['background_color'] ?? '#f3f4f6') === '#f3f4f6'
+                && ($data['text_color'] ?? '#111827') === '#111827';
+            if ($mode === 'auto' || ($mode === null && $untouched)) {
+                $hero->update(['data' => $paletteService->applyToHero($data, $palette)]);
+            }
+        }
     }
 
     public function uploadCover(Request $request)

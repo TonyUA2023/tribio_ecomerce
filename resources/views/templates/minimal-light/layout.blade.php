@@ -25,19 +25,19 @@
             --pastel-sage: #C8D7BA;
             --pastel-sage-light: #F0F5EC;
             --pastel-sage-dark: #4A6038;
-            --pastel-peach: #F9D6CE;
-            --pastel-peach-light: #FDF1ED;
-            --pastel-peach-dark: #964736;
+            --pastel-peach: #C8D7BA;
+            --pastel-peach-light: #F0F5EC;
+            --pastel-peach-dark: #4A6038;
             --pastel-sand: #EFE3D0;
             --pastel-sand-light: #F7F3EB;
             --pastel-sand-dark: #7A6245;
             --pastel-greige: #E8E7E1;
             --pastel-greige-light: #F4F3F0;
-            --pastel-caramel: #C8A68B;
-            --pastel-caramel-dark: #A87E5E;
-            
+            --pastel-caramel: #7DA268;
+            --pastel-caramel-dark: #4A6038;
+
             --accent: {{ $store->accent_color ?? '#1E1D1B' }};
-            --secondary: {{ $store->secondary_color ?? '#C8A68B' }};
+            --secondary: {{ $store->secondary_color ?? '#7DA268' }};
             --bg: #FAF7F2;
             --text-dark: #1E1D1B;
             --text-muted: #6E6A63;

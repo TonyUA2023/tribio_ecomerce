@@ -47,6 +47,12 @@
     <div class="flex h-[calc(100vh-3.5rem)]">
         <!-- Sidebar Controles (Izquierda) -->
         <aside class="w-[350px] bg-white border-r border-gray-200 flex flex-col shrink-0">
+            @if(session('success'))
+                <div class="p-3 bg-green-50 border-b border-green-200 text-green-900 text-xs leading-relaxed" role="status">{{ session('success') }}</div>
+            @endif
+            @if($errors->any())
+                <div class="p-3 bg-red-50 border-b border-red-200 text-red-900 text-xs leading-relaxed" role="alert">{{ $errors->first() }}</div>
+            @endif
             <div x-show="imageUploadMessage" style="display:none" class="p-3 bg-blue-50 border-b border-blue-200 text-blue-900" role="status" aria-live="polite">
                 <div class="flex items-center gap-3">
                     <img x-show="imageUploadPreview" :src="imageUploadPreview || null" alt="Vista previa de la imagen seleccionada" class="w-16 h-16 object-contain bg-white rounded-lg shrink-0">
@@ -125,9 +131,32 @@
                                 </label>
                             </div>
 
+                            <div x-show="activeSection && activeSection.type === 'hero'" class="mb-5 rounded-xl border border-sky-200 bg-sky-50 p-4">
+                                <p class="text-sm font-bold text-slate-900">Paleta del logo</p>
+                                @if($store->logo_palette)
+                                    <p class="text-xs text-slate-600 mt-1">Punto de partida para el fondo, texto y botón del hero. Puedes ajustar cada color después.</p>
+                                    <div class="flex gap-2 my-3" aria-label="Colores extraídos del logo">
+                                        @foreach(['primary' => 'Principal', 'secondary' => 'Secundario', 'background' => 'Fondo', 'text' => 'Texto'] as $colorKey => $colorLabel)
+                                            <div class="flex-1 min-w-0"><span class="block w-full h-9 rounded border border-slate-300" style="background-color: {{ $store->logo_palette[$colorKey] }}" title="{{ $colorLabel }}: {{ $store->logo_palette[$colorKey] }}"></span><span class="block text-[10px] text-slate-600 mt-1 truncate">{{ $colorLabel }}</span></div>
+                                        @endforeach
+                                    </div>
+                                    <button type="button" @click="applyLogoPalette()" class="w-full rounded-lg bg-sky-700 px-3 py-2 text-white text-xs font-bold hover:bg-sky-800">Aplicar colores del logo al hero</button>
+                                    <p class="text-[11px] text-slate-500 mt-2" x-text="activeSection?.data?.palette_mode === 'auto' ? 'Los colores del logo están aplicados al borrador.' : 'Este hero conserva sus colores actuales. Puedes aplicar la paleta cuando quieras.'"></p>
+                                @else
+                                    @if($store->logo_path)
+                                        <p class="text-xs text-slate-600 mt-1">Tu logo ya está guardado. Genera una paleta para empezar a diseñar el hero.</p>
+                                        <form method="POST" action="{{ route('dashboard.store.logo.palette') }}" class="mt-3">@csrf
+                                            <button type="submit" class="w-full rounded-lg bg-sky-700 px-3 py-2 text-white text-xs font-bold hover:bg-sky-800">Extraer colores de mi logo</button>
+                                        </form>
+                                    @else
+                                        <p class="text-xs text-slate-600 mt-1">Sube el logo de tu negocio para crear automáticamente una propuesta de colores.</p>
+                                        <a href="{{ route('dashboard.store.edit') }}" class="inline-block text-xs font-bold text-sky-700 underline mt-2">Ir a Logo y Portada</a>
+                                    @endif
+                                @endif
+                            </div>
                             <div class="space-y-4">
                                 <template x-for="(value, key) in activeSection.data" :key="key">
-                                    <div class="flex flex-col gap-1.5" x-show="key !== 'blocks'">
+                                    <div class="flex flex-col gap-1.5" x-show="!['blocks', 'palette_mode', 'palette_button_color'].includes(key)">
                                         <label class="text-[10px] font-black text-slate-600 uppercase tracking-widest" x-text="key.replace(/_/g, ' ')"></label>
                                         
                                         <template x-if="key === 'alignment'">
@@ -194,8 +223,8 @@
                                         
                                         <template x-if="key.includes('color') && !key.includes('image') && key !== 'carousel_images'">
                                             <div class="flex items-center gap-2">
-                                                <input type="color" x-model="activeSection.data[key]" @change="saveActiveSection" class="h-8 w-8 p-0 border-0 rounded cursor-pointer shadow-sm">
-                                                <input type="text" x-model="activeSection.data[key]" @blur="saveActiveSection" class="w-full px-3 py-1.5 text-sm text-gray-900 bg-white border border-gray-300 rounded focus:ring-1 focus:ring-primary focus:border-primary font-mono uppercase">
+                                                <input type="color" x-model="activeSection.data[key]" @change="setSectionColor(key)" class="h-8 w-8 p-0 border-0 rounded cursor-pointer shadow-sm">
+                                                <input type="text" x-model="activeSection.data[key]" @blur="setSectionColor(key)" class="w-full px-3 py-1.5 text-sm text-gray-900 bg-white border border-gray-300 rounded focus:ring-1 focus:ring-primary focus:border-primary font-mono uppercase">
                                             </div>
                                         </template>
                                         
@@ -1107,6 +1136,7 @@
         document.addEventListener('alpine:init', () => {
             Alpine.data('storeBuilder', () => ({
                 sections: @json($sections),
+                logoPalette: @json($store->logo_palette),
                 activeSection: null,
                 activeSectionId: null,
                 activeBlockPath: null,
@@ -1910,6 +1940,31 @@
                     } catch(e) { console.error(e); }
                 },
 
+                setSectionColor(key) {
+                    if (this.activeSection?.type === 'hero' && ['background_color', 'text_color'].includes(key)) {
+                        this.activeSection.data.palette_mode = 'manual';
+                    }
+                    this.saveActiveSection();
+                },
+                applyLogoPalette() {
+                    if (this.activeSection?.type !== 'hero' || !this.logoPalette) return;
+                    const palette = this.logoPalette;
+                    this.activeSection.data.background_color = palette.background;
+                    this.activeSection.data.text_color = palette.text;
+                    this.activeSection.data.palette_mode = 'auto';
+                    this.activeSection.data.palette_button_color = palette.primary;
+                    const recolorButtons = blocks => {
+                        for (const block of blocks || []) {
+                            if (block.type === 'button') {
+                                block.background_color = palette.primary;
+                                block.text_color = palette.button_text;
+                            }
+                            if (block.blocks) recolorButtons(block.blocks);
+                        }
+                    };
+                    recolorButtons(this.activeSection.data.blocks);
+                    this.saveActiveSection();
+                },
                 async saveActiveSection(skipReload = false) {
                     if(!this.activeSection) return;
                     this.isSaving = true;

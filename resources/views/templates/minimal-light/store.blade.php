@@ -20,7 +20,7 @@
     <style>
         :root {
             --accent: {{ $store->accent_color ?? '#1A1A1A' }};
-            --secondary: {{ $store->secondary_color ?? '#C8A68B' }};
+            --secondary: {{ $store->secondary_color ?? '#7DA268' }};
             --bg: #FDF8EF;
             --text-dark: #1A1A1A;
             --text-light: #666666;
@@ -124,9 +124,9 @@
                     <!-- Circular "Comprar Ahora" Button with Pastel Pink Accent -->
                     <div class="relative inline-flex items-center justify-center w-36 h-36 md:w-40 md:h-40 group cursor-pointer" onclick="window.location='{{ route('store.catalog', $store->slug) }}'">
                         <!-- Outer Thin Ring -->
-                        <div class="absolute inset-0 rounded-full border-2 border-white/60 group-hover:scale-110 group-hover:border-[#F4C5CD] transition-all duration-500"></div>
+                        <div class="absolute inset-0 rounded-full border-2 border-white/60 group-hover:scale-110 group-hover:border-[#7DA268] transition-all duration-500"></div>
                         <!-- Inner Solid Circle (Centered Text & Arrow) -->
-                        <div class="absolute inset-2 md:inset-2.5 rounded-full bg-[#F4C5CD] flex flex-col items-center justify-center text-center px-4 shadow-xl group-hover:bg-[#E5AAB5] transition-all duration-500">
+                        <div class="absolute inset-2 md:inset-2.5 rounded-full bg-[#7DA268] flex flex-col items-center justify-center text-center px-4 shadow-xl group-hover:bg-[#4A6038] transition-all duration-500">
                             <span class="text-white text-sm md:text-base tracking-wider uppercase font-extrabold font-brand text-center block w-full leading-tight">
                                 {{ \App\Helpers\TranslationHelper::trans('shop_now', 'Comprar Ahora') }}
                             </span>
@@ -207,8 +207,8 @@
                     </div>
 
                     <!-- Pillar 3: Ideas Prácticas (Pastel Peach) -->
-                    <div class="flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#F9D6CE] shadow-2xs hover:shadow-md hover:border-[#E8A598] transition-all duration-300 group">
-                        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#F9D6CE] flex items-center justify-center shrink-0 text-[#8C3425] text-2xl sm:text-3xl shadow-inner group-hover:scale-110 transition-transform duration-300">
+                    <div class="flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-[#C8D7BA] shadow-2xs hover:shadow-md hover:border-[#A2C493] transition-all duration-300 group">
+                        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#C8D7BA] flex items-center justify-center shrink-0 text-[#4A6038] text-2xl sm:text-3xl shadow-inner group-hover:scale-110 transition-transform duration-300">
                             💡
                         </div>
                         <div>
@@ -243,7 +243,7 @@
                     </div>
 
                     <a href="{{ route('store.catalog', $store->slug) }}" 
-                       class="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-stone-700 hover:text-[#C8A68B] transition-colors font-brand group self-start sm:self-auto">
+                       class="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-stone-700 hover:text-[#7DA268] transition-colors font-brand group self-start sm:self-auto">
                         <span>Ver todo el catálogo</span>
                         <span class="group-hover:translate-x-0.5 transition-transform">→</span>
                     </a>
@@ -305,7 +305,7 @@
                             </video>
 
                             @if($vProduct->resolveComparePrice() > $vProduct->resolvePrice())
-                                <div class="absolute top-2.5 left-2.5 bg-[#F9D6CE] text-[#8C3425] border border-[#F2BCB0] text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider shadow-xs font-brand">
+                                <div class="absolute top-2.5 left-2.5 bg-[#C8D7BA] text-[#4A6038] border border-[#CCDBC0] text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider shadow-xs font-brand">
                                     Oferta
                                 </div>
                             @endif
@@ -323,7 +323,7 @@
                         <!-- Minimalist Single Row Info: Name + Price + Action -->
                         <div class="pt-2.5 pb-1 px-1 flex items-center justify-between gap-2.5">
                             <!-- Product Name -->
-                            <h3 class="font-bold text-[#1E1D1B] text-xs sm:text-sm truncate flex-1 group-hover:text-[#C8A68B] transition-colors font-brand" title="{{ $vProduct->name }}">
+                            <h3 class="font-bold text-[#1E1D1B] text-xs sm:text-sm truncate flex-1 group-hover:text-[#7DA268] transition-colors font-brand" title="{{ $vProduct->name }}">
                                 {{ $vProduct->name }}
                             </h3>
 
@@ -340,7 +340,7 @@
                                     @endif
                                 </div>
                                 
-                                <span class="inline-flex items-center text-[11px] sm:text-xs font-bold text-[#C8A68B] group-hover:text-[#1E1D1B] transition-colors font-brand">
+                                <span class="inline-flex items-center text-[11px] sm:text-xs font-bold text-[#7DA268] group-hover:text-[#1E1D1B] transition-colors font-brand">
                                     <span>Ver</span>
                                     <span class="ml-0.5 group-hover:translate-x-0.5 transition-transform">→</span>
                                 </span>
@@ -370,11 +370,11 @@
                         <a href="{{ route('store.catalog', $store->slug) }}?{{ $h['query'] }}" 
                            class="flex flex-col items-center gap-2 group transition-transform duration-300 hover:-translate-y-1" 
                            data-animate style="animation-delay: {{ $index * 50 }}ms;">
-                            <div class="w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center text-base md:text-lg font-bold shadow-2xs group-hover:shadow-md transition-all border border-stone-200/80 group-hover:border-[#C8A68B] group-hover:scale-105" 
+                            <div class="w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center text-base md:text-lg font-bold shadow-2xs group-hover:shadow-md transition-all border border-stone-200/80 group-hover:border-[#7DA268] group-hover:scale-105" 
                                  style="background-color: {{ $h['bg'] }}; color: {{ $h['text'] }}">
                                  {{ $h['icon'] }}
                             </div>
-                            <span class="text-xs md:text-sm font-semibold text-stone-700 group-hover:text-[#C8A68B] transition-colors font-brand">{{ $h['title'] }}</span>
+                            <span class="text-xs md:text-sm font-semibold text-stone-700 group-hover:text-[#7DA268] transition-colors font-brand">{{ $h['title'] }}</span>
                         </a>
                     @endforeach
                 </div>
@@ -465,7 +465,7 @@
 
                             @if($product->resolveComparePrice() > $product->resolvePrice())
                             <div class="absolute top-3 left-3">
-                                <span class="bg-[#F9D6CE] text-[#8C3425] border border-[#F2BCB0] text-[10px] font-bold px-2.5 py-1 rounded-full shadow-2xs tracking-wider font-brand">
+                                <span class="bg-[#C8D7BA] text-[#4A6038] border border-[#CCDBC0] text-[10px] font-bold px-2.5 py-1 rounded-full shadow-2xs tracking-wider font-brand">
                                     -{{ round((($product->resolveComparePrice() - $product->resolvePrice()) / $product->resolveComparePrice()) * 100) }}% SALE
                                 </span>
                             </div>
@@ -474,14 +474,14 @@
                             <!-- Quick add overlay on hover (Desktop) -->
                             <div class="absolute inset-x-0 bottom-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-4 group-hover:translate-y-0 hidden md:block">
                                 <button onclick="event.preventDefault(); window.TribioCart && window.TribioCart.add({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->resolvePrice() }}, '{{ $product->image_path ? $product->image_url : '' }}', null, this)"
-                                        class="w-full py-3 bg-[#1E1D1B] hover:bg-[#C8A68B] text-white rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-md cursor-pointer font-brand">
+                                        class="w-full py-3 bg-[#1E1D1B] hover:bg-[#7DA268] text-white rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-md cursor-pointer font-brand">
                                     Add to cart
                                 </button>
                             </div>
                         </a>
                         
                         <div class="flex flex-col flex-grow px-1">
-                            <a href="{{ route('store.product', [$store->slug, $product->slug]) }}" class="text-[#1E1D1B] font-bold text-sm leading-snug line-clamp-2 hover:text-[#C8A68B] transition-colors mb-1 font-brand">
+                            <a href="{{ route('store.product', [$store->slug, $product->slug]) }}" class="text-[#1E1D1B] font-bold text-sm leading-snug line-clamp-2 hover:text-[#7DA268] transition-colors mb-1 font-brand">
                                 {{ $product->name }}
                             </a>
                             
@@ -494,7 +494,7 @@
 
                             <!-- Mobile Quick Add -->
                             <button onclick="window.TribioCart && window.TribioCart.add({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->resolvePrice() }}, '{{ $product->image_path ? $product->image_url : '' }}', null, this)"
-                                    class="mt-3 md:hidden w-full py-2.5 bg-[#1E1D1B] text-white rounded-xl text-xs font-semibold hover:bg-[#C8A68B] transition-colors font-brand cursor-pointer">
+                                    class="mt-3 md:hidden w-full py-2.5 bg-[#1E1D1B] text-white rounded-xl text-xs font-semibold hover:bg-[#7DA268] transition-colors font-brand cursor-pointer">
                                 Add to cart
                             </button>
                         </div>
@@ -521,8 +521,8 @@
                 </div>
 
                 <!-- Feature 2: Pastel Peach -->
-                <div class="p-4 rounded-2xl bg-white border border-[#F9D6CE] shadow-2xs hover:shadow-sm transition-all" data-animate style="animation-delay: 200ms;">
-                    <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-[#FDF1ED] border border-[#F9D6CE] flex items-center justify-center text-[#964736]">
+                <div class="p-4 rounded-2xl bg-white border border-[#C8D7BA] shadow-2xs hover:shadow-sm transition-all" data-animate style="animation-delay: 200ms;">
+                    <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-[#F0F5EC] border border-[#C8D7BA] flex items-center justify-center text-[#4A6038]">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
                     </div>
                     <h4 class="font-bold text-sm text-[#1E1D1B] mb-1 font-brand">Múltiples formas de pago</h4>
@@ -579,14 +579,14 @@
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto p-1">
                 @foreach($modalCountries as $code => $c)
                     <button type="button" @click="selectCountry('{{ $code }}', '{{ $c['currency'] }}')" 
-                            class="flex flex-col items-center justify-center gap-2.5 p-3.5 sm:p-4 rounded-xl border-2 border-stone-100 hover:border-[#C8A68B] hover:bg-[#FDF8EF]/50 transition-all group cursor-pointer shadow-xs hover:shadow-md bg-white">
+                            class="flex flex-col items-center justify-center gap-2.5 p-3.5 sm:p-4 rounded-xl border-2 border-stone-100 hover:border-[#7DA268] hover:bg-[#FDF8EF]/50 transition-all group cursor-pointer shadow-xs hover:shadow-md bg-white">
                         <div class="w-14 h-9 sm:w-16 sm:h-10 rounded-md overflow-hidden border border-stone-200/80 shadow-xs flex items-center justify-center bg-stone-100 group-hover:scale-105 transition-transform duration-200">
                             <img src="{{ $c['flag_url'] ?? \App\Helpers\CurrencyHelper::flagUrl($code) }}" 
                                  alt="{{ $c['name'] }}" 
                                  class="w-full h-full object-cover">
                         </div>
                         <div class="text-center">
-                            <span class="font-bold text-xs text-gray-800 group-hover:text-[#C8A68B] block leading-tight">{{ $c['name'] }}</span>
+                            <span class="font-bold text-xs text-gray-800 group-hover:text-[#7DA268] block leading-tight">{{ $c['name'] }}</span>
                             <span class="text-[10px] text-gray-500 font-mono mt-0.5 block">{{ $c['currency'] }} ({{ $c['symbol'] }})</span>
                         </div>
                     </button>
