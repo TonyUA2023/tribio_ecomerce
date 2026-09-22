@@ -60,6 +60,7 @@
                 </svg>
                 Continuar con Google
             </a>
+            @endif
 
             <p class="text-center text-slate-400 text-sm mt-6">
                 ¿No tienes cuenta?
