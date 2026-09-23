@@ -13,6 +13,11 @@
                     class="btn-primary mt-6">Agregar al carrito</button>
             <a href="{{ route('store.show', $store->slug) }}" class="btn-ghost mt-3">← Volver a la tienda</a>
         </div>
+
+        {{-- Reseñas verificadas (vibrant-fresh reutiliza esta vista) --}}
+        <div class="max-w-2xl mx-auto" style="margin-top: 2rem;">
+            @include('components.storefront.reviews', ['variant' => 'public'])
+        </div>
     </div>
 </div>
 

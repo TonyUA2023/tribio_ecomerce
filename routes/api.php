@@ -40,6 +40,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Tribio Pass — historial de compras del comprador autenticado
     Route::get('/customer/orders', [CustomerAuthController::class, 'orders']);
+    // Tribio Pass — calificar un producto comprado (misma regla que la web: pedido entregado)
+    Route::post('/customer/reviews', [\App\Http\Controllers\CustomerReviewController::class, 'store'])->middleware('throttle:20,1');
 
     // Dashboard
     Route::get('/dashboard/stats', [DashboardController::class, 'index']);

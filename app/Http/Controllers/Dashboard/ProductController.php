@@ -119,6 +119,10 @@ class ProductController extends Controller
             'video.mimes'    => 'El formato del video debe ser MP4, WebM o MOV.',
             'video.uploaded' => 'El video no se pudo subir. Asegúrate de que pese menos de 4 MB y que el servidor permita este tamaño de archivo.',
         ]);
+        // Venta por encargo: se valida antes de guardar imágenes o el producto.
+        $madeToOrder = app(\App\Actions\Products\SaveMadeToOrderSettings::class)->validate($request, $store);
+        // Publicidad (catálogo de Meta): solo si el formulario trae esa sección.
+        $adsCatalog = app(\App\Actions\Products\SaveAdsCatalogSettings::class)->validate($request);
 
         // Procesar precios multi-moneda personalizados
         $currencyPrices = $request->input('currency_prices', []);
@@ -238,6 +242,8 @@ class ProductController extends Controller
         }
 
         $product = Product::create($data);
+        app(\App\Actions\Products\SaveMadeToOrderSettings::class)->apply($product, $madeToOrder);
+        app(\App\Actions\Products\SaveAdsCatalogSettings::class)->apply($product, $adsCatalog);
 
         // Sincronizar categorías en la tabla pivot
         if (!empty($categoryIds)) {
@@ -373,6 +379,10 @@ class ProductController extends Controller
             'video.mimes'    => 'El formato del video debe ser MP4, WebM o MOV.',
             'video.uploaded' => 'El video no se pudo subir. Asegúrate de que pese menos de 4 MB y que el servidor permita este tamaño de archivo.',
         ]);
+        // Venta por encargo: se valida antes de guardar imágenes o el producto.
+        $madeToOrder = app(\App\Actions\Products\SaveMadeToOrderSettings::class)->validate($request, $store);
+        // Publicidad (catálogo de Meta): solo si el formulario trae esa sección.
+        $adsCatalog = app(\App\Actions\Products\SaveAdsCatalogSettings::class)->validate($request);
 
         // Procesar precios multi-moneda personalizados
         $currencyPrices = $request->input('currency_prices', []);
@@ -525,6 +535,8 @@ class ProductController extends Controller
 
         $product->update($data);
         $product->categories()->sync($categoryIds);
+        app(\App\Actions\Products\SaveMadeToOrderSettings::class)->apply($product, $madeToOrder);
+        app(\App\Actions\Products\SaveAdsCatalogSettings::class)->apply($product, $adsCatalog);
 
         // Sincronizar Variantes
         if ($hasVariants && $request->filled('variants_json')) {

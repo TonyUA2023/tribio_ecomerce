@@ -86,9 +86,11 @@
                     ['dashboard.marcas.index', 'tag', 'Marcas', null],
                     ['dashboard.galeria.index', 'image', 'Galería', null],
                     ['dashboard.pedidos.index', 'cart', 'Pedidos', 'Operación'],
+                    ['dashboard.resenas.index', 'star', 'Reseñas', null],
                     ['dashboard.inventario.index', 'inventory', 'Inventario', null],
                     ['dashboard.shipping.index', 'truck', 'Zonas de envío', null],
                     ['dashboard.gateway.edit', 'wallet', 'Pasarela de pago', null],
+                    ['dashboard.marketing.index', 'megaphone', 'Marketing', 'Crecimiento'],
                     ['dashboard.plantillas.index', 'palette', 'Plantillas', 'Personalización'],
                     ['dashboard.store.edit', 'store', 'Mi tienda', null],
                 ];

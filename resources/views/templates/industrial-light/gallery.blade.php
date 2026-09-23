@@ -69,6 +69,7 @@
             animation: whatsapp-ripple 2s infinite;
         }
     </style>
+@include('components.marketing.head')
 </head>
 <body class="antialiased bg-gray-50 flex flex-col min-h-screen">
 

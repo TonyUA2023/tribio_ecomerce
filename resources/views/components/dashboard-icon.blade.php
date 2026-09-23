@@ -34,6 +34,7 @@
         'wand' => 'M3 21l12-12 M15 3v2 M15 9v2 M19 7h2 M11 7h2 M18.4 4.6 17 6 M18.4 9.4 17 8',
         'refresh' => 'M20 11a8 8 0 1 0-2.3 5.7 M20 4v7h-7',
         'back' => 'M19 12H5 M11 18l-6-6 6-6',
+        'star' => 'M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 3z',
     ];
 @endphp
 <svg {{ $attributes->merge(['class' => 'dash-icon']) }} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ $paths[$name] ?? $paths['grid'] }}"/></svg>

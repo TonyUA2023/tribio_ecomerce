@@ -49,7 +49,7 @@ class FlowService
     public function createPayment(Store $store, PendingCheckout $pending): string
     {
         $data = $pending->payload;
-        if (!$this->isConfigured($store) || ($data['currency'] ?? null) !== $store->flow_currency || (float) ($data['total'] ?? 0) <= 0) {
+        if (!$this->isConfigured($store) || ($data['currency'] ?? null) !== $store->flow_currency || $pending->chargeAmount() <= 0) {
             throw new RuntimeException('Flow configuration or currency mismatch.');
         }
         // Use the platform host: custom-domain middleware redirects /api POST requests.
@@ -59,7 +59,8 @@ class FlowService
             'commerceOrder' => $pending->reference,
             'subject' => 'Pedido ' . $pending->reference . ' en ' . $store->name,
             'currency' => $data['currency'],
-            'amount' => number_format((float) $data['total'], 2, '.', ''),
+            // The total, or just the deposit of a made-to-order cart.
+            'amount' => number_format($pending->chargeAmount(), 2, '.', ''),
             'email' => $data['customer_email'],
             'paymentMethod' => 9,
             'urlConfirmation' => $platform . '/api/flow/' . $store->id . '/confirmation',
@@ -110,7 +111,7 @@ class FlowService
             || (string) ($data['flowOrder'] ?? '') !== $expectedFlowOrder
             || ($data['currency'] ?? null) !== $payload['currency']
             || !isset($data['amount']) || !is_numeric($data['amount'])
-            || (int) round((float) $data['amount'] * 100) !== (int) round((float) $payload['total'] * 100)
+            || (int) round((float) $data['amount'] * 100) !== (int) round($pending->chargeAmount() * 100)
             || !in_array($data['status'] ?? null, [1, 2, 3, 4], true)) {
             throw new RuntimeException('Flow payment verification mismatch.');
         }

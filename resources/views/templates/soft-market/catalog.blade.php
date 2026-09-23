@@ -265,6 +265,7 @@
                                 <div class="text-left">
                                     <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 truncate">{{ $p->categories && $p->categories->isNotEmpty() ? $p->categories->map(fn($c) => $c->getTranslatedName())->implode(', ') : ($p->category ? $p->category->getTranslatedName() : (\App\Helpers\TranslationHelper::isEn() ? 'Catalog' : 'Catálogo')) }}</p>
                                     <h3 class="text-[#1A1A1A] font-semibold text-sm md:text-base mb-1 truncate">{{ $p->name }}</h3>
+                                    @include('components.storefront.rating-badge', ['product' => $p])
                                     <div class="flex items-center gap-2">
                                         <p class="text-[var(--t-primary)] font-bold text-sm md:text-base">
                                              {{ \App\Helpers\CurrencyHelper::symbol() }} {{ number_format($p->resolvePrice(), 2) }}

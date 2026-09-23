@@ -112,6 +112,7 @@
             height: 4px;
         }
     </style>
+@include('components.marketing.head')
 </head>
 <body x-data="cartApp()" x-init="initCart()" class="antialiased bg-white">
 

@@ -135,6 +135,28 @@
                         @if($item->product_sku)
                             <p class="text-white/30 text-xs">SKU: {{ $item->product_sku }}</p>
                         @endif
+                        @if(!empty($item->customization))
+                            {{-- Pedido por encargo: lo que el cliente pidió producir --}}
+                            <dl class="mt-2 p-2.5 rounded-lg space-y-1 text-xs" style="background: rgba(255,255,255,0.04);">
+                                @foreach($item->customization as $row)
+                                <div class="flex flex-wrap gap-x-1.5">
+                                    <dt class="text-white/40">{{ $row['label'] }}:</dt>
+                                    <dd class="text-white font-semibold break-words">
+                                        @if(($row['type'] ?? null) === 'choice' && !empty($row['color']))<span class="inline-block w-3 h-3 rounded-full align-middle mr-1 border border-white/20" style="background: {{ $row['color'] }}"></span>@endif{{ $row['value'] }}
+                                        @if(!empty($row['price']) && (float) $row['price'] > 0)<span class="text-white/40 font-normal">(+ {{ $order->money($row['price']) }} c/u)</span>@endif
+                                    </dd>
+                                </div>
+                                @endforeach
+                                @foreach($item->attachments as $attachment)
+                                <div class="flex items-center gap-2 pt-1">
+                                    @if($attachment->isImage())
+                                        <img src="{{ $attachment->signedUrl(120) }}" alt="" class="w-12 h-12 rounded-md object-contain bg-white">
+                                    @endif
+                                    <a href="{{ $attachment->signedUrl(60 * 24, true) }}" class="text-tribio-cyan font-bold">⬇ Descargar {{ $attachment->original_name }}</a>
+                                </div>
+                                @endforeach
+                            </dl>
+                        @endif
                         <p class="text-white/50 text-xs mt-0.5">{{ $item->quantity }} × {{ $order->money($item->price) }}</p>
                     </div>
                     <p class="text-white font-bold text-sm whitespace-nowrap">{{ $order->money($item->subtotal) }}</p>
@@ -177,6 +199,49 @@
             </a>
             @endif
         </div>
+
+        {{-- Producción: solo pedidos por encargo --}}
+        @if($order->isMadeToOrder())
+        @php
+            $stageKeys = array_keys(\App\Models\Order::PRODUCTION_STAGES);
+            $stageIndex = array_search($order->production_stage, $stageKeys, true);
+        @endphp
+        <div class="glass-card p-5">
+            <h2 class="text-white font-bold mb-3">✂️ Producción</h2>
+            <ol class="space-y-1.5 mb-4 text-xs">
+                @foreach(\App\Models\Order::PRODUCTION_STAGES as $stageKey => $stageLabel)
+                <li class="flex items-center gap-2 {{ $loop->index <= $stageIndex ? 'text-white font-semibold' : 'text-white/40' }}">
+                    <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold {{ $loop->index < $stageIndex ? 'badge-green' : ($loop->index === $stageIndex ? 'badge-blue' : 'badge-gray') }}">{{ $loop->index < $stageIndex ? '✓' : $loop->iteration }}</span>
+                    {{ $stageLabel }}
+                </li>
+                @endforeach
+            </ol>
+            <dl class="space-y-1 text-xs mb-4">
+                @if($order->required_by)
+                <div class="flex justify-between"><dt class="text-white/50">El cliente lo necesita</dt><dd class="text-white font-semibold">{{ $order->required_by->format('d/m/Y') }}</dd></div>
+                @endif
+                @if($order->estimated_ready_at)
+                <div class="flex justify-between"><dt class="text-white/50">Listo estimado</dt><dd class="text-white">{{ $order->estimated_ready_at->format('d/m/Y') }}</dd></div>
+                @endif
+            </dl>
+            <form method="POST" action="{{ route('dashboard.pedidos.production', $order) }}" class="space-y-2">
+                @csrf @method('PATCH')
+                <select name="production_stage" class="input-field" aria-label="Etapa de producción">
+                    @foreach(\App\Models\Order::PRODUCTION_STAGES as $stageKey => $stageLabel)
+                    <option value="{{ $stageKey }}" @selected($order->production_stage === $stageKey)>{{ $stageLabel }}</option>
+                    @endforeach
+                </select>
+                <textarea name="message" rows="2" maxlength="500" class="input-field text-sm" placeholder="Mensaje para el cliente (opcional)"></textarea>
+                @if($order->customer_email)
+                <label class="flex items-center gap-2 text-xs text-white/70 cursor-pointer">
+                    <input type="hidden" name="notify_customer" value="0">
+                    <input type="checkbox" name="notify_customer" value="1" checked class="w-4 h-4 accent-tribio-cyan"> Avisar al cliente por correo
+                </label>
+                @endif
+                <button type="submit" class="btn-primary w-full">Actualizar etapa</button>
+            </form>
+        </div>
+        @endif
 
         {{-- Pago --}}
         <div class="glass-card p-5">
@@ -224,6 +289,49 @@
                     </li>
                     @endforeach
                 </ul>
+            </div>
+            @endif
+
+            @if((float) $order->deposit_amount > 0)
+            <p class="text-white/40 text-xs mt-3">Adelanto pedido al cliente: {{ $order->money($order->deposit_amount) }}</p>
+            @endif
+
+            @if((float) $order->balance_due > 0)
+            {{-- Cobrar el saldo: enlace para el cliente o registro manual (Yape, transferencia…) --}}
+            @php
+                $balanceUrl = $order->balancePaymentUrl();
+                $balanceText = "Hola {$order->customer_name}, aquí puedes ver tu pedido #{$order->order_number} y pagar el saldo de " . $order->money($order->balance_due) . ": {$balanceUrl}";
+            @endphp
+            <div class="border-t mt-4 pt-3 space-y-3" style="border-color: rgba(255,255,255,0.08);" x-data="{ copied: false, open: false }">
+                <div>
+                    <p class="text-white/40 text-xs mb-1.5">Enlace para que el cliente pague el saldo</p>
+                    <div class="flex gap-2">
+                        <button type="button" class="btn-ghost text-xs flex-1"
+                                @click="navigator.clipboard.writeText(@js($balanceUrl)).then(() => { copied = true; setTimeout(() => copied = false, 2000) })">
+                            <span x-show="!copied">Copiar enlace</span><span x-show="copied" x-cloak>✓ Copiado</span>
+                        </button>
+                        @if($phoneDigits)
+                        <a href="https://wa.me/{{ $phoneDigits }}?text={{ urlencode($balanceText) }}" target="_blank" rel="noopener" class="btn-ghost text-xs flex-1 text-center">Enviar por WhatsApp</a>
+                        @endif
+                    </div>
+                </div>
+                <button type="button" class="btn-secondary w-full text-xs" @click="open = !open" :aria-expanded="open">+ Registrar pago recibido</button>
+                <form method="POST" action="{{ route('dashboard.pedidos.payments.store', $order) }}" class="space-y-2" x-show="open || {{ $errors->hasAny(['amount', 'method', 'note']) ? 'true' : 'false' }}" x-cloak>
+                    @csrf
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" name="amount" step="0.01" min="0.01" max="{{ (float) $order->balance_due }}" value="{{ old('amount', number_format((float) $order->balance_due, 2, '.', '')) }}" class="input-field" aria-label="Monto recibido">
+                        <select name="method" class="input-field" aria-label="Medio de pago">
+                            @foreach(\App\Http\Requests\Dashboard\RecordManualPaymentRequest::METHODS as $methodKey => $methodLabel)
+                            <option value="{{ $methodKey }}" @selected(old('method') === $methodKey)>{{ $methodLabel }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <input type="text" name="note" maxlength="200" value="{{ old('note') }}" class="input-field text-sm" placeholder="Nota (ej: N° de operación)">
+                    @foreach(['amount', 'method', 'note'] as $paymentField)
+                        @error($paymentField)<p class="text-xs text-red-400">{{ $message }}</p>@enderror
+                    @endforeach
+                    <button type="submit" class="btn-primary w-full">Guardar pago</button>
+                </form>
             </div>
             @endif
         </div>

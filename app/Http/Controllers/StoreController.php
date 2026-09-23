@@ -273,8 +273,19 @@ class StoreController extends Controller
             }
         }
 
+        // Reseñas verificadas de este producto: la sección que comparten todas las plantillas
+        // (components/storefront/reviews). Es un complemento: si no se pueden cargar (p. ej. la
+        // migración aún no corrió en esta base — el deploy no la ejecuta) la página del producto
+        // debe seguir funcionando, solo que sin la sección.
+        try {
+            $reviewSection = app(\App\Services\Reviews\ProductReviewService::class)->storefrontData($product, Auth::user());
+        } catch (\Illuminate\Database\QueryException $e) {
+            report($e);
+            $reviewSection = null;
+        }
+
         $template = $store->template_name;
-        return view("templates.{$template}.product", compact('store', 'product', 'relatedProducts', 'categories'));
+        return view("templates.{$template}.product", compact('store', 'product', 'relatedProducts', 'categories', 'reviewSection'));
     }
 
     public function gallery(string $slug)
@@ -511,8 +522,23 @@ class StoreController extends Controller
                 'payment_method'      => $paymentMethod,
                 'source'              => 'store',
                 'items'               => $orderItemsData,
-            ],
+            ] + ($quote->hasMadeToOrder ? [
+                // Made-to-order: gateways charge amount_due_now (the deposit share when
+                // the store asks for one); materialize() credits it and opens the workshop stage.
+                'has_made_to_order'   => true,
+                'amount_due_now'      => $quote->amountDueNow(),
+                'deposit_percent'     => $quote->depositPercent,
+                'deposit_amount'      => $quote->isDeposit() ? $quote->amountDueNow() : null,
+                'required_by'         => $quote->requiredBy,
+                'estimated_ready_at'  => $quote->estimatedReadyAt,
+            ] : []) + array_filter([
+                // Stores with a Meta Pixel only: cookie consent, Meta browser ids and the
+                // campaign the visit came from, for the Conversions API "Purchase" that is
+                // sent when this order is paid (possibly later, from a webhook).
+                'tracking' => app(\App\Services\Marketing\TrackingContext::class)->capture($request, $store),
+            ]),
         ]);
+        $amountDueNow = $quote->amountDueNow();
 
         if ($paymentMethod === 'flow') {
             // Failure here propagates to checkout()'s transaction wrapper, which rolls
@@ -547,7 +573,7 @@ class StoreController extends Controller
                 if ($mpFormData && !empty($mpFormData['token'])) {
                     // --- TARJETA EMBEBIDA (sin redirección) ---
                     $paymentBody = [
-                        'transaction_amount' => round((float) $total, 2),
+                        'transaction_amount' => round((float) $amountDueNow, 2),
                         'token'              => $mpFormData['token'],
                         'description'        => 'Pedido en ' . $store->name . ' - ' . $pending->reference,
                         'installments'       => (int) ($mpFormData['installments'] ?? 1),
@@ -641,7 +667,16 @@ class StoreController extends Controller
                     // Se arma desde $orderItemsData: no existe ningún Order todavía en este
                     // punto (ver PendingCheckout::materialize), así que no hay otra fuente.
                     $items = [];
-                    foreach ($orderItemsData as $orderItem) {
+                    if ($quote->isDeposit()) {
+                        // Only the deposit is charged today: one line that sums exactly to it.
+                        $items[] = [
+                            'title'       => "Adelanto {$quote->depositPercent}% · Pedido {$pending->reference}",
+                            'quantity'    => 1,
+                            'unit_price'  => round((float) $amountDueNow, 2),
+                            'currency_id' => $currency === 'USD' ? 'USD' : 'PEN',
+                        ];
+                    }
+                    foreach (($quote->isDeposit() ? [] : $orderItemsData) as $orderItem) {
                         $itemTitle = $orderItem['product_name'];
                         if (!empty($orderItem['variant_title'])) {
                             $itemTitle .= " ({$orderItem['variant_title']})";
@@ -654,7 +689,7 @@ class StoreController extends Controller
                         ];
                     }
 
-                    if ($shippingCost > 0) {
+                    if ($shippingCost > 0 && !$quote->isDeposit()) {
                         $items[] = [
                             'title'       => 'Costo de Envío',
                             'quantity'    => 1,
@@ -667,7 +702,7 @@ class StoreController extends Controller
                     // tiene un campo dedicado para descuentos en la preference, así que se
                     // representa como una línea más con precio negativo — sin esto, la suma
                     // de $items no coincidiría con $total y el cliente pagaría de más.
-                    if ($discount > 0) {
+                    if ($discount > 0 && !$quote->isDeposit()) {
                         $items[] = [
                             'title'       => 'Descuento por cantidad',
                             'quantity'    => 1,
@@ -797,6 +832,20 @@ class StoreController extends Controller
                     'unit_amount' => (float) $item['price_usd'],
                     'quantity'    => (int) $item['quantity'],
                 ], $orderItemsData);
+
+                if ($quote->isDeposit()) {
+                    // Deposit share of the same USD total the full order would have cost.
+                    $fullUsd = array_sum(array_map(fn ($i) => round($i['unit_amount'], 2) * $i['quantity'], $paypalItems))
+                        - min(round($discountUsd, 2), array_sum(array_map(fn ($i) => round($i['unit_amount'], 2) * $i['quantity'], $paypalItems)))
+                        + round($shippingUsd, 2);
+                    $paypalItems = [[
+                        'name'        => "Adelanto {$quote->depositPercent}% · Pedido {$pending->reference}",
+                        'unit_amount' => round($fullUsd * $quote->depositPercent / 100, 2),
+                        'quantity'    => 1,
+                    ]];
+                    $shippingUsd = 0.0;
+                    $discountUsd = 0.0;
+                }
 
                 $paypalOrder = $paypalService->createOrder($store, $pending->reference, $paypalItems, $shippingUsd, $discountUsd);
                 $pending->update(['gateway_ref' => $paypalOrder['id']]);
@@ -982,6 +1031,8 @@ class StoreController extends Controller
         $store = $this->getStore($slug);
         $pending = PendingCheckout::where('store_id', $store->id)->where('reference', $reference)->firstOrFail();
 
+        // Balance payments come back through BalancePaymentController (own, tokened URL).
+        abort_if($pending->isBalancePayment(), 404);
         if ($pending->order_id) {
             return redirect(route('store.show', $store->slug) . '?pedido=' . urlencode($reference));
         }
@@ -1021,11 +1072,36 @@ class StoreController extends Controller
         // order_number is globally unique (see Shipping-Promotions vault note on the
         // collision fix), so this needs no store scoping and works on custom domains too.
         $order = Order::where('order_number', $orderNumber)->firstOrFail();
-        return response()->json([
+        return response()->json(array_filter([
             'order_number'   => $order->order_number,
             'payment_status' => $order->payment_status,
             'payment_method' => $order->payment_method,
-        ]);
+            'tracking'       => $this->browserPurchase($order),
+        ], fn ($value) => $value !== null));
+    }
+
+    /**
+     * The Meta Pixel "Purchase" for the buyer who just came back from paying (see
+     * resources/js/app.js): stores with a Pixel, paid orders, and only for a short
+     * while — order numbers are sequential, so this must not become a way to read
+     * any store's sales. The Conversions API covers anything later, server side.
+     */
+    private function browserPurchase(Order $order): ?array
+    {
+        if (!in_array($order->payment_status, ['paid', 'partial'], true) || $order->created_at?->lt(now()->subHours(2))) {
+            return null;
+        }
+        try {
+            $store = $order->store;
+            if (!$store || !app(\App\Services\Marketing\Meta\MetaIntegrationService::class)->active($store)?->hasPixel()) {
+                return null;
+            }
+
+            return app(\App\Services\Marketing\Meta\PurchaseEvent::class)->forBrowser($order->load('items'));
+        } catch (\Throwable $e) {
+            report($e);
+            return null;
+        }
     }
 
     public function mercadopagoWebhook(Request $request, Store $store)
@@ -1052,7 +1128,13 @@ class StoreController extends Controller
                         // voucher that came back 'pending') must still be upgraded when the
                         // payment clears later; a settled one is left untouched, so replays
                         // stay no-ops. materialize() itself never downgrades a paid order.
-                        if ($pending && !$pending->isSettled()) {
+                        if ($pending && $pending->isBalancePayment()) {
+                            // Balance of an existing made-to-order order: credit its ledger,
+                            // never touch the order's own notes/method (see settleBalance()).
+                            if (!$pending->isSettled()) {
+                                $pending->settleBalance($paymentData);
+                            }
+                        } elseif ($pending && !$pending->isSettled()) {
                             $status = $paymentData['status'] ?? '';
                             if ($status === 'approved') {
                                 $pending->materialize('paid', 'confirmed', decrementStock: true)->update([

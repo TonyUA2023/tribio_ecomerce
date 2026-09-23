@@ -1,4 +1,5 @@
 import './bootstrap';
+import './marketing';
 import './dashboard-images';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
@@ -26,9 +27,15 @@ import 'sweetalert2/dist/sweetalert2.min.css';
         if (!res.ok) return;
         const order = await res.json();
         const isGatewayOrder = ['mercadopago', 'flow', 'paypal'].includes(order.payment_method);
+        // Only present for a paid order of a store with a Meta Pixel (see orderStatus()).
+        window.TribioTrack?.purchase(order.tracking);
 
         let config;
-        if (order.payment_status === 'paid') {
+        if (order.payment_status === 'partial') {
+            // Made-to-order deposit charged: the order is confirmed, the rest is paid later.
+            window.TribioCart?.clear();
+            config = { icon: 'success', title: '¡Adelanto recibido!', text: `Tu pedido ${order.order_number} ya está confirmado y entra a producción. Te avisaremos cuando esté listo para pagar el saldo.` };
+        } else if (order.payment_status === 'paid') {
             // Whatsapp/card orders already cleared the cart synchronously at checkout;
             // for a gateway redirect this is the first moment payment is actually
             // confirmed, so it's the first safe moment to clear it here too.
@@ -172,6 +179,35 @@ window.TribioCart = {
             });
         }
         this.save();
+        window.TribioTrack?.addToCart(id, price, variantId);
+        if (originEl !== null) {
+            this.flyToCart(image, originEl);
+        }
+    },
+
+    // Made-to-order line: every distinct set of answers (text, logo, sizes…) is its own
+    // line. `fixedQuantity` lines (quantity decided by a size grid) can't be +/- edited.
+    addCustom({ id, name, price, image = '', variant = null, quantity = 1, customization = {}, summary = [], fixedQuantity = false }, originEl) {
+        const variantId = variant && variant.id ? variant.id : null;
+        let hash = 0;
+        for (const ch of JSON.stringify([variantId, customization])) hash = (Math.imul(hash, 31) + ch.charCodeAt(0)) | 0;
+        const cartKey = `${id}-c${(hash >>> 0).toString(36)}`;
+
+        const existing = this.items.find(i => i.cartKey === cartKey);
+        if (existing) {
+            if (!fixedQuantity) existing.quantity += quantity;
+        } else {
+            this.items.push({
+                id, cartKey, name, price: parseFloat(price) || 0, image, quantity,
+                variant_id: variantId,
+                variant_title: variant && variant.title ? variant.title : null,
+                variant_attributes: variant && variant.attributes ? variant.attributes : null,
+                customization, customization_summary: summary,
+                fixed_quantity: fixedQuantity, made_to_order: true,
+            });
+        }
+        this.save();
+        window.TribioTrack?.addToCart(id, price, variantId);
         if (originEl !== null) {
             this.flyToCart(image, originEl);
         }
@@ -187,6 +223,8 @@ window.TribioCart = {
         if (item) {
             if (qty <= 0) {
                 this.remove(cartKeyOrId);
+            } else if (item.fixed_quantity) {
+                return;
             } else {
                 item.quantity = qty;
                 this.save();

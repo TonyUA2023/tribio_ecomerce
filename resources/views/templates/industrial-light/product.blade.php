@@ -86,6 +86,7 @@
             animation: whatsapp-ripple 2s infinite;
         }
     </style>
+@include('components.marketing.head')
 </head>
 <body x-data="cartApp()" class="antialiased bg-gray-50">
 
@@ -259,6 +260,11 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Customer Reviews (compras verificadas) -->
+        <div class="mt-16">
+            @include('components.storefront.reviews', ['variant' => 'industrial'])
         </div>
 
         <!-- Related Products -->

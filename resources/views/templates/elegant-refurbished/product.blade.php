@@ -94,4 +94,9 @@
         </div>
     </div>
 </div>
+
+<!-- Customer Reviews (compras verificadas) -->
+<div class="er-container" style="padding-bottom: var(--space-lg);">
+    @include('components.storefront.reviews', ['variant' => 'refurbished'])
+</div>
 @endsection

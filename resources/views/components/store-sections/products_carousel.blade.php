@@ -16,6 +16,7 @@
                             @endif
                         </div>
                         <h3 class="mt-4 text-sm font-medium" style="color: {{ $data['text_color'] ?? '#111827' }};">{{ $product->name }}</h3>
+                        @include('components.storefront.rating-badge', ['product' => $product])
                         <p class="mt-1 text-lg font-bold" style="color: {{ $data['text_color'] ?? '#111827' }};">
                             {{ config('tribio.currency') }}{{ number_format($product->price, 2) }}
                         </p>

@@ -166,24 +166,84 @@
                 </div>
 
                 {{-- Order list --}}
+                <template x-if="notice">
+                    <div class="p-3 mb-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-700 text-xs" x-text="notice"></div>
+                </template>
                 <template x-if="orders.length > 0">
                     <div class="bg-white rounded-3xl border border-slate-100 divide-y divide-slate-100 overflow-hidden">
                         <template x-for="order in orders" :key="order.id">
-                            <div class="p-4 sm:p-5 flex items-center justify-between gap-4">
-                                <div class="min-w-0">
-                                    <p class="text-slate-900 font-bold text-sm truncate" x-text="order.store_name"></p>
-                                    <p class="text-slate-400 text-[11px] mt-0.5" x-text="order.order_number + ' · ' + order.created_diff"></p>
+                            <div class="p-4 sm:p-5">
+                                <div class="flex items-center justify-between gap-4">
+                                    <div class="min-w-0">
+                                        <p class="text-slate-900 font-bold text-sm truncate" x-text="order.store_name"></p>
+                                        <p class="text-slate-400 text-[11px] mt-0.5" x-text="order.order_number + ' · ' + order.created_diff"></p>
+                                    </div>
+                                    <div class="text-right flex-shrink-0">
+                                        <p class="text-slate-900 font-bold text-sm" x-text="order.currency_symbol + ' ' + order.total.toFixed(2)"></p>
+                                        <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                                              :style="'background:' + order.status_color + '22; color:' + order.status_color"
+                                              x-text="order.status_label"></span>
+                                    </div>
                                 </div>
-                                <div class="text-right flex-shrink-0">
-                                    <p class="text-slate-900 font-bold text-sm" x-text="order.currency_symbol + ' ' + order.total.toFixed(2)"></p>
-                                    <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
-                                          :style="'background:' + order.status_color + '22; color:' + order.status_color"
-                                          x-text="order.status_label"></span>
-                                </div>
+
+                                {{-- Pedido entregado: calificar (o editar) la reseña de cada producto --}}
+                                <template x-if="order.status === 'delivered' && order.items.some(i => i.can_review || i.review)">
+                                    <ul class="mt-3 space-y-2">
+                                        <template x-for="(item, idx) in order.items" :key="idx">
+                                            <li class="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2">
+                                                <div class="min-w-0">
+                                                    <p class="text-slate-800 font-semibold text-xs truncate" x-text="item.name"></p>
+                                                    <template x-if="item.review">
+                                                        <p class="text-[11px] mt-0.5"><span class="text-amber-500" x-text="stars(item.review.rating)"></span> <span class="text-slate-400">Tu calificación</span></p>
+                                                    </template>
+                                                </div>
+                                                <template x-if="item.can_review">
+                                                    <button type="button" @click="openReview(item)" class="flex-shrink-0 px-3 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-[11px] font-bold transition-all">⭐ Calificar</button>
+                                                </template>
+                                                <template x-if="item.review">
+                                                    <button type="button" @click="openReview(item)" class="flex-shrink-0 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-white text-[11px] font-bold transition-all">Editar</button>
+                                                </template>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </template>
                             </div>
                         </template>
                     </div>
                 </template>
+
+                {{-- Calificar una compra --}}
+                <div x-show="rate.open" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                     @keydown.escape.window="closeReview()" role="dialog" aria-modal="true" aria-labelledby="rate-title">
+                    <div class="absolute inset-0" style="background: rgba(15, 23, 42, 0.5);" @click="closeReview()"></div>
+                    <div class="relative w-full max-w-md bg-white rounded-3xl p-6 sm:p-7" style="box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);">
+                        <h3 id="rate-title" class="text-lg font-extrabold text-slate-900" x-text="rate.item && rate.item.review ? 'Editar tu reseña' : 'Califica tu compra'"></h3>
+                        <p class="text-slate-500 text-xs mt-1 truncate" x-text="rate.item ? rate.item.name : ''"></p>
+
+                        <div class="flex items-center gap-1 mt-4" role="radiogroup" aria-label="Calificación">
+                            <template x-for="n in 5" :key="n">
+                                <button type="button" @click="rate.rating = n" @mouseenter="rate.hover = n" @mouseleave="rate.hover = 0"
+                                        :class="(rate.hover || rate.rating) >= n ? 'text-amber-400' : 'text-slate-300'"
+                                        class="text-4xl leading-none transition-colors" role="radio"
+                                        :aria-label="n + (n === 1 ? ' estrella' : ' estrellas')" :aria-checked="(rate.rating === n).toString()">★</button>
+                            </template>
+                        </div>
+
+                        <textarea x-model="rate.comment" rows="4" maxlength="1500" placeholder="¿Qué tal la calidad, el envío, el tamaño…? (opcional)"
+                                  class="w-full mt-4 px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-sky-500 text-slate-900"></textarea>
+                        <template x-if="rate.error">
+                            <p class="mt-3 text-xs text-red-600" x-text="rate.error"></p>
+                        </template>
+
+                        <div class="flex items-center justify-end gap-2 mt-5">
+                            <button type="button" @click="closeReview()" class="px-4 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 text-xs font-bold transition-all">Cancelar</button>
+                            <button type="button" @click="submitReview()" :disabled="rate.busy" class="px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 disabled:opacity-50 text-white text-xs font-bold uppercase tracking-wider transition-all">
+                                <span x-text="rate.busy ? 'Enviando...' : 'Publicar reseña'"></span>
+                            </button>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-3">Se publica al instante con tu nombre y la inicial de tu apellido.</p>
+                    </div>
+                </div>
             </div>
         </template>
 
@@ -208,6 +268,45 @@ function tribioPassHub(hasStoreInitial) {
         login: { email: '', password: '' },
         reg: { name: '', email: '', phone: '', password: '', token: '' },
         csrf: '{{ csrf_token() }}',
+        notice: '',
+        rate: { open: false, item: null, rating: 0, hover: 0, comment: '', busy: false, error: '' },
+
+        stars(n) { return '★'.repeat(n) + '☆'.repeat(5 - n); },
+
+        // "Calificar mi compra": create or edit the review of one delivered order line.
+        openReview(item) {
+            this.rate = {
+                open: true, item: item, hover: 0, busy: false, error: '',
+                rating: item.review ? item.review.rating : 0,
+                comment: item.review ? (item.review.comment || '') : '',
+            };
+        },
+        closeReview() { this.rate.open = false; },
+        async submitReview() {
+            if (!this.rate.rating) { this.rate.error = 'Elige de 1 a 5 estrellas.'; return; }
+            this.rate.busy = true; this.rate.error = '';
+            try {
+                const res = await fetch('{{ route('tribio-pass.reviews.store') }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': this.csrf },
+                    body: JSON.stringify({ product_id: this.rate.item.product_id, rating: this.rate.rating, comment: this.rate.comment }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.success) {
+                    this.rate.item.review = data.review;
+                    this.rate.item.can_review = false;
+                    this.rate.open = false;
+                    this.notice = data.message;
+                    setTimeout(() => { this.notice = ''; }, 6000);
+                } else {
+                    this.rate.error = data.message || Object.values(data.errors || {}).flat().join(' ') || 'No pudimos guardar tu reseña.';
+                }
+            } catch (e) {
+                this.rate.error = 'Error de conexión con el servidor.';
+            } finally {
+                this.rate.busy = false;
+            }
+        },
 
         async init() {
             try {

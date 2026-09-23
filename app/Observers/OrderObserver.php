@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Mail\OrderReceivedCustomer;
 use App\Mail\OrderReceivedStore;
 use App\Models\Order;
+use App\Services\Marketing\Meta\PurchaseTracking;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
@@ -53,6 +54,27 @@ class OrderObserver
                     'error' => $e->getMessage(),
                 ]);
             }
+        }
+
+        $this->reportPurchase($order, created: true);
+    }
+
+    /** A pending order that gets paid later (voucher cleared, owner recorded a Yape payment…). */
+    public function updated(Order $order): void
+    {
+        $this->reportPurchase($order, created: false);
+    }
+
+    /** Meta Conversions API "Purchase" (Dashboard → Marketing). Never allowed to break a save. */
+    private function reportPurchase(Order $order, bool $created): void
+    {
+        try {
+            app(PurchaseTracking::class)->orderSaved($order, $created);
+        } catch (Throwable $e) {
+            Log::error('No se pudo encolar la compra para Meta.', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }

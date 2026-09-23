@@ -4,7 +4,9 @@ namespace App\Providers;
 
 use App\Mail\Transport\BrevoApiTransport;
 use App\Models\Order;
+use App\Models\ProductReview;
 use App\Observers\OrderObserver;
+use App\Observers\ProductReviewObserver;
 use App\Services\Storefront\StorefrontTheme;
 use App\Services\Storefront\TemplateRegistry;
 use Illuminate\Support\Facades\Mail;
@@ -27,6 +29,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Order::observe(OrderObserver::class);
+        ProductReview::observe(ProductReviewObserver::class);
 
         Mail::extend('brevo', function () {
             return new BrevoApiTransport(config('services.brevo.api_key'));

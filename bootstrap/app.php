@@ -22,6 +22,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'store_currency',
             'store_lang',
             'googtrans',
+            // Written in the browser (Meta Pixel / resources/js/marketing.js), read at
+            // checkout by App\Services\Marketing\TrackingContext.
+            '_fbp',
+            '_fbc',
+            'tribio_consent',
+            'tribio_attr',
         ]);
         $middleware->validateCsrfTokens(except: [
             '/plan/webhook',

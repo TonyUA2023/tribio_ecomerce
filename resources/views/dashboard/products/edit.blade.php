@@ -357,6 +357,9 @@
                     </div>
                 </div>
 
+                {{-- Venta por encargo (solo tiendas que la activaron en Mi Tienda) --}}
+                @includeWhen($store->made_to_order_enabled, 'dashboard.products._made-to-order', ['product' => $product])
+
                 {{-- Inventario --}}
                 <div class="glass-card p-5 sm:p-6">
                     <h3 class="text-white font-bold mb-4 text-sm uppercase tracking-wider opacity-60">📦 Inventario y Stock</h3>
@@ -497,6 +500,8 @@
                         </label>
                     </div>
                 </div>
+
+                @include('dashboard.products._ads', ['product' => $product])
 
                 {{-- Organización --}}
                 <div class="glass-card p-5 sm:p-6" x-data="{

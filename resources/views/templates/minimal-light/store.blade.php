@@ -52,6 +52,7 @@
         #goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
         .goog-text-highlight { background: none !important; box-shadow: none !important; }
     </style>
+@include('components.marketing.head')
 </head>
 <body class="antialiased relative bg-[#FDF8EF]">
     
@@ -484,6 +485,7 @@
                             <a href="{{ route('store.product', [$store->slug, $product->slug]) }}" class="text-[#1E1D1B] font-bold text-sm leading-snug line-clamp-2 hover:text-[#7DA268] transition-colors mb-1 font-brand">
                                 {{ $product->name }}
                             </a>
+                            @include('components.storefront.rating-badge', ['product' => $product])
                             
                             <div class="mt-auto flex items-center gap-2 font-brand">
                                 <span class="font-bold text-sm text-[#1E1D1B]">{{ $product->resolveCurrencySymbol() }} {{ number_format($product->resolvePrice(), 2) }}</span>

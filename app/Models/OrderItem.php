@@ -9,6 +9,7 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id', 'product_id', 'variant_id', 'variant_title', 'variant_attributes',
         'product_name', 'product_sku', 'product_image', 'price', 'price_usd', 'quantity', 'subtotal',
+        'customization',
     ];
 
     protected $casts = [
@@ -16,11 +17,18 @@ class OrderItem extends Model
         'price_usd'          => 'decimal:2',
         'subtotal'           => 'decimal:2',
         'variant_attributes' => 'array',
+        'customization'      => 'array',
     ];
 
     public function order()
     {
         return $this->belongsTo(Order::class);
+    }
+
+    /** Buyer uploads (logo, reference) linked to this line at checkout. */
+    public function attachments()
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
     }
 
     public function product()

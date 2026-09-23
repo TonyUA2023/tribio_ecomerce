@@ -62,4 +62,11 @@ return [
         'redirect'      => env('GOOGLE_REDIRECT_URI', '/auth/google/callback'),
     ],
 
+    // Meta (Facebook/Instagram) — Conversions API. Each store brings its own Pixel and
+    // token (Dashboard → Marketing); only the Graph API version is global. Meta retires
+    // a version about two years after release (v23.0 died in June 2026): bump this pin.
+    'meta' => [
+        'graph_version' => env('META_GRAPH_VERSION', 'v26.0'),
+    ],
+
 ];

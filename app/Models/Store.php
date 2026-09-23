@@ -31,7 +31,7 @@ class Store extends Model
         'enabled_countries', 'national_shipping_cost', 'country_shipping_costs',
         'free_shipping_min_quantity', 'free_shipping_min_amount',
         'bulk_discount_min_quantity', 'bulk_discount_type', 'bulk_discount_value',
-        'made_to_order_enabled',
+        'made_to_order_enabled', 'deposit_percent',
     ];
 
     protected $hidden = ['flow_api_key', 'flow_secret_key'];
@@ -53,6 +53,7 @@ class Store extends Model
         'is_express_shipping_enabled' => 'boolean',
         'is_multilanguage_enabled'    => 'boolean',
         'made_to_order_enabled'       => 'boolean',
+        'deposit_percent'             => 'integer',
         'plan_expires_at'  => 'datetime',
         'total_revenue'    => 'decimal:2',
         'express_shipping_cost' => 'decimal:2',
@@ -124,6 +125,19 @@ class Store extends Model
     {
         $phone = preg_replace('/[^0-9]/', '', $this->whatsapp_phone ?? '');
         return !empty($phone) ? "https://wa.me/{$phone}" : null;
+    }
+
+    /**
+     * Share of a made-to-order cart charged at checkout (1–100). 100 means pay in full,
+     * which is also what every store without made-to-order selling gets.
+     */
+    public function depositPercent(): int
+    {
+        if (!$this->made_to_order_enabled) {
+            return 100;
+        }
+
+        return max(1, min(100, (int) ($this->deposit_percent ?: 100)));
     }
 
     public function isActive(): bool
@@ -276,6 +290,12 @@ class Store extends Model
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    /** Meta settings (Pixel, Conversions API, catalog). See App\Services\Marketing. */
+    public function metaIntegration()
+    {
+        return $this->hasOne(StoreMarketingIntegration::class)->where('provider', StoreMarketingIntegration::PROVIDER_META);
     }
 
     public function analytics()

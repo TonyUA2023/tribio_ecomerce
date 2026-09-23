@@ -25,7 +25,17 @@ class Order extends Model
         'subtotal', 'discount', 'shipping_cost', 'total', 'currency',
         'status', 'payment_status', 'payment_method', 'paypal_order_id',
         'whatsapp_sent', 'whatsapp_sent_at',
-        'source', 'internal_notes', 'is_express_shipping'
+        'source', 'internal_notes', 'is_express_shipping',
+        'production_stage', 'deposit_amount', 'required_by', 'estimated_ready_at',
+    ];
+
+    /** Workshop pipeline for made-to-order orders (separate from the commercial `status`). */
+    public const PRODUCTION_STAGES = [
+        'received'      => 'Pedido recibido',
+        'proof_review'  => 'Diseño en revisión',
+        'in_production' => 'En producción',
+        'quality_check' => 'Control de calidad',
+        'ready'         => 'Listo para entregar',
     ];
 
     protected $hidden = ['flow_token'];
@@ -37,6 +47,9 @@ class Order extends Model
         'total'            => 'decimal:2',
         'amount_paid'      => 'decimal:2',
         'balance_due'      => 'decimal:2',
+        'deposit_amount'   => 'decimal:2',
+        'required_by'      => 'date',
+        'estimated_ready_at' => 'date',
         'whatsapp_sent'    => 'boolean',
         'whatsapp_sent_at' => 'datetime',
         'is_express_shipping' => 'boolean',
@@ -86,9 +99,16 @@ class Order extends Model
 
     public function refreshPaymentTotals(): void
     {
-        $this->forceFill([
-            'amount_paid' => round((float) $this->payments()->where('status', OrderPayment::STATUS_PAID)->sum('amount'), 2),
-        ])->save();
+        $amountPaid = round((float) $this->payments()->where('status', OrderPayment::STATUS_PAID)->sum('amount'), 2);
+        $changes = ['amount_paid' => $amountPaid];
+
+        // Money received moves the payment status forward (never back): a deposit or a
+        // manual Yape entry makes it 'partial', the balance completing it makes it 'paid'.
+        if (in_array($this->payment_status, ['pending', 'partial', 'failed'], true) && $amountPaid > 0) {
+            $changes['payment_status'] = $amountPaid + 0.005 >= (float) $this->total ? 'paid' : 'partial';
+        }
+
+        $this->forceFill($changes)->save();
     }
 
     /** What is still owed on a live order; closed or failed orders owe nothing. */
@@ -100,6 +120,21 @@ class Order extends Model
         }
 
         return max(0.0, round((float) $this->total - (float) $this->amount_paid, 2));
+    }
+
+    // ─── Scopes ──────────────────────────────────────────────────
+    /**
+     * Orders that belong to a Tribio Pass buyer: placed while logged in (user_id) or as a
+     * guest with the account's e-mail. The single definition behind "Mis Compras"
+     * (CustomerIdentityService::ordersFor) and the right to review a product
+     * (ProductReviewService), so what a buyer sees as theirs is exactly what they may rate.
+     */
+    public function scopeBoughtBy($query, User $user)
+    {
+        return $query->where(function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+              ->orWhere('customer_email', $user->email);
+        });
     }
 
     // ─── Helpers ─────────────────────────────────────────────────
@@ -172,6 +207,7 @@ class Order extends Model
     {
         return match ($this->payment_status) {
             'paid'     => 'Pagado',
+            'partial'  => 'Adelanto pagado',
             'pending'  => 'Pago pendiente',
             'failed'   => 'Pago fallido',
             'refunded' => 'Reembolsado',
@@ -183,6 +219,7 @@ class Order extends Model
     {
         return match ($this->payment_status) {
             'paid'     => 'badge-green',
+            'partial'  => 'badge-blue',
             'pending'  => 'badge-gold',
             'failed'   => 'badge-red',
             default    => 'badge-gray',
@@ -207,6 +244,27 @@ class Order extends Model
     public function getCurrencySymbolAttribute(): string
     {
         return \App\Helpers\CurrencyHelper::symbol($this->currency ?: 'PEN');
+    }
+
+    public function getProductionStageLabelAttribute(): ?string
+    {
+        return self::PRODUCTION_STAGES[$this->production_stage] ?? null;
+    }
+
+    public function isMadeToOrder(): bool
+    {
+        return $this->production_stage !== null;
+    }
+
+    /**
+     * Public page where the buyer pays (or checks) the remaining balance. Signed and
+     * long-lived: it is sent by email/WhatsApp and must keep working until paid.
+     */
+    public function balancePaymentUrl(): string
+    {
+        return \Illuminate\Support\Facades\URL::temporarySignedRoute('store.balance.show', now()->addDays(60), [
+            'slug' => $this->store->slug, 'order' => $this->order_number,
+        ]);
     }
 
     public function money(float|string|null $amount): string
@@ -261,7 +319,12 @@ class Order extends Model
     public function buildWhatsappMessage(): string
     {
         $items = $this->items->map(function ($item) {
-            return "• {$item->quantity}x {$item->product_name} (S/. " . number_format($item->price, 2) . " c/u) - S/. " . number_format($item->subtotal, 2);
+            $line = "• {$item->quantity}x {$item->product_name} (S/. " . number_format($item->price, 2) . " c/u) - S/. " . number_format($item->subtotal, 2);
+            // Made-to-order answers (text to embroider, thread color, sizes…) under the line.
+            foreach ($item->customization ?? [] as $row) {
+                $line .= "\n   ✂️ {$row['label']}: {$row['value']}";
+            }
+            return $line;
         })->join("\n");
 
         return urlencode(
@@ -276,6 +339,8 @@ class Order extends Model
             "📦 *Detalle del Pedido:*\n{$items}\n" .
             "━━━━━━━━━━━━━━━━━━━━━━\n" .
             "💰 *Total:* S/. " . number_format($this->total, 2) . "\n" .
+            ((float) $this->deposit_amount > 0 ? "💳 *Adelanto a pagar:* S/. " . number_format($this->deposit_amount, 2) . " · *Saldo:* S/. " . number_format((float) $this->total - (float) $this->deposit_amount, 2) . "\n" : '') .
+            ($this->estimated_ready_at ? "📅 *Listo aprox.:* " . $this->estimated_ready_at->format('d/m/Y') . "\n" : '') .
             ($this->customer_notes ? "📝 *Notas:* {$this->customer_notes}\n" : '') .
             "━━━━━━━━━━━━━━━━━━━━━━\n" .
             "⚡ _Pedido generado a través de Tribio_"
@@ -301,5 +366,10 @@ class Order extends Model
     public function payments()
     {
         return $this->hasMany(OrderPayment::class);
+    }
+
+    public function attribution()
+    {
+        return $this->hasOne(OrderAttribution::class);
     }
 }

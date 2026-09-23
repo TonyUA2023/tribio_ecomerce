@@ -64,6 +64,7 @@
             animation: fadeInUp 0.5s ease-out forwards;
         }
     </style>
+@include('components.marketing.head')
 </head>
 <body class="antialiased bg-gray-50 min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
 

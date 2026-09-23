@@ -224,16 +224,19 @@
 
                 <!-- Ratings & SKU -->
                 <div class="flex flex-wrap items-center gap-3 text-xs text-stone-500 mb-6">
-                    <div class="flex items-center text-amber-500 gap-1">
-                        <span>★★★★★</span>
-                        <span class="font-bold text-stone-800 ml-1">4.9</span>
-                        <span class="text-stone-400">({{ \App\Helpers\TranslationHelper::isEn() ? '28 reviews' : '28 valoraciones' }})</span>
-                    </div>
-                    @if($product->sku)
-                        <span class="text-stone-300">•</span>
-                        <span>SKU: <strong class="text-stone-700 font-mono">{{ $product->sku }}</strong></span>
-                    @endif
+                    @if(($reviewSection['summary']['count'] ?? 0) > 0)
+                    <a href="#resenas" class="flex items-center gap-1 hover:opacity-80 transition"
+                       title="{{ \App\Helpers\TranslationHelper::isEn() ? 'See customer reviews' : 'Ver opiniones de clientes' }}">
+                        <span role="img" aria-label="{{ number_format($reviewSection['summary']['average'], 1) }}/5" style="letter-spacing:.08em;background:linear-gradient(90deg,#f59e0b {{ round($reviewSection['summary']['average'] / 5 * 100, 1) }}%,#d6d3d1 {{ round($reviewSection['summary']['average'] / 5 * 100, 1) }}%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">★★★★★</span>
+                        <span class="font-bold text-stone-800 ml-1">{{ number_format($reviewSection['summary']['average'], 1) }}</span>
+                        <span class="text-stone-400">({{ $reviewSection['summary']['count'] }} {{ \App\Helpers\TranslationHelper::isEn() ? ($reviewSection['summary']['count'] === 1 ? 'review' : 'reviews') : ($reviewSection['summary']['count'] === 1 ? 'reseña' : 'reseñas') }})</span>
+                    </a>
                     <span class="text-stone-300">•</span>
+                    @endif
+                    @if($product->sku)
+                        <span>SKU: <strong class="text-stone-700 font-mono">{{ $product->sku }}</strong></span>
+                        <span class="text-stone-300">•</span>
+                    @endif
                     <span class="text-emerald-700 font-semibold flex items-center gap-1">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         {{ \App\Helpers\TranslationHelper::trans('quality_guarantee', 'Garantía Oficial') }}
@@ -401,13 +404,6 @@
                     <span>🚚</span>
                     <span>{{ \App\Helpers\TranslationHelper::isEn() ? 'Shipping & Warranty' : 'Envíos y Garantía' }}</span>
                 </button>
-                <button type="button" 
-                        @click="activeTab = 'reviews'"
-                        :class="activeTab === 'reviews' ? 'border-[#1A1A1A] text-[#1A1A1A] font-bold' : 'border-transparent text-stone-500 hover:text-stone-800 font-semibold'"
-                        class="pb-4 px-2 border-b-2 text-sm sm:text-base flex items-center gap-2 transition cursor-pointer">
-                    <span>⭐</span>
-                    <span>{{ \App\Helpers\TranslationHelper::isEn() ? 'Customer Reviews (28)' : 'Opiniones de Clientes (28)' }}</span>
-                </button>
             </div>
 
             <!-- Tab 1: Descripción Extensa y Beneficios -->
@@ -502,53 +498,12 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Tab 4: Reseñas / Opiniones -->
-            <div x-show="activeTab === 'reviews'" style="display: none;" class="space-y-6">
-                <div class="flex items-center gap-6 p-6 bg-stone-50 rounded-2xl border border-stone-200/60">
-                    <div class="text-center pr-6 border-r border-stone-200">
-                        <div class="text-4xl font-black text-stone-900">4.9</div>
-                        <div class="text-amber-500 text-sm">★★★★★</div>
-                        <div class="text-xs text-stone-500 mt-1">28 reseñas</div>
-                    </div>
-                    <div class="flex-1 space-y-1.5 text-xs">
-                        <div class="flex items-center gap-2">
-                            <span class="w-14">5 estrellas</span>
-                            <div class="flex-1 bg-stone-200 h-2 rounded-full overflow-hidden">
-                                <div class="bg-amber-400 h-full w-[90%]"></div>
-                            </div>
-                            <span class="w-8 text-right text-stone-500">90%</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="w-14">4 estrellas</span>
-                            <div class="flex-1 bg-stone-200 h-2 rounded-full overflow-hidden">
-                                <div class="bg-amber-400 h-full w-[10%]"></div>
-                            </div>
-                            <span class="w-8 text-right text-stone-500">10%</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="space-y-4">
-                    <div class="p-4 rounded-2xl border border-stone-100 bg-white">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="font-bold text-sm text-stone-900">María C.</span>
-                            <span class="text-xs text-stone-400">Hace 2 días</span>
-                        </div>
-                        <div class="text-amber-500 text-xs mb-1">★★★★★ <span class="text-emerald-700 font-semibold ml-1">Compra Verificada</span></div>
-                        <p class="text-xs text-stone-600">¡Excelente producto! Llegó rapidísimo y la calidad es tal cual la descripción. Muy recomendado.</p>
-                    </div>
-                    <div class="p-4 rounded-2xl border border-stone-100 bg-white">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="font-bold text-sm text-stone-900">Jorge L.</span>
-                            <span class="text-xs text-stone-400">Hace 1 semana</span>
-                        </div>
-                        <div class="text-amber-500 text-xs mb-1">★★★★★ <span class="text-emerald-700 font-semibold ml-1">Compra Verificada</span></div>
-                        <p class="text-xs text-stone-600">Muy buena atención y el pedido llegó en perfecto estado. Definitivamente volveré a comprar aquí.</p>
-                    </div>
-                </div>
-            </div>
         </div>
+    </div>
+
+    <!-- Customer Reviews: real verified-purchase reviews (replaces the former hardcoded "Opiniones" tab) -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 md:mt-20">
+        @include('components.storefront.reviews', ['variant' => 'stone'])
     </div>
 
     <!-- Related Products ("Productos Relacionados") -->

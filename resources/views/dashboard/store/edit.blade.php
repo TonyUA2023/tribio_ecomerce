@@ -300,6 +300,42 @@
             </div>
         </div>
 
+        {{-- Ventas por encargo: productos que se fabrican después de cada pedido --}}
+        <div class="glass-card p-5 sm:p-6 space-y-4" x-data="{
+            mtoEnabled: {{ old('made_to_order_enabled', $store?->made_to_order_enabled) ? 'true' : 'false' }},
+            deposit: {{ (int) old('deposit_percent', $store?->deposit_percent ?? 100) }}
+        }">
+            <div>
+                <h3 class="text-white font-bold text-lg mb-1 flex items-center gap-2">✂️ Ventas por encargo</h3>
+                <p class="text-xs text-white/50">Para lo que haces a pedido: bordados, estampados, regalos personalizados. Tus clientes te dejan su texto, logo o tallas al comprar.</p>
+            </div>
+            <label class="flex items-center gap-3 cursor-pointer">
+                <div class="relative">
+                    <input type="checkbox" name="made_to_order_enabled" class="sr-only" x-model="mtoEnabled" value="1">
+                    <div class="block bg-white/10 w-10 h-6 rounded-full transition-colors" :class="{'bg-tribio-cyan': mtoEnabled}"></div>
+                    <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform" :class="{'translate-x-4': mtoEnabled}"></div>
+                </div>
+                <span class="text-sm font-medium text-white">Vendo productos por encargo</span>
+            </label>
+            <div x-show="mtoEnabled" x-cloak class="space-y-3">
+                <p class="input-label !mb-0">¿Cuánto cobras al hacer el pedido?</p>
+                <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Porcentaje de adelanto">
+                    @foreach([100 => 'Pago completo', 70 => '70% adelanto', 50 => '50% adelanto', 30 => '30% adelanto'] as $pct => $pctLabel)
+                        <button type="button" @click="deposit = {{ $pct }}" class="px-3.5 py-2 rounded-xl text-xs font-bold border transition"
+                                :class="deposit === {{ $pct }} ? 'bg-tribio-cyan/10 border-tribio-cyan text-tribio-cyan' : 'border-white/10 text-white/70'"
+                                :aria-pressed="deposit === {{ $pct }}">{{ $pctLabel }}</button>
+                    @endforeach
+                </div>
+                <div class="flex items-center gap-2 max-w-xs">
+                    <label for="deposit_percent" class="text-xs text-white/60 whitespace-nowrap">Otro porcentaje</label>
+                    <input type="number" id="deposit_percent" name="deposit_percent" x-model.number="deposit" min="1" max="100" class="input-field !w-24">
+                    <span class="text-white/60 text-sm">%</span>
+                </div>
+                <p class="text-[11px] text-white/40" x-show="deposit < 100">El saldo lo cobras antes de entregar: desde cada pedido puedes registrarlo (Yape, transferencia, efectivo) o enviarle al cliente un enlace para pagarlo en línea.</p>
+                <p class="text-[11px] text-white/40">Luego, en cada producto elige “Lo hago por encargo” y define qué datos le pides al comprador.</p>
+            </div>
+        </div>
+
         {{-- Pasarela de Pago: ahora vive en su propia página --}}
         <div class="glass-card p-5 sm:p-6">
             <div class="flex items-center justify-between gap-3 flex-wrap">

@@ -618,6 +618,24 @@
                                         </div>
                                     </div>
 
+@if($store->made_to_order_enabled)
+                                    {{-- Pedido por encargo: etapa de producción y saldo por pagar --}}
+                                    <template x-if="order.production_stage">
+                                        <div class="mb-3 p-3 rounded-xl bg-[var(--pay-surface-muted)] border border-[var(--pay-border)] text-xs space-y-1.5">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <span class="font-bold text-[var(--pay-text-muted)]">✂️ Hecho a pedido</span>
+                                                <span class="font-extrabold" style="color: var(--pay-accent);" x-text="order.production_stage_label"></span>
+                                            </div>
+                                            <p x-show="order.estimated_ready_at" class="text-[var(--pay-text-muted)]" x-text="'Listo aprox.: ' + order.estimated_ready_at"></p>
+                                            <template x-if="order.balance_due > 0">
+                                                <div class="flex items-center justify-between gap-2 pt-1">
+                                                    <span class="text-[var(--pay-text)]">Saldo: <strong x-text="order.currency_symbol + ' ' + order.balance_due.toFixed(2)"></strong></span>
+                                                    <a x-show="order.balance_url" :href="order.balance_url" class="font-bold text-white px-3 py-1.5 rounded-lg" style="background: var(--pay-accent);">Ver y pagar</a>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+@endif
                                     <div x-data="{ expanded: false }" class="mt-2 pt-2 border-t border-[var(--pay-border)]">
                                         <button @click="expanded = !expanded" class="text-xs font-bold text-[var(--pay-text-muted)] hover:text-[var(--pay-text)] flex items-center justify-between w-full">
                                             <span x-text="expanded ? 'Ocultar productos ▲' : 'Ver detalle de productos ▼'"></span>

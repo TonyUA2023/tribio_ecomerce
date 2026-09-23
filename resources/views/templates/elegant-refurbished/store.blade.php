@@ -167,6 +167,7 @@
                 <a href="{{ route('store.product', ['slug' => $store->slug, 'product' => $product->slug]) }}" class="er-product-card animate-on-scroll" style="animation-delay: {{ $index * 0.1 }}s;">
                     <img src="{{ $product->image_url ?? asset('img/dummy-iphone.png') }}" alt="{{ $product->name }}" class="er-product-img">
                     <h3 class="er-title-md" style="margin-bottom: 0.5rem; color: var(--text-main); font-size: 1.2rem;">{{ $product->name }}</h3>
+                    @include('components.storefront.rating-badge', ['product' => $product])
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Desde</p>
                     <div class="er-price-new">S/ {{ number_format($product->price, 2) }}</div>
                     <div class="er-price-old">S/ {{ number_format($product->price * 1.2, 2) }}</div>

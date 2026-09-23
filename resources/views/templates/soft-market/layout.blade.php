@@ -42,6 +42,7 @@
         .goog-text-highlight { background: none !important; box-shadow: none !important; }
     </style>
     @include('templates.soft-market._theme')
+@include('components.marketing.head')
 </head>
 <body class="antialiased relative bg-[var(--t-bg)] text-[#1E1D1B]">
     

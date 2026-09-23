@@ -77,6 +77,9 @@
          paypalOrderNumber: null,
          paymentMethod: '{{ $defaultPayment }}',
          hasActiveToken: {{ (!empty($store->mp_access_token) || !empty($store->gateway_access_token)) ? 'true' : 'false' }},
+@if($store->made_to_order_enabled)
+         depositPercent: {{ $store->depositPercent() }},
+@endif
          cartItems: window.TribioCart ? window.TribioCart.items : [],
          // Tarjeta embebida: se tokeniza con MercadoPago.js dentro del propio drawer, sin
          // redirigir a otra página. Yape/PagoEfectivo/banca no se pueden representar como
@@ -589,9 +592,16 @@
                                 <template x-if="item.variant_title">
                                     <p class="text-[11px] text-[var(--pay-accent-soft)] font-semibold mt-0.5" x-text="item.variant_title"></p>
                                 </template>
+@if($store->made_to_order_enabled)
+                                <template x-if="item.customization_summary && item.customization_summary.length">
+                                    <ul class="mt-1 space-y-0.5">
+                                        <template x-for="row in item.customization_summary"><li class="text-[11px] text-[var(--pay-text-muted)] leading-snug break-words"><span x-text="row.label + ': '"></span><span class="font-semibold text-[var(--pay-text)]" x-text="row.value"></span></li></template>
+                                    </ul>
+                                </template>
+@endif
                                 <div class="flex justify-between items-center mt-2">
                                     <p class="text-[var(--pay-text)] font-bold text-sm" x-text="formatMoney(item.price * item.quantity)"></p>
-                                    <div class="flex items-center gap-2 text-[var(--pay-text-muted)] text-xs bg-white rounded-full border border-[var(--pay-border)] p-1">
+                                    <div class="flex items-center gap-2 text-[var(--pay-text-muted)] text-xs bg-white rounded-full border border-[var(--pay-border)] p-1"@if($store->made_to_order_enabled) x-show="!item.fixed_quantity"@endif>
                                         <button @click="window.TribioCart.updateQuantity(item.cartKey || item.id, item.quantity - 1)" class="w-5 h-5 rounded-full hover:bg-[var(--pay-surface-muted)] flex items-center justify-center font-bold">-</button>
                                         <span x-text="item.quantity" class="w-4 text-center font-medium"></span>
                                         <button @click="window.TribioCart.updateQuantity(item.cartKey || item.id, item.quantity + 1)" class="w-5 h-5 rounded-full hover:bg-[var(--pay-surface-muted)] flex items-center justify-center font-bold">+</button>
@@ -871,11 +881,19 @@
                     <span class="font-bold text-sm">Total a pagar:</span>
                     <span class="font-black text-xl" x-text="formatMoney(cartTotal)"></span>
                 </div>
+@if($store->made_to_order_enabled)
+                <template x-if="depositPercent < 100 && cartItems.some(i => i.made_to_order)">
+                    <div class="-mt-2 mb-4 p-3 rounded-xl bg-white border border-[var(--pay-border)] text-xs space-y-1">
+                        <div class="flex justify-between font-bold text-[var(--pay-text)]"><span x-text="'Hoy pagas (adelanto ' + depositPercent + '%)'"></span><span x-text="formatMoney(Math.round(cartTotal * depositPercent) / 100)"></span></div>
+                        <div class="flex justify-between text-[var(--pay-text-muted)]"><span>Saldo antes de la entrega</span><span x-text="formatMoney(cartTotal - Math.round(cartTotal * depositPercent) / 100)"></span></div>
+                    </div>
+                </template>
+@endif
                 <p x-show="checkoutStep === 2 && paymentMethod === 'paypal'" x-cloak class="text-[11px] text-[var(--pay-text-muted)] text-right mb-3">PayPal te cobrará el equivalente en USD, no en soles.</p>
                 <p x-show="checkoutStep === 2" x-cloak class="text-[11px] leading-relaxed text-[var(--pay-text-muted)] mb-3">Al continuar, consulta los <a href="{{ route('legal.terms') }}" target="_blank" rel="noopener noreferrer" class="underline font-semibold">Términos de Tribio</a> y su <a href="{{ route('legal.privacy') }}" target="_blank" rel="noopener noreferrer" class="underline font-semibold">Política de Privacidad y Tratamiento de Datos</a>. El vendedor es el Negocio identificado en esta tienda.</p>
 
                 <template x-if="checkoutStep === 1">
-                    <button @click="checkoutStep = 2" style="background: var(--pay-accent);" class="w-full py-3 rounded-xl font-bold text-white transition-all shadow-md flex items-center justify-center gap-2 hover:opacity-90">
+                    <button @click="checkoutStep = 2; window.TribioTrack?.initiateCheckout()" style="background: var(--pay-accent);" class="w-full py-3 rounded-xl font-bold text-white transition-all shadow-md flex items-center justify-center gap-2 hover:opacity-90">
                         Siguiente paso
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     </button>

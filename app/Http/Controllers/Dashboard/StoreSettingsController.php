@@ -74,6 +74,8 @@ class StoreSettingsController extends Controller
             'enabled_countries.*'         => 'string|in:PE,US,ES,MX,CO,EC,CL,AR',
             'country_shipping_costs'      => 'nullable|array',
             'is_multilanguage_enabled'    => 'nullable|boolean',
+            'made_to_order_enabled'       => 'nullable|boolean',
+            'deposit_percent'             => 'nullable|integer|min:1|max:100',
             'hero_title'                  => 'nullable|string|max:100',
             'hero_subtitle'               => 'nullable|string|max:200',
             'hero_badge'                  => 'nullable|string|max:50',
@@ -98,6 +100,10 @@ class StoreSettingsController extends Controller
         ]);
         $data['is_express_shipping_enabled'] = $request->has('is_express_shipping_enabled');
         $data['is_multilanguage_enabled']    = $request->has('is_multilanguage_enabled');
+        $data['made_to_order_enabled']       = $request->has('made_to_order_enabled');
+        if ($request->filled('deposit_percent')) {
+            $data['deposit_percent'] = (int) $request->input('deposit_percent');
+        }
 
         // Campos numéricos opcionales: un input vacío llega como '' y no como null,
         // lo cual rompería las columnas integer/decimal si se guarda tal cual.

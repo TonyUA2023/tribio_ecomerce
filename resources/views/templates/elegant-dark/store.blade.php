@@ -15,6 +15,7 @@
             --bg: {{ $store->bg_color }};
         }
     </style>
+@include('components.marketing.head')
 </head>
 <body style="background: {{ $store->bg_color }}; font-family: 'Outfit', sans-serif; color: white; min-height: 100vh;">
 
@@ -77,6 +78,7 @@
                         </div>
                         <div class="p-4">
                             <p class="text-white font-semibold text-sm leading-tight">{{ $product->name }}</p>
+                            @include('components.storefront.rating-badge', ['product' => $product, 'tone' => 'rgba(255,255,255,.6)'])
                             @if($product->short_description)
                             <p class="text-white/40 text-xs mt-1 line-clamp-2">{{ $product->short_description }}</p>
                             @endif

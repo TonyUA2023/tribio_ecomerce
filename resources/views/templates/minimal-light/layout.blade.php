@@ -83,6 +83,7 @@
         #goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
         .goog-text-highlight { background: none !important; box-shadow: none !important; }
     </style>
+@include('components.marketing.head')
 </head>
 <body class="antialiased relative bg-[#FAF7F2] text-[#1E1D1B]">
     

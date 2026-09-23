@@ -95,6 +95,7 @@
             animation: whatsapp-ripple 2s infinite;
         }
     </style>
+@include('components.marketing.head')
 </head>
 <body x-data="cartApp()" class="antialiased scroll-smooth bg-white">
 
@@ -562,6 +563,7 @@
                                     <a href="{{ route('store.product', [$store->slug, $product->slug]) }}" class="block font-black text-gray-800 hover:text-[#E50914] text-xs uppercase tracking-wide leading-snug line-clamp-2 transition-colors">
                                         {{ $product->name }}
                                     </a>
+                                    @include('components.storefront.rating-badge', ['product' => $product])
                                     <div class="text-[11px] text-gray-600 font-bold uppercase space-y-0.5">
                                         <p>SKU: <span class="text-gray-900 font-medium">{{ $product->sku ?? 'N/D' }}</span></p>
                                         <p>MARCA: <span class="text-gray-900 font-medium">{{ $detectedBrand }}</span></p>

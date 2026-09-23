@@ -86,6 +86,7 @@
             animation: whatsapp-ripple 2s infinite;
         }
     </style>
+@include('components.marketing.head')
 </head>
 <body x-data="cartApp()" x-init="initCart()" class="antialiased bg-gray-50">
 

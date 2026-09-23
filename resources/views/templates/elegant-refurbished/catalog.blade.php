@@ -104,6 +104,7 @@
                             <div style="font-size: 1.4rem; font-weight: 400; color: var(--text-main); margin-bottom: 0.25rem;">S/ {{ number_format($product->price, 2) }}</div>
                             <div style="font-size: 0.8rem; color: #00a650; margin-bottom: 0.5rem; font-weight: 600;">Llega gratis mañana</div>
                             <h3 style="font-size: 0.9rem; font-weight: 400; color: var(--text-muted); line-height: 1.4; margin: 0; flex: 1;">{{ $product->name }}</h3>
+                            @include('components.storefront.rating-badge', ['product' => $product])
                         </div>
                     </a>
                 @empty

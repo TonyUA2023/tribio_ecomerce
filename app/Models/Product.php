@@ -21,7 +21,12 @@ class Product extends Model
         'is_composite', 'composite_type', 'is_sold', 'sold_at',
         'weight', 'dimensions', 'tags', 'meta_title', 'meta_description',
         'views', 'sold_count', 'sort_order',
+        'sale_mode', 'lead_time_days', 'customization_schema',
+        'condition', 'exclude_from_ads',
     ];
+
+    public const SALE_STOCK = 'stock';
+    public const SALE_MADE_TO_ORDER = 'made_to_order';
 
     protected $casts = [
         'gallery_images'      => 'array',
@@ -45,6 +50,12 @@ class Product extends Model
         'is_composite'    => 'boolean',
         'is_sold'         => 'boolean',
         'sold_at'         => 'datetime',
+        'lead_time_days'  => 'integer',
+        'customization_schema' => 'array',
+        'exclude_from_ads' => 'boolean',
+        // Derived by ProductReviewObserver — deliberately not in $fillable.
+        'average_rating'  => 'decimal:2',
+        'reviews_count'   => 'integer',
     ];
 
     // ─── Scopes ──────────────────────────────────────────────────
@@ -180,6 +191,18 @@ class Product extends Model
         return \App\Helpers\CurrencyHelper::symbol();
     }
 
+    /**
+     * Produced per order instead of taken from stock. Only honored while the store
+     * sells made-to-order — a store that switches the feature off gets plain products
+     * back without having to edit each one.
+     */
+    public function isMadeToOrder(?Store $store = null): bool
+    {
+        $store ??= $this->store;
+
+        return $this->sale_mode === self::SALE_MADE_TO_ORDER && (bool) $store?->made_to_order_enabled;
+    }
+
     public function isInStock(): bool
     {
         if (!$this->track_stock) return true;
@@ -293,6 +316,16 @@ class Product extends Model
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
+    public function publishedReviews()
+    {
+        return $this->reviews()->published();
     }
 
     public function inventoryMovements()

@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\Order;
+use App\Models\ProductReview;
 use App\Models\User;
+use App\Services\Reviews\ProductReviewService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
@@ -163,14 +165,18 @@ class CustomerIdentityService
      */
     public function ordersFor(User $user): Collection
     {
-        return Order::where(function ($q) use ($user) {
-                $q->where('user_id', $user->id)
-                  ->orWhere('customer_email', $user->email);
-            })
-            ->with(['items', 'store:id,name,slug,logo_path'])
+        // What the buyer already reviewed and which stores are theirs, loaded once so that
+        // flagging every order line as "can be rated" costs two queries, not two per line.
+        $reviewService = app(ProductReviewService::class);
+        $reviewsReady = $reviewService->isAvailable();
+        $reviews = $reviewsReady ? ProductReview::where('user_id', $user->id)->get()->keyBy('product_id') : collect();
+        $ownStoreIds = $user->stores()->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        return Order::boughtBy($user)
+            ->with(['items.product:id,slug,store_id', 'store:id,name,slug,logo_path'])
             ->latest()
             ->get()
-            ->map(function ($order) {
+            ->map(function ($order) use ($reviews, $ownStoreIds, $reviewService, $reviewsReady) {
                 return [
                     'id'               => $order->id,
                     'order_number'     => $order->order_number,
@@ -186,15 +192,39 @@ class CustomerIdentityService
                     'created_at'       => $order->created_at ? $order->created_at->format('d/m/Y H:i') : '',
                     'created_diff'     => $order->created_at ? $order->created_at->diffForHumans() : '',
                     'items_count'      => $order->items->sum('quantity'),
-                    'items'            => $order->items->map(function ($i) {
+                    'items'            => $order->items->map(function ($i) use ($order, $reviews, $ownStoreIds, $reviewService, $reviewsReady) {
+                        $product = $i->product; // null once the owner deleted the product
+                        $review = $i->product_id ? $reviews->get($i->product_id) : null;
+
                         return [
-                            'name'     => $i->product_name,
-                            'price'    => (float) $i->price,
-                            'quantity' => $i->quantity,
-                            'subtotal' => (float) $i->subtotal,
+                            'name'         => $i->product_name,
+                            'price'        => (float) $i->price,
+                            'quantity'     => $i->quantity,
+                            'subtotal'     => (float) $i->subtotal,
+                            // Reviews ("Calificar mi compra"): same rule as ProductReviewService —
+                            // delivered order, product still on sale, not your own store, not rated yet.
+                            'product_id'   => $i->product_id,
+                            'product_url'  => $product && $order->store
+                                ? route('store.product', ['slug' => $order->store->slug, 'product' => $product->slug])
+                                : null,
+                            'review'       => $review ? $reviewService->transform($review) : null,
+                            'can_review'   => $reviewsReady
+                                && $order->status === 'delivered'
+                                && $product !== null
+                                && $review === null
+                                && !in_array((int) $product->store_id, $ownStoreIds, true),
                         ];
                     }),
                     'shipping_address' => $order->customer_address ? "{$order->customer_address}, {$order->customer_city} ({$order->customer_state})" : '',
+                    // Additive (made-to-order): workshop stage and what is still owed.
+                    'payment_status'         => $order->payment_status,
+                    'amount_paid'            => (float) $order->amount_paid,
+                    'balance_due'            => (float) $order->balance_due,
+                    'production_stage'       => $order->production_stage,
+                    'production_stage_label' => $order->production_stage ? $order->production_stage_label : null,
+                    'estimated_ready_at'     => $order->estimated_ready_at?->format('d/m/Y'),
+                    'balance_url'            => $order->isMadeToOrder() && (float) $order->balance_due > 0 && $order->store
+                        ? $order->balancePaymentUrl() : null,
                 ];
             });
     }

@@ -11,6 +11,7 @@ use App\Http\Controllers\Dashboard\CategoryController;
 use App\Http\Controllers\Dashboard\BrandController;
 use App\Http\Controllers\Dashboard\GalleryController;
 use App\Http\Controllers\Dashboard\OrderController as DashboardOrderController;
+use App\Http\Controllers\Dashboard\ReviewController as DashboardReviewController;
 use App\Http\Controllers\Dashboard\InventoryController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AdminStoreController;
@@ -36,6 +37,9 @@ Route::post('/plan/webhook', [SubscriptionController::class, 'webhook'])->name('
 
 // ────────── TRIBIO PASS (portal unificado comprador + negocio) ──────────
 Route::get('/tribio-pass', [\App\Http\Controllers\TribioPassController::class, 'index'])->name('tribio-pass');
+// "Calificar mi compra" desde Mis Compras (sesión web; el móvil usa POST /api/customer/reviews).
+// Fuera de customer/* a propósito: ese prefijo está exento de CSRF y esto escribe contenido público.
+Route::post('/tribio-pass/resenas', [\App\Http\Controllers\CustomerReviewController::class, 'store'])->middleware(['auth', 'throttle:20,1'])->name('tribio-pass.reviews.store');
 
 // ═══════════════════════════════════════════════════════════════
 //  AUTENTICACIÓN
@@ -138,14 +142,34 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     Route::get('/pedidos', [DashboardOrderController::class, 'index'])->name('pedidos.index');
     Route::get('/pedidos/{order}', [DashboardOrderController::class, 'show'])->name('pedidos.show');
     Route::patch('/pedidos/{order}/status', [DashboardOrderController::class, 'updateStatus'])->name('pedidos.status');
+    Route::patch('/pedidos/{order}/produccion', [DashboardOrderController::class, 'updateProduction'])->name('pedidos.production');
+    Route::post('/pedidos/{order}/pagos', [DashboardOrderController::class, 'recordPayment'])->name('pedidos.payments.store');
     Route::get('/pedidos/{order}/whatsapp', [DashboardOrderController::class, 'whatsappRedirect'])->name('pedidos.whatsapp');
+
+    // Reseñas de productos: ver, ocultar y responder públicamente
+    Route::get('/resenas', [DashboardReviewController::class, 'index'])->name('resenas.index');
+    Route::patch('/resenas/{review}/visibilidad', [DashboardReviewController::class, 'toggleVisibility'])->name('resenas.visibility');
+    Route::put('/resenas/{review}/respuesta', [DashboardReviewController::class, 'reply'])->name('resenas.reply');
+    Route::delete('/resenas/{review}/respuesta', [DashboardReviewController::class, 'destroyReply'])->name('resenas.reply.destroy');
 
     // Inventario
     Route::get('/inventario', [InventoryController::class, 'index'])->name('inventario.index');
     Route::get('/inventario/{product}', [InventoryController::class, 'product'])->name('inventario.product');
     Route::post('/inventario/{product}/ajuste', [InventoryController::class, 'adjust'])->name('inventario.adjust');
     Route::get('/inventario/exportar', [InventoryController::class, 'export'])->name('inventario.export');
+
+    // Marketing: conexión con Meta (Píxel, Conversions API y catálogo de anuncios)
+    Route::get('/marketing', [\App\Http\Controllers\Dashboard\MarketingController::class, 'index'])->name('marketing.index');
+    Route::get('/marketing/meta', [\App\Http\Controllers\Dashboard\MetaIntegrationController::class, 'edit'])->name('marketing.meta.edit');
+    Route::put('/marketing/meta', [\App\Http\Controllers\Dashboard\MetaIntegrationController::class, 'update'])->name('marketing.meta.update');
+    Route::post('/marketing/meta/evento-prueba', [\App\Http\Controllers\Dashboard\MetaIntegrationController::class, 'testEvent'])
+        ->middleware('throttle:10,1')->name('marketing.meta.test-event');
 });
+
+// Catálogo de productos para Meta (Commerce Manager lo lee cada hora) y copias JPG de
+// las fotos WebP, que Meta no acepta. Ver App\Services\Marketing\Meta\CatalogFeed.
+Route::get('/feed-img/{path}', [\App\Http\Controllers\MarketingFeedController::class, 'image'])
+    ->where('path', '.+\.webp\.jpg')->middleware('throttle:120,1')->name('marketing.feed-image');
 
 // ═══════════════════════════════════════════════════════════════
 //  SUPER ADMIN
@@ -197,6 +221,8 @@ Route::domain('{custom_domain}')
         Route::get('/contacto', [StoreController::class, 'contact']);
         Route::post('/contacto', [StoreController::class, 'submitContact']);
         Route::post('/adjuntos', [\App\Http\Controllers\AttachmentController::class, 'store'])->middleware('throttle:12,1');
+        Route::post('/producto/{product}/resena', [\App\Http\Controllers\StoreReviewController::class, 'store'])->middleware('throttle:10,1');
+        Route::get('/feed/facebook.xml', [\App\Http\Controllers\MarketingFeedController::class, 'meta'])->middleware('throttle:30,1');
     });
 
 // ────────── TIENDAS PÚBLICAS ESTÁNDAR ──────────
@@ -204,7 +230,10 @@ Route::prefix('tienda')->name('store.')->group(function () {
     Route::get('/{slug}', [StoreController::class, 'show'])->name('show');
     Route::get('/{slug}/catalogo', [StoreController::class, 'catalog'])->name('catalog');
     Route::get('/{slug}/producto/{product}', [StoreController::class, 'product'])->name('product');
+    // Reseña de un comprador con pedido entregado (la regla vive en ProductReviewService).
+    Route::post('/{slug}/producto/{product}/resena', [\App\Http\Controllers\StoreReviewController::class, 'store'])->name('product.review')->middleware('throttle:10,1');
     Route::get('/{slug}/galeria', [StoreController::class, 'gallery'])->name('gallery');
+    Route::get('/{slug}/feed/facebook.xml', [\App\Http\Controllers\MarketingFeedController::class, 'meta'])->middleware('throttle:30,1')->name('feed.meta');
     Route::post('/{slug}/checkout', [StoreController::class, 'checkout'])->name('checkout');
     Route::post('/{slug}/checkout/paypal/capturar', [StoreController::class, 'capturePaypalOrder'])->name('checkout.paypal.capture');
     Route::post('/{slug}/checkout/paypal/webhook', [StoreController::class, 'paypalWebhook'])->name('checkout.paypal.webhook');
@@ -214,6 +243,11 @@ Route::prefix('tienda')->name('store.')->group(function () {
     Route::post('/{slug}/contacto', [StoreController::class, 'submitContact'])->name('contact.submit');
     // Archivos del cliente para trabajos por encargo (logo a bordar, referencias).
     Route::post('/{slug}/adjuntos', [\App\Http\Controllers\AttachmentController::class, 'store'])->name('attachments.upload')->middleware('throttle:12,1');
+    // Saldo de un pedido por encargo: enlace firmado que la tienda envía al cliente
+    // (Order::balancePaymentUrl()); el retorno de Mercado Pago lleva un token propio.
+    Route::get('/{slug}/pedido/{order}/saldo', [\App\Http\Controllers\BalancePaymentController::class, 'show'])->name('balance.show')->middleware('signed');
+    Route::post('/{slug}/pedido/{order}/saldo/pagar', [\App\Http\Controllers\BalancePaymentController::class, 'start'])->name('balance.start')->middleware(['signed', 'throttle:6,1']);
+    Route::get('/{slug}/saldo/retorno/{reference}/{token}', [\App\Http\Controllers\BalancePaymentController::class, 'return'])->name('balance.return');
 });
 
 // Archivos privados: solo con URL firmada y con fecha de vencimiento (Attachment::signedUrl()).

@@ -2,8 +2,11 @@
 
 namespace App\Services\Checkout;
 
+use App\Helpers\CurrencyHelper;
 use App\Models\Product;
 use App\Models\Store;
+use App\Services\ExchangeRateService;
+use App\Services\MadeToOrder\CustomizationSchema;
 
 /**
  * Prices a storefront cart: line prices (product or variant, in the visitor's currency,
@@ -37,6 +40,9 @@ class CheckoutPricing
 
         $subtotal = 0;
         $orderItemsData = [];
+        $madeToOrderLeadTimes = [];
+        $requiredByDates = [];
+        $currency = CurrencyHelper::currentCurrency();
 
         foreach ($cartItems as $item) {
             $product  = $products[$item['id']] ?? null;
@@ -54,6 +60,7 @@ class CheckoutPricing
             $variantTitle      = $item['variant_title'] ?? null;
             $variantAttributes = $item['variant_attributes'] ?? null;
             $imagePath         = $product->image_path;
+            $isMadeToOrder     = $product->isMadeToOrder($store);
 
             // Availability is only checked here, never decremented: stock only moves once
             // a payment is actually confirmed, in PendingCheckout::materialize(). A
@@ -68,7 +75,7 @@ class CheckoutPricing
                     $variantAttributes = $variant->attributes;
                     if (!empty($variant->image_path)) $imagePath = $variant->image_path;
 
-                    if ($product->track_stock && empty($product->out_of_stock_message) && !$product->allow_backorder) {
+                    if (!$isMadeToOrder && $product->track_stock && empty($product->out_of_stock_message) && !$product->allow_backorder) {
                         if ($variant->stock < $qty) {
                             throw new CheckoutPricingException("Stock insuficiente para {$product->name} ({$variantTitle}). Disponibles: {$variant->stock}.");
                         }
@@ -76,9 +83,30 @@ class CheckoutPricing
                 }
             }
 
-            if ($product->track_stock && empty($product->out_of_stock_message) && !$product->allow_backorder) {
+            if (!$isMadeToOrder && $product->track_stock && empty($product->out_of_stock_message) && !$product->allow_backorder) {
                 if (!$variantId && $product->stock < $qty) {
                     throw new CheckoutPricingException("Stock insuficiente para {$product->name}. Disponibles: {$product->stock}.");
+                }
+            }
+
+            // Made-to-order: the buyer's answers are validated and priced here, server-side
+            // (a size grid decides the quantity; chosen extras raise the unit price).
+            $customization = null;
+            if ($isMadeToOrder) {
+                $evaluated = CustomizationSchema::evaluate(
+                    $product->customization_schema ?? [], $item['customization'] ?? null, $qty,
+                    (int) $product->lead_time_days, $store->id, $product->name,
+                );
+                $qty = $evaluated->quantity;
+                if ($evaluated->extraPerUnit > 0) {
+                    $rates = app(ExchangeRateService::class);
+                    $price += $currency === 'PEN' ? $evaluated->extraPerUnit : $rates->convert($evaluated->extraPerUnit, 'PEN', $currency);
+                    $priceUsd += $rates->convert($evaluated->extraPerUnit, 'PEN', 'USD');
+                }
+                $customization = $evaluated->rows;
+                $madeToOrderLeadTimes[] = (int) $product->lead_time_days;
+                if ($evaluated->requiredBy) {
+                    $requiredByDates[] = $evaluated->requiredBy;
                 }
             }
 
@@ -97,7 +125,7 @@ class CheckoutPricing
                 'price_usd'          => $priceUsd,
                 'quantity'           => $qty,
                 'subtotal'           => $itemSubtotal,
-            ];
+            ] + ($isMadeToOrder ? ['customization' => $customization] : []);
         }
 
         // Descuento por cantidad (compra al por mayor) — se calcula sobre el subtotal
@@ -122,6 +150,22 @@ class CheckoutPricing
 
         $total = $subtotal - $discount + $shippingCost;
 
-        return new CheckoutQuote($orderItemsData, $subtotal, $discount, $shippingCost, $isExpress, $total, $totalQuantity);
+        if ($madeToOrderLeadTimes === []) {
+            return new CheckoutQuote($orderItemsData, $subtotal, $discount, $shippingCost, $isExpress, $total, $totalQuantity);
+        }
+
+        // A cart with made-to-order items is charged the merchant's deposit share today;
+        // the rest is the order's balance (see Order::balance_due / OrderPayment).
+        $depositPercent = $store->depositPercent();
+        sort($requiredByDates);
+
+        return new CheckoutQuote(
+            $orderItemsData, $subtotal, $discount, $shippingCost, $isExpress, $total, $totalQuantity,
+            hasMadeToOrder: true,
+            depositPercent: $depositPercent,
+            amountDueNowOverride: $depositPercent < 100 ? round($total * $depositPercent / 100, 2) : null,
+            requiredBy: $requiredByDates[0] ?? null,
+            estimatedReadyAt: today()->addDays(max($madeToOrderLeadTimes))->toDateString(),
+        );
     }
 }

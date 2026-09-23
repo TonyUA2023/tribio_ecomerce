@@ -50,6 +50,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     @yield('extra_head')
+@include('components.marketing.head')
 </head>
 <body class="er-body-dark">
     <!-- Header -->
