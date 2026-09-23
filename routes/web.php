@@ -196,6 +196,7 @@ Route::domain('{custom_domain}')
         Route::get('/checkout/retorno/{reference}', [StoreController::class, 'checkoutReturn']);
         Route::get('/contacto', [StoreController::class, 'contact']);
         Route::post('/contacto', [StoreController::class, 'submitContact']);
+        Route::post('/adjuntos', [\App\Http\Controllers\AttachmentController::class, 'store'])->middleware('throttle:12,1');
     });
 
 // ────────── TIENDAS PÚBLICAS ESTÁNDAR ──────────
@@ -211,7 +212,13 @@ Route::prefix('tienda')->name('store.')->group(function () {
     Route::get('/{slug}/checkout/retorno/{reference}', [StoreController::class, 'checkoutReturn'])->name('checkout.return');
     Route::get('/{slug}/contacto', [StoreController::class, 'contact'])->name('contact');
     Route::post('/{slug}/contacto', [StoreController::class, 'submitContact'])->name('contact.submit');
+    // Archivos del cliente para trabajos por encargo (logo a bordar, referencias).
+    Route::post('/{slug}/adjuntos', [\App\Http\Controllers\AttachmentController::class, 'store'])->name('attachments.upload')->middleware('throttle:12,1');
 });
+
+// Archivos privados: solo con URL firmada y con fecha de vencimiento (Attachment::signedUrl()).
+Route::get('/adjuntos/{attachment:token}', [\App\Http\Controllers\AttachmentController::class, 'show'])
+    ->name('attachments.show')->middleware('signed');
 
 // API para costos de envío
 Route::get('/api/shipping-cost/{slug}', [\App\Http\Controllers\StoreController::class, 'getShippingCost']);

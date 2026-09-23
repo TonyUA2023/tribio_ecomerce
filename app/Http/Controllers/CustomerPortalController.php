@@ -62,6 +62,12 @@ class CustomerPortalController extends Controller
                 'phone'     => $user->phone,
                 'role'      => $user->role,
                 'has_store' => $user->hasStore(),
+                // Last document the buyer gave at any Tribio checkout, to pre-fill the next one.
+                'document'  => \App\Models\Order::where('user_id', $user->id)
+                    ->whereNotNull('customer_document_number')
+                    ->latest()
+                    ->first(['customer_document_type', 'customer_document_number'])
+                    ?->only(['customer_document_type', 'customer_document_number']),
             ],
             'addresses' => $user->customerAddresses()->get(),
         ]);

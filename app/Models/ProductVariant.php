@@ -38,10 +38,14 @@ class ProductVariant extends Model
 
     public function getTitleAttribute(): string
     {
-        if (empty($this->attributes) || !is_array($this->attributes)) {
+        // getAttribute(), not $this->attributes: inside the model that property is
+        // Eloquent's raw column array (id, sku, price…), not this `attributes` JSON
+        // column — the name collision used to put every column into the title.
+        $options = $this->getAttribute('attributes');
+        if (empty($options) || !is_array($options)) {
             return $this->sku ?? 'Variante';
         }
-        return implode(' / ', array_values($this->attributes));
+        return implode(' / ', array_values($options));
     }
 
     public function getImageUrlAttribute(): string

@@ -32,6 +32,8 @@
              name: '',
              email: '',
              phone: '',
+             document_type: 'DNI',
+             document_number: '',
              address: '',
              address_type: 'casa',
              country: '{{ \App\Helpers\CurrencyHelper::currentCountry() }}',
@@ -186,6 +188,8 @@
                  customer_name: this.customer.name,
                  customer_email: this.customer.email,
                  customer_phone: this.customer.phone,
+                 customer_document_type: this.customer.document_type,
+                 customer_document_number: this.customer.document_number,
                  customer_address: this.customer.address,
                  customer_country: this.customer.country,
                  customer_state: this.customer.state,
@@ -411,6 +415,10 @@
                  if (!this.customer.name?.trim()) this.customer.name = data.user.name || '';
                  if (!this.customer.email?.trim()) this.customer.email = data.user.email || '';
                  if (!this.customer.phone?.trim()) this.customer.phone = data.user.phone || '';
+                 if (!this.customer.document_number?.trim() && data.user.document) {
+                     this.customer.document_type = data.user.document.customer_document_type || 'DNI';
+                     this.customer.document_number = data.user.document.customer_document_number || '';
+                 }
              }
              if (this.customerAddresses.length > 0) {
                  const def = this.customerAddresses.find(a => a.is_default) || this.customerAddresses[0];
@@ -467,6 +475,10 @@
          validateStep2() {
              this.errors = {};
              if (!this.customer.phone || !this.customer.phone.trim()) this.errors.phone = 'Ingresa tu teléfono / WhatsApp.';
+             const doc = (this.customer.document_number || '').trim();
+             if (!doc) this.errors.document = 'Ingresa tu documento: lo pide la empresa de envíos.';
+             else if (this.customer.document_type === 'DNI' && !/^\d{8}$/.test(doc)) this.errors.document = 'El DNI debe tener 8 dígitos.';
+             else if (!this.cardForm.idNumber) { this.cardForm.idNumber = doc; }
              if (this.selectedAddressId === 'new' || this.customerAddresses.length === 0) {
                  if (!this.customer.address || !this.customer.address.trim()) this.errors.address = 'Ingresa tu dirección de entrega.';
              }
@@ -657,6 +669,25 @@
                                        :class="errors.phone ? 'pay-field-error' : 'border-[var(--pay-border)]'"
                                        class="w-full bg-[var(--pay-surface-muted)] border rounded-lg px-4 py-2.5 text-sm outline-none transition">
                                 <span x-show="errors.phone" x-text="errors.phone" class="pay-field-error-msg"></span>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-[var(--pay-text-muted)] mb-1">Documento de identidad *</label>
+                                <div class="flex gap-2">
+                                    <select x-model="customer.document_type" @change="delete errors.document"
+                                            class="h-[42px] bg-[var(--pay-surface-muted)] border border-[var(--pay-border)] rounded-lg px-2 text-sm outline-none transition">
+                                        <option value="DNI">DNI</option>
+                                        <option value="CE">C.E.</option>
+                                        <option value="PAS">Pasaporte</option>
+                                        <option value="RUC">RUC</option>
+                                    </select>
+                                    <input type="text" x-model="customer.document_number" @input="delete errors.document"
+                                           :inputmode="customer.document_type === 'PAS' ? 'text' : 'numeric'"
+                                           :maxlength="customer.document_type === 'DNI' ? 8 : 20"
+                                           placeholder="Número de documento"
+                                           :class="errors.document ? 'pay-field-error' : 'border-[var(--pay-border)]'"
+                                           class="flex-1 min-w-0 bg-[var(--pay-surface-muted)] border rounded-lg px-4 py-2.5 text-sm outline-none transition">
+                                </div>
+                                <span x-show="errors.document" x-text="errors.document" class="pay-field-error-msg"></span>
                             </div>
 
                             <template x-if="selectedAddressId === 'new' || customerAddresses.length === 0">

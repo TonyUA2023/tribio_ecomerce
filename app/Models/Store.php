@@ -31,6 +31,7 @@ class Store extends Model
         'enabled_countries', 'national_shipping_cost', 'country_shipping_costs',
         'free_shipping_min_quantity', 'free_shipping_min_amount',
         'bulk_discount_min_quantity', 'bulk_discount_type', 'bulk_discount_value',
+        'made_to_order_enabled',
     ];
 
     protected $hidden = ['flow_api_key', 'flow_secret_key'];
@@ -51,6 +52,7 @@ class Store extends Model
         'is_featured'      => 'boolean',
         'is_express_shipping_enabled' => 'boolean',
         'is_multilanguage_enabled'    => 'boolean',
+        'made_to_order_enabled'       => 'boolean',
         'plan_expires_at'  => 'datetime',
         'total_revenue'    => 'decimal:2',
         'express_shipping_cost' => 'decimal:2',

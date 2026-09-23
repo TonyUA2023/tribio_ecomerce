@@ -15,31 +15,37 @@ class OrderController extends Controller
     {
         $store = $this->getStore();
 
+        $search = trim((string) $request->search);
+
         $orders = $store->orders()
-            ->with('items')
+            ->withCount('items')
+            ->withSum('items', 'quantity')
             ->when($request->status, fn($q) => $q->where('status', $request->status))
-            ->when($request->search, fn($q) => $q->where(fn($search) =>
-                $search->where('order_number', 'like', "%{$request->search}%")
-                    ->orWhere('customer_name', 'like', "%{$request->search}%")))
+            ->when($search !== '', fn($q) => $q->where(fn($s) =>
+                $s->where('order_number', 'like', "%{$search}%")
+                    ->orWhere('customer_name', 'like', "%{$search}%")
+                    ->orWhere('customer_email', 'like', "%{$search}%")
+                    ->orWhere('customer_phone', 'like', "%{$search}%")
+                    ->orWhere('customer_document_number', 'like', "%{$search}%")))
             ->latest()
-            ->paginate(15);
+            ->paginate(15)
+            ->withQueryString();
 
-        $statusCounts = [
-            'pending'    => $store->orders()->where('status', 'pending')->count(),
-            'confirmed'  => $store->orders()->where('status', 'confirmed')->count(),
-            'processing' => $store->orders()->where('status', 'processing')->count(),
-            'delivered'  => $store->orders()->where('status', 'delivered')->count(),
-            'cancelled'  => $store->orders()->where('status', 'cancelled')->count(),
-        ];
+        // One grouped query instead of one COUNT per status.
+        $counts = $store->orders()->selectRaw('status, COUNT(*) as total')->groupBy('status')->pluck('total', 'status');
+        $statusCounts = collect(['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'])
+            ->mapWithKeys(fn($s) => [$s => (int) ($counts[$s] ?? 0)])
+            ->all();
+        $totalCount = (int) $counts->sum();
 
-        return view('dashboard.orders.index', compact('store', 'orders', 'statusCounts'));
+        return view('dashboard.orders.index', compact('store', 'orders', 'statusCounts', 'totalCount', 'search'));
     }
 
     public function show(Order $order)
     {
         $store = $this->getStore();
         abort_if($order->store_id !== $store->id, 403);
-        $order->load('items');
+        $order->load(['items', 'payments' => fn($q) => $q->orderBy('paid_at')]);
 
         return view('dashboard.orders.show', compact('store', 'order'));
     }

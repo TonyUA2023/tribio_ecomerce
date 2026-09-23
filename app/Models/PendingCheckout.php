@@ -14,6 +14,31 @@ class PendingCheckout extends Model
         'gateway_meta' => 'array',
     ];
 
+    /**
+     * Opens a checkout draft under a fresh order number. Two buyers of the same store
+     * checking out at the same instant can still compute the same number, so a unique
+     * violation is retried with the next free one instead of surfacing as a 500.
+     */
+    public static function openWithFreshReference(int $storeId, array $attributes): self
+    {
+        for ($attempt = 1; ; $attempt++) {
+            try {
+                return self::create(['store_id' => $storeId, 'reference' => Order::generateOrderNumber($storeId)] + $attributes);
+            } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                if ($attempt >= 3) {
+                    throw $e;
+                }
+            }
+        }
+    }
+
+    /** True once the resulting order is paid or refunded — later callbacks must not touch it. */
+    public function isSettled(): bool
+    {
+        return $this->order_id !== null
+            && in_array($this->order?->payment_status, ['paid', 'refunded'], true);
+    }
+
     public function store()
     {
         return $this->belongsTo(Store::class);
@@ -40,15 +65,20 @@ class PendingCheckout extends Model
      */
     public function materialize(string $paymentStatus, string $status, bool $decrementStock): Order
     {
-        return DB::transaction(function () use ($paymentStatus, $status, $decrementStock) {
+        $settlement = null;
+
+        $order = DB::transaction(function () use ($paymentStatus, $status, $decrementStock, &$settlement) {
             $locked = self::whereKey($this->id)->lockForUpdate()->firstOrFail();
             $data = $locked->payload;
+            // Set only by the call that actually turns the order paid — replays never re-credit.
+            $settles = $paymentStatus === 'paid' ? ['gateway' => $locked->gateway, 'ref' => $locked->gateway_ref] : null;
 
             if ($locked->order_id) {
                 $order = Order::whereKey($locked->order_id)->lockForUpdate()->firstOrFail();
                 if (in_array($order->payment_status, ['paid', 'refunded'], true)) {
                     return $order;
                 }
+                $settlement = $settles;
                 // Reaching here means the existing order is 'pending' or 'failed', so
                 // stock was never decremented for it before — safe to do now if this
                 // call is the one that finally confirms payment.
@@ -67,6 +97,8 @@ class PendingCheckout extends Model
                 'customer_name'       => $data['customer_name'],
                 'customer_phone'      => $data['customer_phone'],
                 'customer_email'      => $data['customer_email'],
+                'customer_document_type'   => $data['customer_document_type'] ?? null,
+                'customer_document_number' => $data['customer_document_number'] ?? null,
                 'customer_address'    => $data['customer_address'] ?? null,
                 'customer_country'    => $data['customer_country'] ?? 'PE',
                 'customer_state'      => $data['customer_state'] ?? null,
@@ -93,8 +125,33 @@ class PendingCheckout extends Model
             }
 
             $locked->update(['order_id' => $order->id]);
+            $settlement = $settles;
             return $order;
         });
+
+        if ($settlement) {
+            $this->recordSettlement($order, $settlement['gateway'], $settlement['ref']);
+        }
+
+        return $order;
+    }
+
+    /**
+     * Credits the confirmed charge to the payments ledger — deliberately outside the
+     * transaction above: the gateway has already moved real money, so a ledger problem
+     * must never roll back the order the buyer just paid for. It is logged for manual
+     * reconciliation instead (see the Mercado Pago charge-loss incident in the vault).
+     */
+    private function recordSettlement(Order $order, string $gateway, ?string $gatewayRef): void
+    {
+        try {
+            $order->recordPayment((float) $order->total, OrderPayment::KIND_FULL, $gateway, $gatewayRef);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::critical('Pago confirmado sin registrar en el libro de pagos.', [
+                'order_id' => $order->id, 'order_number' => $order->order_number,
+                'gateway' => $gateway, 'gateway_ref' => $gatewayRef, 'exception' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function decrementStockFor(array $items): void

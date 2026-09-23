@@ -8,6 +8,9 @@ use App\Models\Product;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\User;
+use App\Services\Checkout\CheckoutPricing;
+use App\Services\Checkout\CheckoutPricingException;
+use App\Services\Checkout\ShippingCostResolver;
 use App\Services\Storefront\StorefrontHomeData;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,20 +21,7 @@ class StoreController extends Controller
 {
     private function getStore(string $slug): Store
     {
-        if (request()->attributes->has('store')) {
-            return request()->attributes->get('store');
-        }
-
-        // Si el slug tiene formato de dominio, buscar por dominio propio
-        if (str_contains($slug, '.')) {
-            return Store::where('custom_domain', $slug)
-                ->active()
-                ->firstOrFail();
-        }
-
-        return Store::where('slug', $slug)
-            ->active()
-            ->firstOrFail();
+        return app(\App\Services\Storefront\StorefrontStoreResolver::class)->resolve($slug);
     }
 
     public function show(string $slug)
@@ -306,56 +296,7 @@ class StoreController extends Controller
 
     public function resolveShippingCostForStore(Store $store, string $country = 'PE', ?string $state = null): float
     {
-        $country = strtoupper(trim($country ?: 'PE'));
-
-        // 1. Envío Nacional Plano para Perú (Tarifa Única para todo el país)
-        if ($country === 'PE') {
-            if ($state) {
-                $rate = $store->shippingRates()->where('is_active', true)
-                              ->where('country_code', 'PE')
-                              ->where('state', $state)
-                              ->first();
-                if ($rate) {
-                    return (float) $rate->cost;
-                }
-            }
-            if ($store->national_shipping_cost !== null && (float) $store->national_shipping_cost >= 0) {
-                return (float) $store->national_shipping_cost;
-            }
-        }
-
-        // 2. Tarifa específica configurada por país en country_shipping_costs
-        $countryCosts = is_array($store->country_shipping_costs) ? $store->country_shipping_costs : json_decode($store->country_shipping_costs ?? '[]', true);
-        if (!empty($countryCosts) && isset($countryCosts[$country]) && is_numeric($countryCosts[$country])) {
-            return (float) $countryCosts[$country];
-        }
-
-        // 3. Consulta por departamento / estado en shipping_rates
-        if ($state) {
-            $rate = $store->shippingRates()->where('is_active', true)
-                          ->where('country_code', $country)
-                          ->where('state', $state)
-                          ->first();
-            if ($rate) {
-                return (float) $rate->cost;
-            }
-        }
-
-        // 4. Consulta por país predeterminado en shipping_rates
-        $rate = $store->shippingRates()->where('is_active', true)
-                      ->where('country_code', $country)
-                      ->whereNull('state')
-                      ->first();
-        if ($rate) {
-            return (float) $rate->cost;
-        }
-
-        // 5. Fallback Internacional General (ALL)
-        $rate = $store->shippingRates()->where('is_active', true)
-                      ->where('country_code', 'ALL')
-                      ->first();
-        
-        return $rate ? (float) $rate->cost : 0.0;
+        return app(ShippingCostResolver::class)->resolve($store, $country, $state);
     }
 
     public function getShippingCost(Request $request, string $slug)
@@ -430,7 +371,7 @@ class StoreController extends Controller
 
         // Normalizar campos en caso lleguen sin el prefijo customer_
         $input = $request->all();
-        $fields = ['name', 'phone', 'email', 'address', 'country', 'state', 'city', 'zipcode', 'notes'];
+        $fields = ['name', 'phone', 'email', 'document_type', 'document_number', 'address', 'country', 'state', 'city', 'zipcode', 'notes'];
         foreach ($fields as $field) {
             if (!isset($input['customer_' . $field]) && isset($input[$field])) {
                 $input['customer_' . $field] = $input[$field];
@@ -442,6 +383,10 @@ class StoreController extends Controller
             'customer_name'    => 'required|string|max:255',
             'customer_phone'   => 'required|string|max:20',
             'customer_email'   => 'required|email|max:255',
+            // Nullable server-side so older clients (mobile, cached storefront JS) keep
+            // working; the web drawer itself requires it before submitting.
+            'customer_document_type'   => 'nullable|string|in:DNI,CE,PAS,RUC',
+            'customer_document_number' => 'nullable|string|max:20',
             'customer_address' => 'nullable|string|max:500',
             'customer_country' => 'nullable|string|max:2',
             'customer_state'   => 'nullable|string|max:100',
@@ -454,110 +399,30 @@ class StoreController extends Controller
             'express_shipping' => 'nullable|boolean',
         ]);
 
-        $cartItems = collect($request->items);
-        $products  = Product::whereIn('id', $cartItems->pluck('id'))
-            ->where('store_id', $store->id)
-            ->where('is_active', true)
-            ->get()
-            ->keyBy('id');
-
-        if ($products->isEmpty()) {
-            return response()->json(['error' => 'Carrito inválido'], 422);
-        }
-
-        $subtotal = 0;
-        $orderItemsData = [];
-
-        foreach ($cartItems as $item) {
-            $product  = $products[$item['id']] ?? null;
-            if (!$product) continue;
-
-            $qty               = (int) $item['quantity'];
-            $price             = $product->resolvePrice();
-            // Resolved in parallel regardless of the customer's browsing currency: PayPal
-            // never settles in PEN (confirmed against PayPal's currency-codes reference),
-            // so its branch below always needs a USD amount, prefering each product's own
-            // explicit USD price over a live-converted one (see Product::resolvePrice()).
-            $priceUsd          = $product->resolvePrice('USD');
-            $sku               = $product->sku;
-            $variantId         = $item['variant_id'] ?? null;
-            $variantTitle      = $item['variant_title'] ?? null;
-            $variantAttributes = $item['variant_attributes'] ?? null;
-            $imagePath         = $product->image_path;
-
-            // Availability is only checked here, never decremented: stock only moves once
-            // a payment is actually confirmed, in PendingCheckout::materialize(). A
-            // gateway checkout that's abandoned or rejected must never cost real inventory.
-            if ($variantId) {
-                $variant = $product->variants()->where('id', $variantId)->first();
-                if ($variant) {
-                    $price             = $variant->resolvePrice();
-                    $priceUsd          = $variant->resolvePrice('USD');
-                    if (!empty($variant->sku)) $sku = $variant->sku;
-                    $variantTitle      = $variant->title;
-                    $variantAttributes = $variant->attributes;
-                    if (!empty($variant->image_path)) $imagePath = $variant->image_path;
-
-                    if ($product->track_stock && empty($product->out_of_stock_message) && !$product->allow_backorder) {
-                        if ($variant->stock < $qty) {
-                            return response()->json([
-                                'error' => "Stock insuficiente para {$product->name} ({$variantTitle}). Disponibles: {$variant->stock}."
-                            ], 422);
-                        }
-                    }
-                }
-            }
-
-            if ($product->track_stock && empty($product->out_of_stock_message) && !$product->allow_backorder) {
-                if (!$variantId && $product->stock < $qty) {
-                    return response()->json([
-                        'error' => "Stock insuficiente para {$product->name}. Disponibles: {$product->stock}."
-                    ], 422);
-                }
-            }
-
-            $itemSubtotal = $price * $qty;
-            $subtotal += $itemSubtotal;
-
-            $orderItemsData[] = [
-                'product_id'         => $product->id,
-                'variant_id'         => $variantId,
-                'variant_title'      => $variantTitle,
-                'variant_attributes' => $variantAttributes,
-                'product_name'       => $product->name,
-                'product_sku'        => $sku,
-                'product_image'      => $imagePath,
-                'price'              => $price,
-                'price_usd'          => $priceUsd,
-                'quantity'           => $qty,
-                'subtotal'           => $itemSubtotal,
-            ];
-        }
-
-        // Descuento por cantidad (compra al por mayor) — se calcula sobre el subtotal
-        // original, antes de envío. Ver Store::calculateBulkDiscount().
-        $totalQuantity = collect($orderItemsData)->sum('quantity');
-        $discount = $store->calculateBulkDiscount($subtotal, $totalQuantity);
-
-        // Calculate dynamic shipping cost
         $country = $request->customer_country ?? 'PE';
         $state   = $request->customer_state;
-        $shippingCost = $this->resolveShippingCostForStore($store, $country, $state);
 
-        // Envío gratis por cantidad o monto (ver Store::qualifiesForFreeShipping) anula
-        // solo la tarifa base — el envío express, si el cliente lo elige aparte, se sigue
-        // cobrando normalmente.
-        if ($store->qualifiesForFreeShipping($subtotal, $totalQuantity)) {
-            $shippingCost = 0;
+        // The courier needs the buyer's ID. If the checkout form didn't send one, the
+        // Mercado Pago card form's payer identification is the same person's document.
+        $documentType   = $request->customer_document_number ? ($request->customer_document_type ?: 'DNI') : null;
+        $documentNumber = $request->customer_document_number ? trim($request->customer_document_number) : null;
+        if (!$documentNumber && $request->filled('mp_form_data.payer.identification.number')) {
+            $documentNumber = trim((string) $request->input('mp_form_data.payer.identification.number'));
+            $documentType   = (string) $request->input('mp_form_data.payer.identification.type', 'DNI');
         }
 
-        $isExpress = false;
-        if ($request->boolean('express_shipping') && $store->is_express_shipping_enabled) {
-            $isExpress = true;
-            $shippingCost += $store->express_shipping_cost;
+        // Every gateway below charges exactly these numbers (see CheckoutPricing).
+        try {
+            $quote = app(CheckoutPricing::class)->quote($store, $request->items, $country, $state, $request->boolean('express_shipping'));
+        } catch (CheckoutPricingException $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
         }
-
-        $total = $subtotal - $discount + $shippingCost;
+        $orderItemsData = $quote->items;
+        $subtotal       = $quote->subtotal;
+        $discount       = $quote->discount;
+        $shippingCost   = $quote->shippingCost;
+        $isExpress      = $quote->isExpress;
+        $total          = $quote->total;
         $currency = \App\Helpers\CurrencyHelper::currentCurrency();
 
         // Gestión de cuenta de cliente universal Tribio
@@ -622,15 +487,15 @@ class StoreController extends Controller
         // stock move — once a gateway actually confirms a result (see PendingCheckout::
         // materialize()). A customer who just looks at the payment screen and leaves
         // never triggers any of that: no callback ever arrives, so nothing here is used.
-        $pending = PendingCheckout::create([
-            'store_id'  => $store->id,
-            'reference' => Order::generateOrderNumber($store->id),
+        $pending = PendingCheckout::openWithFreshReference($store->id, [
             'gateway'   => $paymentMethod,
             'payload'   => [
                 'user_id'             => $userId,
                 'customer_name'       => $request->customer_name,
                 'customer_phone'      => $request->customer_phone,
                 'customer_email'      => $request->customer_email,
+                'customer_document_type'   => $documentType,
+                'customer_document_number' => $documentNumber,
                 'customer_address'    => $request->customer_address,
                 'customer_country'    => $country,
                 'customer_state'      => $state,
@@ -676,7 +541,8 @@ class StoreController extends Controller
         if ($store->payment_gateway === 'mercado_pago' && $paymentMethod !== 'paypal' && ($paymentMethod === 'mercadopago' || $store->checkout_mode === 'card') && $mpToken) {
             $mpFormData = $request->input('mp_form_data');
             try {
-                $client = new \GuzzleHttp\Client(['timeout' => 15]);
+                // Resolved from the container (same config) so tests can swap in a mock handler.
+                $client = app()->makeWith(\GuzzleHttp\Client::class, ['config' => ['timeout' => 15]]);
 
                 if ($mpFormData && !empty($mpFormData['token'])) {
                     // --- TARJETA EMBEBIDA (sin redirección) ---
@@ -1072,7 +938,7 @@ class StoreController extends Controller
         }
 
         $pending = PendingCheckout::where('store_id', $store->id)->where('gateway_ref', $paypalOrderId)->first();
-        if ($pending && !$pending->order_id) {
+        if ($pending && !$pending->isSettled()) {
             $paypalOrder = $paypalService->getOrder($store, $paypalOrderId);
             if (($paypalOrder['status'] ?? null) === 'COMPLETED') {
                 $pending->materialize('paid', 'confirmed', decrementStock: true)
@@ -1171,7 +1037,7 @@ class StoreController extends Controller
             $mpToken = $store->mp_access_token ?? $store->gateway_access_token;
             if ($mpToken) {
                 try {
-                    $client = new \GuzzleHttp\Client(['timeout' => 10]);
+                    $client = app()->makeWith(\GuzzleHttp\Client::class, ['config' => ['timeout' => 10]]);
                     $mpRes = $client->get("https://api.mercadopago.com/v1/payments/{$id}", [
                         'headers' => ['Authorization' => 'Bearer ' . trim($mpToken)]
                     ]);
@@ -1182,7 +1048,11 @@ class StoreController extends Controller
                             ->where('store_id', $store->id)
                             ->first();
 
-                        if ($pending && !$pending->order_id) {
+                        // An order that already exists but isn't settled (e.g. a PagoEfectivo
+                        // voucher that came back 'pending') must still be upgraded when the
+                        // payment clears later; a settled one is left untouched, so replays
+                        // stay no-ops. materialize() itself never downgrades a paid order.
+                        if ($pending && !$pending->isSettled()) {
                             $status = $paymentData['status'] ?? '';
                             if ($status === 'approved') {
                                 $pending->materialize('paid', 'confirmed', decrementStock: true)->update([
