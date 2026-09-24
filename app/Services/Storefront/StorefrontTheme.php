@@ -81,6 +81,37 @@ class StorefrontTheme
         return filter_var($this->value($path), FILTER_VALIDATE_BOOLEAN);
     }
 
+    /** Public URL of an uploaded `image` field, or null when the owner has not uploaded one. */
+    public function image(string $path): ?string
+    {
+        $stored = $this->value($path);
+
+        return is_string($stored) && $stored !== '' ? self::imageUrl($stored) : null;
+    }
+
+    public static function imageUrl(string $storedPath): string
+    {
+        return asset('storage/' . ltrim($storedPath, '/'));
+    }
+
+    /** Real URL of a `link` field (see StorefrontLinks), or null for "Sin enlace". */
+    public function link(string $path): ?string
+    {
+        return StorefrontLinks::resolve($this->store, (string) $this->value($path));
+    }
+
+    /** A select/date value guaranteed to be one of the field's options (or the default). */
+    public function choice(string $path): string
+    {
+        $field = $this->fields[$path] ?? [];
+        $value = (string) $this->value($path);
+        if (isset($field['options']) && !array_key_exists($value, $field['options'])) {
+            return (string) $this->defaultFor($path);
+        }
+
+        return $value;
+    }
+
     /** Whether the owner (or the preview draft) set this explicitly. */
     public function isCustomized(string $path): bool
     {
@@ -127,10 +158,13 @@ class StorefrontTheme
     {
         $fonts = config('storefront.fonts', []);
         $key = (string) $this->value('typography.heading');
-        $font = $fonts[$key] ?? $fonts['fredoka'] ?? ['family' => 'sans-serif', 'google' => null];
+        if (!array_key_exists($key, $fonts)) {
+            $key = array_key_exists((string) $this->defaultFor('typography.heading'), $fonts) ? (string) $this->defaultFor('typography.heading') : 'fredoka';
+        }
+        $font = $fonts[$key] ?? ['family' => 'sans-serif', 'google' => null];
 
         return [
-            'key' => array_key_exists($key, $fonts) ? $key : 'fredoka',
+            'key' => $key,
             'family' => $font['family'],
             'href' => $font['google'] ? 'https://fonts.googleapis.com/css2?family=' . $font['google'] . '&display=swap' : null,
         ];
@@ -147,8 +181,11 @@ class StorefrontTheme
     {
         $values = [];
         foreach ($this->fields as $path => $field) {
-            if (in_array($field['type'], ['text', 'textarea', 'emoji'], true)) {
-                $values[$path] = $this->isCustomized($path) || $this->inheritsColumn($path) ? $this->text($path) : '';
+            if ($field['type'] === 'image') {
+                $values[$path] = $this->image($path) ?? '';
+            } elseif (in_array($field['type'], ['text', 'textarea', 'emoji'], true)) {
+                // Optional copy shows its effective value, so clearing the box really means "hide it".
+                $values[$path] = !empty($field['optional']) || $this->isCustomized($path) || $this->inheritsColumn($path) ? $this->text($path) : '';
             } else {
                 $values[$path] = $this->value($path);
             }
@@ -174,9 +211,11 @@ class StorefrontTheme
             return true;
         }
         if (is_string($value) && trim($value) === '') {
-            // Optional copy (default '') treats an explicit empty value as "hide it";
-            // for everything else a cleared field means "go back to the default".
-            return ($field['default'] ?? null) === '';
+            // Optional copy (default '' or 'optional' => true) treats an explicit empty
+            // value as "hide it"; for everything else a cleared field means "go back to
+            // the default". An image is never "set" to an empty path.
+            return ($field['type'] ?? null) !== 'image'
+                && (($field['default'] ?? null) === '' || !empty($field['optional']));
         }
 
         return true;

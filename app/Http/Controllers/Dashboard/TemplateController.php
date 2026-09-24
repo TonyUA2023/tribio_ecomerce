@@ -9,6 +9,7 @@ use App\Http\Requests\Dashboard\UpdateTemplateSettingsRequest;
 use App\Models\Store;
 use App\Services\LogoPaletteService;
 use App\Services\Storefront\StorefrontHomeData;
+use App\Services\Storefront\StorefrontLinks;
 use App\Services\Storefront\StorefrontTheme;
 use App\Services\Storefront\TemplateRegistry;
 use Illuminate\Http\RedirectResponse;
@@ -138,6 +139,7 @@ class TemplateController extends Controller
             'values' => $theme->formValues(),
             'defaults' => collect($this->registry->fields($key))->map(fn ($f, $path) => $theme->defaultFor($path))->all(),
             'fonts' => $this->registry->fontOptions(),
+            'linkOptions' => StorefrontLinks::options($store),
             'logoPalette' => $this->logoPalette($store, $palettes),
             'hasSaved' => !empty($store->template_settings[$key] ?? null),
         ]);
@@ -146,7 +148,7 @@ class TemplateController extends Controller
     public function update(UpdateTemplateSettingsRequest $request, SaveTemplateSettings $save): RedirectResponse
     {
         $store = $this->store();
-        $save->handle($store, $store->template_name, $request->validated('settings') ?? []);
+        $save->handle($store, $store->template_name, $request->validated('settings') ?? [], $request->validated('remove_images') ?? []);
 
         return redirect()->route('dashboard.plantillas.customize')->with('success', 'Cambios publicados. Tu tienda ya luce así.');
     }

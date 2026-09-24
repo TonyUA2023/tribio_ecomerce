@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Dashboard;
 
+use App\Services\Storefront\StorefrontLinks;
 use App\Services\Storefront\TemplateRegistry;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,14 +26,23 @@ class UpdateTemplateSettingsRequest extends FormRequest
     public function rules(): array
     {
         $registry = app(TemplateRegistry::class);
-        $rules = ['settings' => ['nullable', 'array']];
+        $fields = $registry->fields($this->user()->currentStore()->template_name);
+        $imagePaths = array_keys(array_filter($fields, fn (array $field) => $field['type'] === 'image'));
+        $rules = [
+            'settings' => ['nullable', 'array'],
+            'remove_images' => ['nullable', 'array'],
+            'remove_images.*' => ['string', Rule::in($imagePaths)],
+        ];
 
-        foreach ($registry->fields($this->user()->currentStore()->template_name) as $path => $field) {
+        foreach ($fields as $path => $field) {
             $rules["settings.{$path}"] = match ($field['type']) {
                 'color' => ['nullable', 'string', 'regex:/^#?[0-9A-Fa-f]{6}$/'],
                 'select', 'font' => ['nullable', 'string', Rule::in(array_keys($field['options']))],
                 'toggle' => ['nullable', 'boolean'],
                 'emoji' => ['nullable', 'string', 'max:16'],
+                'image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+                'link' => ['nullable', 'string', 'regex:' . StorefrontLinks::PATTERN],
+                'date' => ['nullable', 'date_format:Y-m-d'],
                 default => ['nullable', 'string', 'max:' . ($field['max'] ?? 255)],
             };
         }
@@ -53,7 +63,11 @@ class UpdateTemplateSettingsRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'settings.*.regex' => 'El :attribute debe ser un color válido (por ejemplo #7DA268).',
+            'settings.colors.*.regex' => 'El :attribute debe ser un color válido (por ejemplo #7DA268).',
+            'settings.*.regex' => 'Elige una opción válida para :attribute.',
+            'settings.*.mimes' => 'La :attribute debe ser una imagen JPG, PNG o WEBP.',
+            'settings.*.uploaded' => 'La :attribute no se pudo subir. Prueba con una imagen de menos de 4 MB.',
+            'settings.*.date_format' => 'Elige una fecha válida para :attribute.',
         ];
     }
 }

@@ -1,0 +1,111 @@
+# Revisión automática de cada Pull Request (ver CONTRIBUTING.md).
+# Una PR solo se puede fusionar si los tres trabajos quedan en verde.
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo_sqlite, sqlite3, gd, intl, bcmath, zip
+          coverage: none
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Preparar .env
+        run: cp .env.example .env
+
+      - name: Dependencias PHP
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Clave de la app
+        run: php artisan key:generate
+
+      # Las vistas usan @vite: sin el build, las páginas fallan en los tests. También
+      # detecta clases de Tailwind o JS que no compilan.
+      - name: Compilar diseño (Vite)
+        run: npm ci && npm run build
+
+      - name: Tests (SQLite en memoria, nunca la base real)
+        run: php artisan test
+
+  migrations:
+    name: Migraciones
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: tribio_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: tribio_ci
+      DB_USERNAME: root
+      DB_PASSWORD: root
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Una migración que ya está en develop/main puede haber corrido en producción:
+      # editarla no cambia nada allí y deja las bases desincronizadas. Se crea una nueva.
+      - name: Las migraciones publicadas no se editan
+        if: github.event_name == 'pull_request'
+        run: |
+          changed=$(git diff --name-status "origin/${{ github.base_ref }}...HEAD" -- database/migrations | grep -E '^(M|D|R)' || true)
+          if [ -n "$changed" ]; then
+            echo "::error::Esta PR modifica, borra o renombra migraciones que ya existen en ${{ github.base_ref }}:"
+            echo "$changed"
+            echo "Crea una migración NUEVA con: php artisan make:migration ..."
+            exit 1
+          fi
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo_mysql, gd, intl, bcmath, zip
+          coverage: none
+
+      - name: Preparar .env
+        run: cp .env.example .env
+
+      - name: Dependencias PHP
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Clave de la app
+        run: php artisan key:generate
+
+      # Es exactamente lo que hace un programador nuevo en su computadora: si esto
+      # falla, nadie puede montar su base local.
+      - name: Todas las migraciones desde cero en MySQL
+        run: php artisan migrate --force
+
+      - name: Datos de ejemplo (seeders)
+        run: php artisan db:seed --force

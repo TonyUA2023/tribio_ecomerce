@@ -489,6 +489,26 @@ a.tpl-card-media:hover .tpl-card-hover, a.tpl-card-media:focus-visible .tpl-card
 .tpl-item-grid > .tpl-field:not(.tpl-field-emoji) { grid-column: 2; }
 .tpl-item-grid > .tpl-field-emoji { grid-row: span 2; }
 .tpl-emoji { text-align: center; font-size: 22px !important; padding: 0 !important; }
+.tpl-item-grid.is-plain { grid-template-columns: minmax(0, 1fr); }
+.tpl-item-grid.is-plain > .tpl-field { grid-column: auto; }
+.tpl-item.is-fold > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; list-style: none; min-height: 28px; }
+.tpl-item.is-fold > summary::-webkit-details-marker { display: none; }
+.tpl-item.is-fold > summary .tpl-group-chevron { width: 16px; height: 16px; transition: transform .2s; transform: rotate(90deg); }
+.tpl-item.is-fold[open] > summary .tpl-group-chevron { transform: rotate(-90deg); }
+.tpl-image { position: relative; display: grid; place-items: center; overflow: hidden; border-radius: 10px; border: 1px dashed #cdd9e6; background: #fff; }
+.tpl-image.is-wide { aspect-ratio: 16 / 7; }
+.tpl-image.is-tall { aspect-ratio: 3 / 4; max-width: 180px; }
+.tpl-image.is-portrait { aspect-ratio: 5 / 6; max-width: 220px; }
+.tpl-image.is-square { aspect-ratio: 1; max-width: 200px; }
+.tpl-image.has-image { border-style: solid; border-color: var(--dash-line); background: #f3f6fa; }
+.tpl-image img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.tpl-image-empty { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #8193a8; }
+.tpl-image-empty .dash-icon { width: 16px; height: 16px; }
+.tpl-image-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tpl-image-pick { cursor: pointer; }
+.tpl-image-pick:focus-within { outline: 3px solid #2176d2; outline-offset: 2px; }
+.tpl-date { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.tpl-date .input-field { max-width: 200px; }
 .tpl-inline-link { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #1b69b7; min-height: 36px; }
 .tpl-inline-link .dash-icon { width: 16px; height: 16px; }
 .tpl-inline-link:hover { text-decoration: underline; }

@@ -70,6 +70,51 @@
         </div>
         @break
 
+    @case('image')
+        <div class="tpl-field tpl-field-image">
+            <span class="tpl-label" id="{{ $id }}-label">{{ $label }}</span>
+            <div class="tpl-image is-{{ $field['aspect'] ?? 'wide' }}" :class="{ 'has-image': imageUrl(@js($path)) }">
+                <img x-show="imageUrl(@js($path))" :src="imageUrl(@js($path))" alt="" x-cloak>
+                <span class="tpl-image-empty" x-show="!imageUrl(@js($path))"><x-dashboard-icon name="image"/> Sin imagen</span>
+            </div>
+            <div class="tpl-image-actions">
+                <label class="btn-secondary tpl-image-pick">
+                    <input id="{{ $id }}" type="file" name="{{ $name }}" accept="image/jpeg,image/png,image/webp" class="sr-only" aria-labelledby="{{ $id }}-label" @change="pickImage(@js($path), $event)" @if($error) aria-invalid="true" @endif>
+                    <x-dashboard-icon name="plus"/> <span x-text="imageUrl(@js($path)) ? 'Cambiar' : 'Subir imagen'">Subir imagen</span>
+                </label>
+                <button type="button" class="btn-ghost" x-show="imageUrl(@js($path))" x-cloak @click="removeImage(@js($path), $event)">Quitar</button>
+                <template x-if="removed[@js($path)]"><input type="hidden" name="remove_images[]" value="{{ $path }}"></template>
+            </div>
+            @if(!empty($field['help']))<p class="tpl-help">{{ $field['help'] }}</p>@endif
+            @if($error)<p class="tpl-error">{{ $error }}</p>@endif
+        </div>
+        @break
+
+    @case('link')
+        <div class="tpl-field">
+            <label class="tpl-label" for="{{ $id }}">{{ $label }}</label>
+            <select id="{{ $id }}" name="{{ $name }}" x-model="v[@js($path)]" class="input-field" @if($error) aria-invalid="true" @endif>
+                @foreach($linkOptions ?? [] as $optionValue => $optionLabel)
+                    <option value="{{ $optionValue }}">{{ $optionLabel }}</option>
+                @endforeach
+            </select>
+            @if(!empty($field['help']))<p class="tpl-help">{{ $field['help'] }}</p>@endif
+            @if($error)<p class="tpl-error">{{ $error }}</p>@endif
+        </div>
+        @break
+
+    @case('date')
+        <div class="tpl-field">
+            <label class="tpl-label" for="{{ $id }}">{{ $label }}</label>
+            <div class="tpl-date">
+                <input id="{{ $id }}" type="date" name="{{ $name }}" x-model="v[@js($path)]" class="input-field" @if($error) aria-invalid="true" @endif>
+                <button type="button" class="btn-ghost" x-show="v[@js($path)]" x-cloak @click="v[@js($path)] = ''; changed()">Quitar fecha</button>
+            </div>
+            @if(!empty($field['help']))<p class="tpl-help">{{ $field['help'] }}</p>@endif
+            @if($error)<p class="tpl-error">{{ $error }}</p>@endif
+        </div>
+        @break
+
     @case('emoji')
         <div class="tpl-field tpl-field-emoji">
             <label class="tpl-label" for="{{ $id }}">{{ $label }}</label>

@@ -69,6 +69,33 @@
         Object.entries(data.toggles || {}).forEach(([path, on]) => {
             document.querySelectorAll('[data-tpl-show="' + CSS.escape(path) + '"]').forEach((el) => { el.hidden = !on; });
         });
+        // Images: only same-origin http(s) or blob: URLs (the customizer's local file previews).
+        const safeImage = (url) => url === '' || url.startsWith('blob:' + origin + '/') || url.startsWith(origin + '/');
+        const imageTargets = [];
+        Object.entries(data.images || {}).forEach(([path, url]) => {
+            if (typeof url !== 'string' || !safeImage(url)) return;
+            document.querySelectorAll('[data-tpl-img="' + CSS.escape(path) + '"]').forEach((el) => imageTargets.push([el, url]));
+        });
+        // <source> first: an <img> inside <picture> checks its mobile source to decide if it shows.
+        imageTargets.sort((a, b) => (a[0].tagName === 'SOURCE' ? 0 : 1) - (b[0].tagName === 'SOURCE' ? 0 : 1)).forEach(([el, url]) => {
+            const value = url || el.dataset.tplImgFallback || '';
+            if (el.tagName === 'SOURCE') { el.srcset = value; el.media = value ? (el.dataset.media || '') : 'not all'; }
+            else if (el.tagName === 'IMG') {
+                const source = el.parentElement && el.parentElement.tagName === 'PICTURE' ? el.parentElement.querySelector('source') : null;
+                const src = value || (source && source.media !== 'not all' ? source.getAttribute('srcset') || '' : '');
+                if (src) el.src = src;
+                el.hidden = !src;
+            }
+            else { el.style.backgroundImage = value ? 'url("' + value + '")' : ''; }
+        });
+        document.querySelectorAll('[data-tpl-img-host]').forEach((host) => {
+            host.toggleAttribute('data-has-image', !!host.querySelector('img[data-tpl-img]:not([hidden])'));
+        });
+        // Select/date/link values: templates style themselves off [data-choice].
+        Object.entries(data.choices || {}).forEach(([path, value]) => {
+            document.querySelectorAll('[data-tpl-choice="' + CSS.escape(path) + '"]').forEach((el) => { el.dataset.choice = String(value); });
+        });
+        document.dispatchEvent(new CustomEvent('tribio:template-preview-applied'));
     });
 
     if (window.parent !== window) {

@@ -18,7 +18,7 @@
     $customizerConfig = [
         'values' => $values,
         'defaults' => $defaults,
-        'fields' => collect($fields)->map(fn ($field) => ['type' => $field['type']])->all(),
+        'fields' => collect($fields)->map(fn ($field) => ['type' => $field['type'], 'optional' => !empty($field['optional'])])->all(),
         'fonts' => $fontsForJs,
         'backgrounds' => \App\Services\Storefront\StorefrontTheme::BACKGROUNDS,
     ];
@@ -32,7 +32,7 @@
 
 @section('content')
 <div class="tpl-page tpl-customize" x-data="templateCustomizer(@js($customizerConfig))">
-    <form id="tpl-settings-form" method="POST" action="{{ route('dashboard.plantillas.update') }}" @input="changed()" @change="changed()" @submit="saving = true" novalidate>
+    <form id="tpl-settings-form" method="POST" action="{{ route('dashboard.plantillas.update') }}" enctype="multipart/form-data" @input="changed()" @change="changed()" @submit="saving = true" novalidate>
         @csrf
         @method('PUT')
 
@@ -116,20 +116,36 @@
                                 </div>
                             @endif
 
-                            @if($group['key'] === 'hero')
+                            @if($group['key'] === 'hero' && !$groupFields->contains(fn ($field) => $field['type'] === 'image'))
                                 <a href="{{ route('dashboard.galeria.index') }}" class="tpl-inline-link"><x-dashboard-icon name="image"/> Elegir las fotos de la portada en Galería</a>
                             @endif
 
                             @foreach($rows as $row)
                                 @if(isset($row['fields']))
+                                    @php $plainItem = !collect($row['fields'])->contains(fn ($field) => $field['type'] === 'emoji'); @endphp
+                                    @php
+                                        $itemTitle = ($group['item_label'] ?? $itemLabels[$group['key']] ?? 'Elemento') . ' ' . ($row['index'] + 1);
+                                        // Long items (a hero banner has ~14 fields) fold so the group stays scannable.
+                                        $foldItem = count($row['fields']) > 5;
+                                        $itemHasError = collect($row['fields'])->keys()->contains(fn ($path) => $errors->has("settings.{$path}"));
+                                    @endphp
+                                    @if($foldItem)
+                                    <details class="tpl-item is-fold" @if($row['index'] === 0 || $itemHasError) open @endif>
+                                        <summary class="tpl-item-title">{{ $itemTitle }} <x-dashboard-icon name="chevron" class="tpl-group-chevron"/></summary>
+                                    @else
                                     <div class="tpl-item">
-                                        <p class="tpl-item-title">{{ $itemLabels[$group['key']] ?? 'Elemento' }} {{ $row['index'] + 1 }}</p>
-                                        <div class="tpl-item-grid">
+                                        <p class="tpl-item-title">{{ $itemTitle }}</p>
+                                    @endif
+                                        <div class="tpl-item-grid {{ $plainItem ? 'is-plain' : '' }}">
                                             @foreach($row['fields'] as $path => $field)
                                                 @include('dashboard.templates._field', ['path' => $path, 'field' => $field, 'compact' => true])
                                             @endforeach
                                         </div>
+                                    @if($foldItem)
+                                    </details>
+                                    @else
                                     </div>
+                                    @endif
                                 @else
                                     @include('dashboard.templates._field', ['path' => $row['path'], 'field' => $row['field'], 'compact' => false])
                                 @endif

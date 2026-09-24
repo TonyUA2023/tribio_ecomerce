@@ -1,0 +1,36 @@
+# Zona compartida: afecta a TODAS las tiendas. Con la protección de rama activada
+# ("Require review from Code Owners"), una PR que toque estos archivos no se puede
+# fusionar sin la aprobación del responsable. Cambia @TonyUA2023 por el usuario de
+# GitHub de quien revise (pueden ser varios, separados por espacio).
+# La última regla que coincide es la que manda.
+
+# Checkout, pagos y pedidos
+/app/Http/Controllers/StoreController.php     @TonyUA2023
+/app/Models/PendingCheckout.php               @TonyUA2023
+/app/Models/Order.php                         @TonyUA2023
+/app/Services/Checkout/                       @TonyUA2023
+/app/Services/Payments/                       @TonyUA2023
+/resources/views/components/checkout/         @TonyUA2023
+
+# Base de datos, rutas y arranque
+/database/migrations/                         @TonyUA2023
+/routes/                                      @TonyUA2023
+/bootstrap/                                   @TonyUA2023
+/config/                                      @TonyUA2023
+
+# Diseño compartido: layouts, componentes de tienda, CSS y JS globales
+/resources/views/layouts/                     @TonyUA2023
+/resources/views/components/storefront/       @TonyUA2023
+/resources/views/components/marketing/        @TonyUA2023
+/resources/css/                               @TonyUA2023
+/resources/js/                                @TonyUA2023
+
+# Tiendas a medida de clientes reales (Maetek congelada, TFL)
+/resources/views/templates/minimal-light/     @TonyUA2023
+/resources/views/clientes_custom/             @TonyUA2023
+
+# Despliegue y CI
+/Dockerfile                                   @TonyUA2023
+/docker-entrypoint.sh                         @TonyUA2023
+/docker/                                      @TonyUA2023
+/.github/                                     @TonyUA2023

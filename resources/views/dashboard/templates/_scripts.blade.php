@@ -84,6 +84,9 @@
 
         Alpine.data('templateCustomizer', (config) => compose(deviceStage(), {
             v: { ...config.values },
+            // Image fields: current URL (saved image or a local blob of the newly picked file).
+            imgs: Object.fromEntries(Object.entries(config.fields).filter(([, f]) => f.type === 'image').map(([path]) => [path, config.values[path] || ''])),
+            removed: {},
             pending: null,
             dirty: false,
             saving: false,
@@ -117,6 +120,28 @@
                 this.changed();
             },
             count(path) { return String(this.v[path] || '').length; },
+            imageUrl(path) { return this.imgs[path] || ''; },
+            pickImage(path, event) {
+                const file = event.target.files && event.target.files[0];
+                if (!file) return;
+                if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size > 4 * 1024 * 1024) {
+                    alert('Usa una imagen JPG, PNG o WEBP de hasta 4 MB.');
+                    event.target.value = '';
+                    return;
+                }
+                if (String(this.imgs[path]).startsWith('blob:')) URL.revokeObjectURL(this.imgs[path]);
+                this.imgs[path] = URL.createObjectURL(file);
+                this.removed[path] = false;
+                this.changed();
+            },
+            removeImage(path, event) {
+                const input = event.target.closest('.tpl-field').querySelector('input[type=file]');
+                if (input) input.value = '';
+                if (String(this.imgs[path]).startsWith('blob:')) URL.revokeObjectURL(this.imgs[path]);
+                this.imgs[path] = '';
+                this.removed[path] = true;
+                this.changed();
+            },
             get primaryIsLight() { return luminance(toRgb(this.color('colors.primary'))) > 0.5; },
             payload() {
                 const primary = this.color('colors.primary');
@@ -124,17 +149,19 @@
                 const vars = { ...primaryScale(primary), ...secondaryScale(this.color('colors.secondary')) };
                 vars.bg = background === 'tint' ? toHex(mix(toRgb(primary), WHITE, 0.95)) : (config.backgrounds[background] || config.backgrounds.cream);
 
-                const texts = {}, toggles = {};
+                const texts = {}, toggles = {}, images = {}, choices = {};
                 Object.entries(config.fields).forEach(([path, field]) => {
                     if (field.type === 'toggle') { toggles[path] = !!this.v[path]; return; }
+                    if (field.type === 'image') { images[path] = this.imgs[path] || ''; return; }
+                    if (['select', 'date', 'link'].includes(field.type)) { choices[path] = String(this.v[path] ?? ''); return; }
                     if (!['text', 'textarea', 'emoji'].includes(field.type)) return;
                     const value = String(this.v[path] || '').trim();
-                    texts[path] = value !== '' ? value : (config.defaults[path] || '');
+                    texts[path] = value !== '' || field.optional ? value : (config.defaults[path] || '');
                 });
                 const fontKey = this.v['typography.heading'];
                 const font = config.fonts[fontKey] ? { key: fontKey, ...config.fonts[fontKey] } : null;
 
-                return { type: 'tribio:template-preview', vars, texts, toggles, font };
+                return { type: 'tribio:template-preview', vars, texts, toggles, images, choices, font };
             },
             send() {
                 const frame = this.$refs.frame;
