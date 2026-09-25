@@ -1082,9 +1082,9 @@ class StoreController extends Controller
 
     /**
      * The Meta Pixel "Purchase" for the buyer who just came back from paying (see
-     * resources/js/app.js): stores with a Pixel, paid orders, and only for a short
-     * while — order numbers are sequential, so this must not become a way to read
-     * any store's sales. The Conversions API covers anything later, server side.
+     * resources/js/app.js): stores with a Meta Pixel or a Google tag, paid orders, and
+     * only for a short while — order numbers are sequential, so this must not become a
+     * way to read any store's sales. The Conversions API covers anything later.
      */
     private function browserPurchase(Order $order): ?array
     {
@@ -1093,7 +1093,8 @@ class StoreController extends Controller
         }
         try {
             $store = $order->store;
-            if (!$store || !app(\App\Services\Marketing\Meta\MetaIntegrationService::class)->active($store)?->hasPixel()) {
+            if (!$store || !(app(\App\Services\Marketing\Meta\MetaIntegrationService::class)->active($store)?->hasPixel()
+                || app(\App\Services\Marketing\Google\GoogleIntegrationService::class)->active($store)?->hasGoogleTag())) {
                 return null;
             }
 

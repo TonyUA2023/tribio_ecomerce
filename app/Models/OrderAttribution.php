@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 class OrderAttribution extends Model
 {
     public const CHANNEL_META = 'meta';
+    public const CHANNEL_GOOGLE = 'google';
     public const CHANNEL_OTHER = 'other';
 
     protected $fillable = [

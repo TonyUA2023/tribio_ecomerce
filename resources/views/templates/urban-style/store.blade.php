@@ -106,15 +106,7 @@
     @include('components.marketing.head')
 </head>
 <body class="antialiased us-body">
-    @unless($tplPreview)
-    <div id="google_translate_element" style="display:none;"></div>
-    <script type="text/javascript">
-        function googleTranslateElementInit() {
-            new google.translate.TranslateElement({pageLanguage: 'es', includedLanguages: 'en,es', autoDisplay: false}, 'google_translate_element');
-        }
-    </script>
-    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-    @endunless
+    @include('templates.urban-style._translate')
 
     @include('templates.urban-style.header', ['overlayHeader' => true])
 

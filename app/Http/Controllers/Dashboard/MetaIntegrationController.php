@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Dashboard\UpdateMetaIntegrationRequest;
 use App\Models\MarketingEventLog;
-use App\Models\Store;
 use App\Models\StoreMarketingIntegration;
 use App\Services\Marketing\Meta\CatalogFeed;
 use App\Services\Marketing\Meta\MetaIntegrationService;
@@ -27,7 +26,7 @@ class MetaIntegrationController extends Controller
             'available'    => $available,
             'saved'        => $saved,
             'integration'  => $saved ?? new StoreMarketingIntegration(['is_active' => true, 'default_condition' => 'new']),
-            'feedUrl'      => self::feedUrl($store),
+            'feedUrl'      => CatalogFeed::url($store, StoreMarketingIntegration::PROVIDER_META),
             'catalog'      => $saved ? $feed->diagnostics($store, $saved) : null,
             'recentEvents' => $saved
                 ? MarketingEventLog::where('store_id', $store->id)->where('provider', StoreMarketingIntegration::PROVIDER_META)
@@ -66,11 +65,4 @@ class MetaIntegrationController extends Controller
         return back()->with($result['ok'] ? 'success' : 'error', $result['message']);
     }
 
-    /** The URL the owner pastes in Commerce Manager: their own domain when they have one. */
-    public static function feedUrl(Store $store): string
-    {
-        return $store->custom_domain && str_contains($store->custom_domain, '.')
-            ? rtrim($store->url, '/') . '/feed/facebook.xml'
-            : route('store.feed.meta', $store->slug);
-    }
 }

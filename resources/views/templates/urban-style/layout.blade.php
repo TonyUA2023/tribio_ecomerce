@@ -46,16 +46,7 @@
 </head>
 <body class="antialiased relative bg-[var(--t-bg)] us-body">
     
-    @unless($templatePreview ?? false)
-    <!-- Google Translate Script -->
-    <div id="google_translate_element" style="display:none;"></div>
-    <script type="text/javascript">
-        function googleTranslateElementInit() {
-            new google.translate.TranslateElement({pageLanguage: 'es', includedLanguages: 'en,es', autoDisplay: false}, 'google_translate_element');
-        }
-    </script>
-    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-    @endunless
+    @include('templates.urban-style._translate')
 
     @yield('content')
 

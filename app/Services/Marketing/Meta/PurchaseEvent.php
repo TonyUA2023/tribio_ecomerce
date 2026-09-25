@@ -36,10 +36,13 @@ class PurchaseEvent
         ], fn ($v) => $v !== null);
     }
 
-    /** What the storefront hands to fbq('track', 'Purchase', …) — no personal data. */
+    /**
+     * What the storefront hands to fbq('track', 'Purchase', …) and gtag('event',
+     * 'purchase', …) — no personal data. order_id becomes Google's transaction_id.
+     */
     public function forBrowser(Order $order): array
     {
-        return ['event_id' => self::eventId($order)] + $this->customData($order);
+        return ['event_id' => self::eventId($order), 'order_id' => $order->order_number] + $this->customData($order);
     }
 
     private function customData(Order $order): array

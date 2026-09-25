@@ -81,22 +81,76 @@
         </div>
     </div>
 
+    {{-- Google --}}
+    <div class="glass-card p-5 sm:p-6">
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+            <div class="min-w-0">
+                <h3 class="text-white font-bold text-base">Google <span class="text-white/40 font-normal text-sm">· Shopping, Analytics y Ads</span></h3>
+                <p class="text-xs text-white/50 mt-1">Tus productos gratis en Google Shopping, y mide visitas y ventas con Google Analytics y Google Ads.</p>
+            </div>
+            @if(!$googleIntegration)
+                <span class="badge badge-gray">Sin conectar</span>
+            @elseif(!$googleIntegration->is_active)
+                <span class="badge badge-gold">En pausa</span>
+            @else
+                <span class="badge badge-green">Conectado</span>
+            @endif
+        </div>
+
+        @if($googleIntegration)
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+            <div class="rounded-xl border border-white/10 bg-white/5 p-3">
+                <p class="text-[11px] text-white/40 uppercase tracking-wider">Google Shopping</p>
+                <p class="text-sm text-white font-semibold mt-1">
+                    @if(!$hasCustomDomain) Necesita dominio propio
+                    @else {{ $googleCatalog['products_included'] }} {{ $googleCatalog['products_included'] === 1 ? 'producto listo' : 'productos listos' }}
+                    @endif
+                </p>
+                <p class="text-[11px] text-white/40 mt-0.5">{{ $googleIntegration->domain_verification ? 'Código de verificación guardado' : 'Falta verificar tu dominio' }}</p>
+            </div>
+            <div class="rounded-xl border border-white/10 bg-white/5 p-3">
+                <p class="text-[11px] text-white/40 uppercase tracking-wider">Google Analytics</p>
+                <p class="text-sm text-white font-semibold mt-1">{{ $googleIntegration->measurement_id ? 'Activo' : 'Sin configurar' }}</p>
+                <p class="text-[11px] text-white/40 mt-0.5">Visitas y ventas de tu tienda</p>
+            </div>
+            <div class="rounded-xl border border-white/10 bg-white/5 p-3">
+                <p class="text-[11px] text-white/40 uppercase tracking-wider">Google Ads</p>
+                <p class="text-sm text-white font-semibold mt-1">{{ $googleIntegration->hasAdsConversion() ? 'Midiendo compras' : 'Sin configurar' }}</p>
+                <p class="text-[11px] text-white/40 mt-0.5">Qué anuncios venden</p>
+            </div>
+        </div>
+
+        <div class="rounded-xl border border-white/10 bg-white/5 p-3 mt-3">
+            <p class="text-[11px] text-white/40 uppercase tracking-wider">Ventas que llegaron desde anuncios de Google · últimos 30 días</p>
+            @forelse($googleSales as $row)
+                <p class="text-sm text-white font-semibold mt-1">
+                    {{ $row->orders_count }} {{ (int) $row->orders_count === 1 ? 'pedido pagado' : 'pedidos pagados' }}
+                    · {{ \App\Helpers\CurrencyHelper::symbol($row->currency ?: 'PEN') }} {{ number_format((float) $row->revenue, 2) }}
+                </p>
+            @empty
+                <p class="text-sm text-white/60 mt-1">Aún ninguna. Aparecerán aquí cuando alguien compre después de hacer clic en un anuncio de Google.</p>
+            @endforelse
+        </div>
+        @endif
+
+        <div class="mt-4">
+            @if($googleAvailable)
+                <a href="{{ route('dashboard.marketing.google.edit') }}" class="btn-primary inline-flex text-xs sm:text-sm">
+                    {{ $googleIntegration ? 'Ver configuración' : 'Conectar con Google' }}
+                </a>
+            @else
+                <p class="text-xs text-white/50">⏳ Estamos activando la conexión con Google. No tienes que hacer nada.</p>
+            @endif
+        </div>
+    </div>
+
     {{-- Próximamente --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div class="glass-card p-4 sm:p-5">
-            <div class="flex items-center justify-between gap-2">
-                <p class="text-white font-bold text-sm">Google Shopping</p>
-                <span class="badge badge-gray">Próximamente</span>
-            </div>
-            <p class="text-xs text-white/50 mt-1">Tus productos gratis en los resultados de Google.</p>
+    <div class="glass-card p-4 sm:p-5">
+        <div class="flex items-center justify-between gap-2">
+            <p class="text-white font-bold text-sm">TikTok</p>
+            <span class="badge badge-gray">Próximamente</span>
         </div>
-        <div class="glass-card p-4 sm:p-5">
-            <div class="flex items-center justify-between gap-2">
-                <p class="text-white font-bold text-sm">TikTok</p>
-                <span class="badge badge-gray">Próximamente</span>
-            </div>
-            <p class="text-xs text-white/50 mt-1">Anuncios con tu catálogo en TikTok.</p>
-        </div>
+        <p class="text-xs text-white/50 mt-1">Anuncios con tu catálogo en TikTok.</p>
     </div>
 </div>
 @endsection

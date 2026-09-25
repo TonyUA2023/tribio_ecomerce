@@ -298,6 +298,12 @@ class Store extends Model
         return $this->hasOne(StoreMarketingIntegration::class)->where('provider', StoreMarketingIntegration::PROVIDER_META);
     }
 
+    /** Google settings (Merchant Center feed, Analytics 4, Google Ads conversion). */
+    public function googleIntegration()
+    {
+        return $this->hasOne(StoreMarketingIntegration::class)->where('provider', StoreMarketingIntegration::PROVIDER_GOOGLE);
+    }
+
     public function analytics()
     {
         return $this->hasMany(StoreAnalytic::class);

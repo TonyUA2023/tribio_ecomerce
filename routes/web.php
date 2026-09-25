@@ -164,6 +164,8 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     Route::put('/marketing/meta', [\App\Http\Controllers\Dashboard\MetaIntegrationController::class, 'update'])->name('marketing.meta.update');
     Route::post('/marketing/meta/evento-prueba', [\App\Http\Controllers\Dashboard\MetaIntegrationController::class, 'testEvent'])
         ->middleware('throttle:10,1')->name('marketing.meta.test-event');
+    Route::get('/marketing/google', [\App\Http\Controllers\Dashboard\GoogleIntegrationController::class, 'edit'])->name('marketing.google.edit');
+    Route::put('/marketing/google', [\App\Http\Controllers\Dashboard\GoogleIntegrationController::class, 'update'])->name('marketing.google.update');
 });
 
 // Catálogo de productos para Meta (Commerce Manager lo lee cada hora) y copias JPG de
@@ -223,6 +225,7 @@ Route::domain('{custom_domain}')
         Route::post('/adjuntos', [\App\Http\Controllers\AttachmentController::class, 'store'])->middleware('throttle:12,1');
         Route::post('/producto/{product}/resena', [\App\Http\Controllers\StoreReviewController::class, 'store'])->middleware('throttle:10,1');
         Route::get('/feed/facebook.xml', [\App\Http\Controllers\MarketingFeedController::class, 'meta'])->middleware('throttle:30,1');
+        Route::get('/feed/google.xml', [\App\Http\Controllers\MarketingFeedController::class, 'google'])->middleware('throttle:30,1');
     });
 
 // ────────── TIENDAS PÚBLICAS ESTÁNDAR ──────────
@@ -234,6 +237,7 @@ Route::prefix('tienda')->name('store.')->group(function () {
     Route::post('/{slug}/producto/{product}/resena', [\App\Http\Controllers\StoreReviewController::class, 'store'])->name('product.review')->middleware('throttle:10,1');
     Route::get('/{slug}/galeria', [StoreController::class, 'gallery'])->name('gallery');
     Route::get('/{slug}/feed/facebook.xml', [\App\Http\Controllers\MarketingFeedController::class, 'meta'])->middleware('throttle:30,1')->name('feed.meta');
+    Route::get('/{slug}/feed/google.xml', [\App\Http\Controllers\MarketingFeedController::class, 'google'])->middleware('throttle:30,1')->name('feed.google');
     Route::post('/{slug}/checkout', [StoreController::class, 'checkout'])->name('checkout');
     Route::post('/{slug}/checkout/paypal/capturar', [StoreController::class, 'capturePaypalOrder'])->name('checkout.paypal.capture');
     Route::post('/{slug}/checkout/paypal/webhook', [StoreController::class, 'paypalWebhook'])->name('checkout.paypal.webhook');

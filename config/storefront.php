@@ -227,6 +227,8 @@ return [
             'default_accent'    => '#E0157A',
             'default_secondary' => '#3B0A2E',
             'default_bg'        => '#FFFFFF',
+            // Sin "multi-idioma" activado la tienda se muestra siempre en español.
+            'respects_language_setting' => true,
             'settings' => [
                 [
                     'key' => 'brand', 'title' => 'Colores y tipografía', 'icon' => 'palette',
@@ -253,8 +255,8 @@ return [
                         'header.style' => ['type' => 'select', 'label' => 'En la página de inicio', 'default' => 'overlay',
                             'options' => ['overlay' => 'Transparente sobre los banners', 'solid' => 'Siempre blanco']],
                         'header.logo_on_hero' => ['type' => 'select', 'label' => 'Tu logo sobre los banners', 'default' => 'white',
-                            'options' => ['white' => 'En blanco (ideal para logos oscuros)', 'original' => 'Con sus colores originales'],
-                            'help' => 'Al bajar por la página el menú se vuelve blanco y el logo recupera sus colores.'],
+                            'options' => ['white' => 'En blanco (solo logos PNG con fondo transparente)', 'original' => 'Con sus colores originales'],
+                            'help' => 'Si tu logo tiene fondo (JPG o PNG con fondo de color) se muestra siempre con sus colores. Al bajar por la página el menú se vuelve blanco.'],
                     ],
                 ],
                 [

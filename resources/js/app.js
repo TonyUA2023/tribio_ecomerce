@@ -179,7 +179,7 @@ window.TribioCart = {
             });
         }
         this.save();
-        window.TribioTrack?.addToCart(id, price, variantId);
+        window.TribioTrack?.addToCart(id, price, variantId, name);
         if (originEl !== null) {
             this.flyToCart(image, originEl);
         }
@@ -207,7 +207,7 @@ window.TribioCart = {
             });
         }
         this.save();
-        window.TribioTrack?.addToCart(id, price, variantId);
+        window.TribioTrack?.addToCart(id, price, variantId, name);
         if (originEl !== null) {
             this.flyToCart(image, originEl);
         }

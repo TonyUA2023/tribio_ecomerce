@@ -42,8 +42,14 @@ class AppServiceProvider extends ServiceProvider
             if (!app(TemplateRegistry::class)->isCustomizable($templateKey)) {
                 continue;
             }
-            View::composer("templates.{$templateKey}.*", function ($view) use ($templateKey) {
+            $respectsLanguage = (bool) config("storefront.templates.{$templateKey}.respects_language_setting", false);
+            View::composer("templates.{$templateKey}.*", function ($view) use ($templateKey, $respectsLanguage) {
                 $data = $view->getData();
+                // A store without "multi-idioma" is Spanish only, even if a googtrans/store_lang
+                // cookie left by another store on the same domain says otherwise.
+                if ($respectsLanguage && isset($data['store']) && !$data['store']->is_multilanguage_enabled && !request()->query->has('lang')) {
+                    request()->query->set('lang', 'es');
+                }
                 if (!isset($data['storefrontTheme']) && isset($data['store'])) {
                     $view->with('storefrontTheme', StorefrontTheme::for($data['store'], $templateKey));
                 }

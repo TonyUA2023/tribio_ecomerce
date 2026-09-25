@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
+
 class LogoPaletteService
 {
     /**
@@ -171,5 +173,49 @@ class LogoPaletteService
         };
 
         return ($luminance($b) + .05) / ($luminance($a) + .05);
+    }
+
+    /**
+     * Whether the logo sits on a transparent canvas (corners and edge midpoints see-through).
+     * Only such logos can be recolored to a white silhouette; a JPG or a PNG with a solid
+     * backdrop would turn into a white rectangle. SVGs are assumed transparent.
+     * Cached per file + modification time, so a re-upload is re-checked.
+     */
+    public function hasTransparentBackground(string $file): bool
+    {
+        if (!is_file($file)) {
+            return false;
+        }
+        if (strtolower(pathinfo($file, PATHINFO_EXTENSION)) === 'svg') {
+            return true;
+        }
+
+        return Cache::rememberForever('logo-transparent:' . md5($file . '|' . filemtime($file)), function () use ($file) {
+            $dimensions = @getimagesize($file);
+            if (!extension_loaded('gd') || !$dimensions || $dimensions[0] * $dimensions[1] > 16_000_000) {
+                return false;
+            }
+            $image = @imagecreatefromstring(file_get_contents($file));
+            if (!$image) {
+                return false;
+            }
+            try {
+                [$w, $h] = [imagesx($image) - 1, imagesy($image) - 1];
+                $points = [[0, 0], [$w, 0], [0, $h], [$w, $h], [intdiv($w, 2), 0], [intdiv($w, 2), $h], [0, intdiv($h, 2)], [$w, intdiv($h, 2)]];
+                $clear = 0;
+                foreach ($points as [$x, $y]) {
+                    // GD alpha: 0 = opaque … 127 = fully transparent.
+                    $color = imagecolorat($image, $x, $y);
+                    $alpha = imageistruecolor($image) ? ($color >> 24) & 0x7F : imagecolorsforindex($image, $color)['alpha'];
+                    if ($alpha >= 100) {
+                        $clear++;
+                    }
+                }
+
+                return $clear >= 6;
+            } finally {
+                imagedestroy($image);
+            }
+        });
     }
 }

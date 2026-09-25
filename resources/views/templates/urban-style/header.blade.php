@@ -20,10 +20,21 @@
     }
     $currentCountry = \App\Helpers\CurrencyHelper::currentCountry();
     $currentCurrency = \App\Helpers\CurrencyHelper::currentCurrency();
+    // País y moneda son cookies separadas; si quedaron desalineadas (moneda USD con país PE),
+    // se muestra el país de esa moneda y más abajo un script corrige la cookie user_country.
+    $countryFixedTo = null;
+    if (($headerCountries[$currentCountry]['currency'] ?? null) !== $currentCurrency) {
+        $countryFixedTo = collect($headerCountries)->search(fn ($c) => ($c['currency'] ?? null) === $currentCurrency) ?: null;
+        $currentCountry = $countryFixedTo ?? $currentCountry;
+    }
     $currentCountryInfo = $headerCountries[$currentCountry] ?? \App\Helpers\CurrencyHelper::getCountryInfo($currentCountry) ?? reset($headerCountries);
     $promoUrl = $storefrontTheme->link('promo.link');
     $searchPlaceholder = $isEn ? 'Search products…' : 'Buscar productos…';
     $isCatalogRoot = request()->routeIs('store.catalog') && !request()->filled('category') && request('sort') !== 'newest';
+    // "Logo en blanco" solo puede aplicarse a un logo con fondo transparente: un JPG o un PNG
+    // con fondo sólido se volvería un rectángulo blanco, así que esos siempre van con sus colores.
+    $logoIsTransparent = $overlayHeader && $store->logo_path
+        && app(\App\Services\LogoPaletteService::class)->hasTransparentBackground(\Illuminate\Support\Facades\Storage::disk('public')->path($store->logo_path));
 @endphp
 
 {{-- Barra negra de aviso --}}
@@ -59,7 +70,7 @@
         <a href="{{ route('store.show', $store->slug) }}" class="us-logo" aria-label="{{ $store->name }}">
             @if($store->logo_path)
                 <img src="{{ $store->logo_url }}" alt="{{ $store->name }}"
-                     @if($overlayHeader) data-tpl-choice="header.logo_on_hero" data-choice="{{ $storefrontTheme->choice('header.logo_on_hero') }}" @endif>
+                     @if($overlayHeader) data-tpl-choice="header.logo_on_hero" data-choice="{{ $storefrontTheme->choice('header.logo_on_hero') }}" @if($logoIsTransparent) data-transparent @else data-opaque @endif @endif>
             @else
                 <span>{{ $store->name }}</span>
             @endif
@@ -199,30 +210,36 @@
     </template>
 </header>
 
+@if($countryFixedTo)
+<script>document.cookie = 'user_country={{ $countryFixedTo }}; path=/; max-age=31536000; SameSite=Lax';</script>
+@endif
+
 @once
 <script>
     // Mismo comportamiento que el header estándar (Maetek / Soft Market): cookies + recarga.
     function usSwitchCountry(country, currency) {
+        // Una copia vieja con dominio o con otra ruta ganaría a la nueva: se borran antes.
+        const parts = window.location.hostname.split('.');
+        const paths = ['/', window.location.pathname.replace(/\/[^/]*$/, '') || '/', window.location.pathname];
+        ['user_country', 'store_currency'].forEach((name) => {
+            paths.forEach((path) => {
+                document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=' + path;
+                for (let i = 0; i < parts.length - 1; i++) {
+                    document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=' + path + '; domain=.' + parts.slice(i).join('.');
+                }
+            });
+        });
         document.cookie = 'user_country=' + country + '; path=/; max-age=31536000; SameSite=Lax';
         document.cookie = 'store_currency=' + currency + '; path=/; max-age=31536000; SameSite=Lax';
         if (window.TribioCart && window.TribioCart.items && window.TribioCart.items.length > 0) window.TribioCart.clear();
         window.location.reload();
     }
     function usSwitchLanguage(lang) {
-        const host = window.location.hostname;
-        const withDomain = host.includes('.') && !/^\d+\.\d+\.\d+\.\d+$/.test(host);
         document.cookie = 'store_lang=' + lang + '; path=/; max-age=31536000; SameSite=Lax';
-        if (lang === 'en') {
-            document.cookie = 'googtrans=/es/en; path=/; max-age=31536000; SameSite=Lax';
-            if (withDomain) document.cookie = 'googtrans=/es/en; domain=' + host + '; path=/; max-age=31536000; SameSite=Lax';
-        } else {
-            document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax';
-            if (withDomain) document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=' + host + '; path=/; SameSite=Lax';
-        }
-        try {
-            const combo = document.querySelector('.goog-te-combo');
-            if (combo) { combo.value = lang; combo.dispatchEvent(new Event('change')); }
-        } catch (e) {}
+        // Quitar primero toda googtrans (ruta + dominios padre); si no, Google vuelve a
+        // traducir al inglés una página que el servidor ya entrega en español.
+        if (window.usClearGoogTrans) window.usClearGoogTrans();
+        if (lang === 'en') document.cookie = 'googtrans=/es/en; path=/; max-age=31536000; SameSite=Lax';
         window.location.reload();
     }
     document.addEventListener('alpine:init', () => {

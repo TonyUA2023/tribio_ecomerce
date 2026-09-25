@@ -1,20 +1,26 @@
 // ═══════════════════════════════════════════════════════════
-//  MARKETING — Meta Pixel + aviso de cookies + origen de la visita
+//  MARKETING — Meta Pixel + Google tag + aviso de cookies + origen de la visita
 // ═══════════════════════════════════════════════════════════
-// Solo se activa en tiendas que configuraron su Píxel en Dashboard → Marketing: el
-// <head> de la tienda (components/marketing/head) deja window.__tribioMarketing. Sin
-// eso, window.TribioTrack existe igual pero no hace nada, así el resto del código
-// (carrito, drawer, confirmación de pedido) puede llamarlo sin preguntar.
+// Solo se activa en tiendas que configuraron Meta y/o Google en Dashboard → Marketing:
+// el <head> de la tienda (components/marketing/head) deja window.__tribioMarketing con
+// `meta` (pixelId) y/o `google` (measurementId, adsId, adsLabel). Sin eso,
+// window.TribioTrack existe igual pero no hace nada, así el resto del código (carrito,
+// drawer, confirmación de pedido) puede llamarlo sin preguntar.
 //
-// Consentimiento (Ley 29733): el Píxel NO se carga hasta que el comprador pulsa
-// "Aceptar". Lo que pasa antes (ver un producto, agregar al carrito) queda en cola y se
-// envía al aceptar; si rechaza, se descarta. La decisión se guarda por tienda (la
-// cookie lleva el path de la tienda) y el servidor la lee en el checkout para decidir
-// si la compra también se reporta por Conversions API.
+// Consentimiento (Ley 29733): ninguna etiqueta (ni la de Meta ni la de Google) se carga
+// hasta que el comprador pulsa "Aceptar". Lo que pasa antes (ver un producto, agregar
+// al carrito) queda en cola y se envía al aceptar; si rechaza, se descarta. La decisión
+// se guarda por tienda (la cookie lleva el path de la tienda) y el servidor la lee en el
+// checkout para decidir si la compra también se reporta por Conversions API.
 
 const config = window.__tribioMarketing || null;
+const meta = config?.meta || null;
+const google = config?.google || null;
 const CONSENT_COOKIE = 'tribio_consent';
 const ATTR_COOKIE = 'tribio_attr';
+
+// Meta event name → Google Analytics 4 ecommerce event.
+const GA4_EVENTS = { ViewContent: 'view_item', AddToCart: 'add_to_cart', InitiateCheckout: 'begin_checkout', Purchase: 'purchase' };
 
 let state = 'off'; // off | pending | granted | denied
 const queue = [];
@@ -30,8 +36,8 @@ function writeCookie(name, value, days) {
     document.cookie = `${name}=${encodeURIComponent(value)}; max-age=${days * 86400}; path=${path}; SameSite=Lax${secure}`;
 }
 
-function loadPixel() {
-    if (window.fbq) return;
+function loadMeta() {
+    if (!meta || window.fbq) return;
     /* eslint-disable */
     !function (f, b, e, v, n, t, s) {
         if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments) };
@@ -39,15 +45,65 @@ function loadPixel() {
         t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s)
     }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
     /* eslint-enable */
-    window.fbq('init', config.pixelId);
+    window.fbq('init', meta.pixelId);
     window.fbq('track', 'PageView');
 }
 
+function loadGoogle() {
+    if (!google || window.gtag) return;
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(google.measurementId || google.adsId)}`;
+    document.head.appendChild(script);
+
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function () { window.dataLayer.push(arguments); };
+    // Only ever loaded after "Aceptar", so consent is granted by definition.
+    window.gtag('consent', 'default', { ad_storage: 'granted', analytics_storage: 'granted', ad_user_data: 'granted', ad_personalization: 'granted' });
+    window.gtag('js', new Date());
+    if (google.measurementId) window.gtag('config', google.measurementId);
+    if (google.adsId) window.gtag('config', google.adsId);
+}
+
+// GA4 wants an `items` array; `id` + google_business_vertical also feed Google Ads
+// dynamic remarketing (they must match the Merchant Center item ids).
+function googleParams(data) {
+    const contents = data.contents || (data.content_ids || []).map(id => ({ id, quantity: 1 }));
+    const single = contents.length === 1;
+    return {
+        currency: data.currency,
+        value: data.value,
+        ...(data.order_id ? { transaction_id: data.order_id } : {}),
+        items: contents.map(c => {
+            const quantity = c.quantity || 1;
+            const price = c.item_price !== undefined ? c.item_price : (single && data.value !== undefined ? data.value / quantity : undefined);
+            return {
+                item_id: String(c.id), id: String(c.id), google_business_vertical: 'retail', quantity,
+                ...(price !== undefined ? { price } : {}),
+                ...(single && data.content_name ? { item_name: data.content_name } : {}),
+            };
+        }),
+    };
+}
+
 function send(name, data, eventId) {
-    if (eventId) {
-        window.fbq('track', name, data, { eventID: eventId });
-    } else {
-        window.fbq('track', name, data);
+    if (meta && window.fbq) {
+        if (eventId) {
+            window.fbq('track', name, data, { eventID: eventId });
+        } else {
+            window.fbq('track', name, data);
+        }
+    }
+    if (google && window.gtag) {
+        if (GA4_EVENTS[name]) {
+            window.gtag('event', GA4_EVENTS[name], googleParams(data));
+        }
+        if (name === 'Purchase' && google.adsId && google.adsLabel) {
+            window.gtag('event', 'conversion', {
+                send_to: `${google.adsId}/${google.adsLabel}`,
+                value: data.value, currency: data.currency, transaction_id: data.order_id || eventId,
+            });
+        }
     }
 }
 
@@ -71,11 +127,12 @@ window.TribioTrack = {
         }
     },
 
-    addToCart(id, price, variantId = null) {
+    addToCart(id, price, variantId = null, name = null) {
         const contentId = adId({ id, variant_id: variantId });
         this.track('AddToCart', {
             content_ids: [contentId], content_type: 'product',
             contents: [{ id: contentId, quantity: 1 }],
+            ...(name ? { content_name: String(name).slice(0, 150) } : {}),
             value: money(price), currency: config?.currency || 'PEN',
         });
     },
@@ -85,7 +142,7 @@ window.TribioTrack = {
         if (!items.length) return;
         this.track('InitiateCheckout', {
             content_ids: items.map(adId), content_type: 'product',
-            contents: items.map(i => ({ id: adId(i), quantity: i.quantity })),
+            contents: items.map(i => ({ id: adId(i), quantity: i.quantity, item_price: money(i.price) })),
             num_items: items.reduce((n, i) => n + (parseInt(i.quantity, 10) || 0), 0),
             value: money(items.reduce((sum, i) => sum + (parseFloat(i.price) || 0) * (parseInt(i.quantity, 10) || 0), 0)),
             currency: config?.currency || 'PEN',
@@ -93,7 +150,8 @@ window.TribioTrack = {
     },
 
     // `tracking` comes from /api/pedido-estado (StoreController::orderStatus): its
-    // event_id is the one the server uses for the same sale, so Meta counts it once.
+    // event_id is the one the server uses for the same sale, so Meta counts it once,
+    // and its order_id is Google's transaction_id (same deduplication on Google's side).
     purchase(tracking) {
         if (!tracking || !tracking.event_id) return;
         const { event_id: eventId, ...data } = tracking;
@@ -104,7 +162,8 @@ window.TribioTrack = {
 function grant() {
     writeCookie(CONSENT_COOKIE, 'granted', 365);
     state = 'granted';
-    loadPixel();
+    loadMeta();
+    loadGoogle();
     queue.splice(0).forEach(args => send(...args));
 }
 
@@ -115,10 +174,11 @@ function deny() {
 }
 
 // Last campaign visit wins (30 days): an order placed after arriving from an ad is
-// labeled with that ad's utm_* / fbclid (PendingCheckout::materialize → order_attributions).
+// labeled with that ad's utm_* / fbclid / gclid (PendingCheckout::materialize →
+// order_attributions).
 function captureAttribution() {
     const params = new URLSearchParams(window.location.search);
-    const keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid'];
+    const keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid'];
     const found = {};
     keys.forEach(k => {
         const v = params.get(k);
@@ -188,12 +248,13 @@ function showBanner() {
     document.body.appendChild(box);
 }
 
-if (config && config.pixelId) {
+if (config && (meta || google)) {
     captureAttribution();
     const choice = readCookie(CONSENT_COOKIE);
     if (choice === 'granted') {
         state = 'granted';
-        loadPixel();
+        loadMeta();
+        loadGoogle();
     } else if (choice === 'denied') {
         state = 'denied';
     } else {

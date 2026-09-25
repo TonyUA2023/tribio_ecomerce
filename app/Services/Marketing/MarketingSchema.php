@@ -14,26 +14,39 @@ use Illuminate\Support\Facades\Schema;
 class MarketingSchema
 {
     private const CACHE_KEY = 'marketing.schema_ready';
+    private const GOOGLE_CACHE_KEY = 'marketing.schema_google_ready';
 
     public function ready(): bool
     {
+        return $this->remember(self::CACHE_KEY, fn () => Schema::hasTable('store_marketing_integrations')
+            && Schema::hasTable('marketing_event_logs')
+            && Schema::hasTable('order_attributions')
+            && Schema::hasColumn('products', 'exclude_from_ads'));
+    }
+
+    /** The Google columns (2026_09_25_100000) on top of the base marketing tables. */
+    public function googleReady(): bool
+    {
+        return $this->ready()
+            && $this->remember(self::GOOGLE_CACHE_KEY, fn () => Schema::hasColumn('store_marketing_integrations', 'measurement_id'));
+    }
+
+    private function remember(string $key, \Closure $check): bool
+    {
         // Once the tables exist they stay: remember only the positive answer.
-        if (Cache::get(self::CACHE_KEY) === true) {
+        if (Cache::get($key) === true) {
             return true;
         }
 
         try {
-            $ready = Schema::hasTable('store_marketing_integrations')
-                && Schema::hasTable('marketing_event_logs')
-                && Schema::hasTable('order_attributions')
-                && Schema::hasColumn('products', 'exclude_from_ads');
+            $ready = (bool) $check();
         } catch (\Throwable $e) {
             report($e);
             return false;
         }
 
         if ($ready) {
-            Cache::put(self::CACHE_KEY, true, now()->addDay());
+            Cache::put($key, true, now()->addDay());
         }
 
         return $ready;

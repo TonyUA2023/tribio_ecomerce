@@ -5,6 +5,7 @@ namespace App\Services\Marketing;
 use App\Models\Order;
 use App\Models\OrderAttribution;
 use App\Models\Store;
+use App\Services\Marketing\Google\GoogleIntegrationService;
 use App\Services\Marketing\Meta\MetaIntegrationService;
 use Illuminate\Http\Request;
 
@@ -12,8 +13,9 @@ use Illuminate\Http\Request;
  * What the checkout remembers for marketing, stored in the PendingCheckout payload
  * ('tracking') because the payment often confirms later from a webhook, with no
  * browser around: the buyer's cookie choice, Meta's browser ids and where the visit
- * came from. Captured only for stores with an active Meta Pixel, and Meta's ids/IP
- * only if the buyer accepted cookies (resources/js/marketing.js).
+ * came from. Captured only for stores with an active Meta Pixel or Google tag; Meta's
+ * ids/IP only for Meta stores and only if the buyer accepted cookies
+ * (resources/js/marketing.js).
  *
  * Never throws: marketing must not be able to break a checkout.
  */
@@ -22,22 +24,27 @@ class TrackingContext
     public const CONSENT_COOKIE = 'tribio_consent';
     public const ATTRIBUTION_COOKIE = 'tribio_attr';
 
-    /** Accepted cookie fields and their column sizes in order_attributions. */
+    /**
+     * Accepted cookie fields and their column sizes in order_attributions. gclid has no
+     * column: it only decides the channel.
+     */
     private const FIELD_LIMITS = [
         'utm_source' => 100, 'utm_medium' => 100, 'utm_campaign' => 150, 'utm_content' => 150,
-        'utm_term' => 150, 'fbclid' => 255, 'landing_path' => 255,
+        'utm_term' => 150, 'fbclid' => 255, 'gclid' => 255, 'landing_path' => 255,
     ];
 
     public function __construct(
         private MarketingSchema $schema,
         private MetaIntegrationService $meta,
+        private GoogleIntegrationService $google,
     ) {}
 
     /** @return array<string, mixed>|null */
     public function capture(Request $request, Store $store): ?array
     {
         try {
-            if (!$this->meta->active($store)?->hasPixel()) {
+            $metaPixel = (bool) $this->meta->active($store)?->hasPixel();
+            if (!$metaPixel && !$this->google->active($store)?->hasGoogleTag()) {
                 return null;
             }
 
@@ -46,9 +53,11 @@ class TrackingContext
             $attribution = $this->attribution($request);
 
             $tracking = ['consent' => $consent, 'attribution' => $attribution];
-            if ($consent !== 'granted') {
-                if ($attribution) {
-                    unset($tracking['attribution']['fbclid']); // a click id is personal data
+            if ($consent !== 'granted' || !$metaPixel) {
+                if ($attribution && $consent !== 'granted') {
+                    // Ad click ids are personal data; the channel is decided before dropping them.
+                    $tracking['attribution']['channel'] = $this->channel($attribution);
+                    unset($tracking['attribution']['fbclid'], $tracking['attribution']['gclid']);
                 }
                 return $tracking;
             }
@@ -77,7 +86,7 @@ class TrackingContext
         try {
             OrderAttribution::firstOrCreate(['order_id' => $order->id], [
                 'store_id'      => $order->store_id,
-                'channel'       => $this->channel($attribution),
+                'channel'       => $attribution['channel'] ?? $this->channel($attribution),
                 'utm_source'    => $attribution['utm_source'] ?? null,
                 'utm_medium'    => $attribution['utm_medium'] ?? null,
                 'utm_campaign'  => $attribution['utm_campaign'] ?? null,
@@ -121,9 +130,11 @@ class TrackingContext
     {
         $source = mb_strtolower((string) ($attribution['utm_source'] ?? ''));
 
-        return !empty($attribution['fbclid']) || preg_match('/^(fb|facebook|ig|instagram|meta|an|msg)\b/', $source)
-            ? OrderAttribution::CHANNEL_META
-            : OrderAttribution::CHANNEL_OTHER;
+        return match (true) {
+            !empty($attribution['fbclid']) || (bool) preg_match('/^(fb|facebook|ig|instagram|meta|an|msg)\b/', $source) => OrderAttribution::CHANNEL_META,
+            !empty($attribution['gclid']) || (bool) preg_match('/^(google|adwords|gads|youtube)\b/', $source) => OrderAttribution::CHANNEL_GOOGLE,
+            default => OrderAttribution::CHANNEL_OTHER,
+        };
     }
 
     /** Meta's own cookies look like "fb.1.1712345678901.abc…"; anything else is ignored. */

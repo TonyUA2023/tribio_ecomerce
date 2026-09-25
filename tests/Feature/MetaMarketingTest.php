@@ -216,7 +216,8 @@ class MetaMarketingTest extends TestCase
 
         $page = $this->get('/tienda/audio-lima/producto/audifonos-pro')->assertOk()->getContent();
         $config = $this->marketingConfig($page);
-        $this->assertSame(self::PIXEL, $config['pixelId']);
+        $this->assertSame(self::PIXEL, $config['meta']['pixelId']);
+        $this->assertNull($config['google'], 'No Google tag for a Meta-only store');
         $this->assertSame('/tienda/audio-lima', $config['cookiePath']);
         $this->assertStringEndsWith('/privacidad#cookies', $config['privacyUrl']);
         $this->assertSame([(string) $product->id], $config['viewContent']['content_ids']);

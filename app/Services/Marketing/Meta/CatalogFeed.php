@@ -10,8 +10,9 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * The store's product catalog as an RSS 2.0 feed with the Google "g:" namespace — the
- * format Meta's Commerce Manager reads on a schedule (and Google Merchant Center too).
- * Served at /feed/facebook.xml (custom domain) and /tienda/{slug}/feed/facebook.xml.
+ * format both Meta's Commerce Manager and Google Merchant Center read on a schedule.
+ * The integration passed in decides the flavor (see CatalogItemMapper). Served at
+ * /feed/facebook.xml and /feed/google.xml (custom domain) or /tienda/{slug}/feed/….
  */
 class CatalogFeed
 {
@@ -19,13 +20,23 @@ class CatalogFeed
 
     public function __construct(private CatalogItemMapper $mapper) {}
 
+    /** The URL the owner pastes in Commerce Manager / Merchant Center: their own domain when they have one. */
+    public static function url(Store $store, string $provider): string
+    {
+        $file = $provider === StoreMarketingIntegration::PROVIDER_GOOGLE ? 'google' : 'facebook';
+
+        return $store->custom_domain && str_contains($store->custom_domain, '.')
+            ? rtrim($store->url, '/') . "/feed/{$file}.xml"
+            : route($file === 'google' ? 'store.feed.google' : 'store.feed.meta', $store->slug);
+    }
+
     /**
      * Cached briefly: Meta fetches hourly at most, and the cache keeps someone hammering
      * the public URL from rebuilding it. Keyed by host because image URLs follow it.
      */
     public function xml(Store $store, StoreMarketingIntegration $integration): string
     {
-        $key = sprintf('marketing.feed.meta.%d.%s.%s', $store->id, sha1(request()->getSchemeAndHttpHost()), $integration->updated_at?->timestamp);
+        $key = sprintf('marketing.feed.%s.%d.%s.%s', $integration->provider, $store->id, sha1(request()->getSchemeAndHttpHost()), $integration->updated_at?->timestamp);
 
         return Cache::remember($key, now()->addMinutes(self::CACHE_MINUTES), fn () => $this->build($store, $integration));
     }
