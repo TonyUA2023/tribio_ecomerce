@@ -7,6 +7,7 @@ use App\Helpers\TranslationHelper;
 use App\Models\Product;
 use App\Models\Store;
 use App\Services\Marketing\Google\GoogleIntegrationService;
+use App\Services\Marketing\Google\MarketplaceFeed;
 use App\Services\Marketing\Google\ProductStructuredData;
 
 /**
@@ -23,6 +24,7 @@ class StorefrontTracking
         private MetaIntegrationService $meta,
         private GoogleIntegrationService $google,
         private ProductStructuredData $structuredData,
+        private MarketplaceFeed $marketplace,
     ) {}
 
     /** @return array{meta_verification: ?string, google_verification: ?string, config: ?array, structured_data: ?array}|null */
@@ -44,11 +46,17 @@ class StorefrontTracking
                 'adsLabel'      => $google->ads_conversion_label,
             ]) : null;
 
+            // On Google Shopping either through the store's own Merchant Center or listed by
+            // Tribio's marketplace account (once Tribio has it configured).
+            $onShopping = $google && ($google->usesOwnMerchantCenter()
+                || ($google->publishesViaTribio() && $this->marketplace->enabled()));
+
             $result = [
                 'meta_verification'   => $meta?->domain_verification,
-                'google_verification' => $google?->domain_verification,
+                // The store's own site claim; stores listed by Tribio ride on Tribio's claim.
+                'google_verification' => $google?->usesOwnMerchantCenter() ? $google->domain_verification : null,
                 'config'              => $metaTag || $googleTag ? $this->config($store, $productPage, $metaTag, $googleTag) : null,
-                'structured_data'     => $google && $productPage ? $this->structuredData->forProduct($productPage, $store, $google) : null,
+                'structured_data'     => $onShopping && $productPage ? $this->structuredData->forProduct($productPage, $store, $google) : null,
             ];
         } catch (\Throwable $e) {
             report($e); // a marketing problem must never break the storefront

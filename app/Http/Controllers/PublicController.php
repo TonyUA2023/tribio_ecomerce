@@ -21,33 +21,6 @@ class PublicController extends Controller
         return view('public.home', compact('featuredStores', 'totalStores', 'totalProducts', 'googleReady'));
     }
 
-    public function search()
-    {
-        $query = request('q', '');
-        $category = request('categoria', '');
-
-        $stores = Store::active()
-            ->when($query, fn($q) => $q->where('name', 'like', "%{$query}%")
-                ->orWhere('description', 'like', "%{$query}%")
-                ->orWhere('slug', 'like', "%{$query}%"))
-            ->when($category, fn($q) => $q->where('category', $category))
-            ->withCount('activeProducts')
-            ->paginate(12);
-
-        return view('public.search', compact('stores', 'query', 'category'));
-    }
-
-    public function directory()
-    {
-        $stores = Store::active()
-            ->withCount('activeProducts')
-            ->orderByDesc('is_featured')
-            ->orderByDesc('created_at')
-            ->paginate(16);
-
-        return view('public.directory', compact('stores'));
-    }
-
     public function terms()
     {
         return view('public.legal.terms');

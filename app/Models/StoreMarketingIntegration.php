@@ -19,6 +19,11 @@ class StoreMarketingIntegration extends Model
     public const PROVIDER_META = 'meta';
     public const PROVIDER_GOOGLE = 'google';
 
+    /** Google Shopping: Tribio lists the store in its marketplace account (automatic, no domain needed). */
+    public const SHOPPING_VIA_TRIBIO = 'tribio';
+    /** Google Shopping: the owner's own Merchant Center account (needs a custom domain). */
+    public const SHOPPING_OWN_ACCOUNT = 'own';
+
     public const CONDITIONS = [
         'new'         => 'Nuevo',
         'refurbished' => 'Reacondicionado',
@@ -28,7 +33,7 @@ class StoreMarketingIntegration extends Model
     protected $fillable = [
         'store_id', 'provider', 'is_active', 'pixel_id', 'capi_token', 'test_event_code',
         'domain_verification', 'default_condition',
-        'measurement_id', 'ads_conversion_id', 'ads_conversion_label',
+        'measurement_id', 'ads_conversion_id', 'ads_conversion_label', 'shopping_mode',
     ];
 
     protected $hidden = ['capi_token'];
@@ -65,6 +70,16 @@ class StoreMarketingIntegration extends Model
     public function hasAdsConversion(): bool
     {
         return $this->is_active && filled($this->ads_conversion_id) && filled($this->ads_conversion_label);
+    }
+
+    public function publishesViaTribio(): bool
+    {
+        return $this->is_active && $this->shopping_mode === self::SHOPPING_VIA_TRIBIO;
+    }
+
+    public function usesOwnMerchantCenter(): bool
+    {
+        return $this->is_active && $this->shopping_mode === self::SHOPPING_OWN_ACCOUNT;
     }
 
     /** "EAAB…x9Qz": enough for the owner to recognize which token is saved. */

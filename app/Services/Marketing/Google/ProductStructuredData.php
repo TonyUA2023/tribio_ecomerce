@@ -28,7 +28,9 @@ class ProductStructuredData
     public function forProduct(Product $product, Store $store, StoreMarketingIntegration $integration): array
     {
         $currency = CurrencyHelper::currentCurrency();
-        $url = rtrim($store->url, '/') . '/producto/' . rawurlencode($product->slug);
+        // The page Google is looking at: tribio.pe/tienda/{slug}/… (listed by Tribio) or the
+        // store's own domain. Never the "other" address, or the offer would point elsewhere.
+        $url = request()->url();
         $variants = $product->has_variants
             ? $product->variants->filter(fn (ProductVariant $v) => $v->is_active)->values()
             : collect();

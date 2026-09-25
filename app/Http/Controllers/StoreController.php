@@ -27,7 +27,10 @@ class StoreController extends Controller
     public function show(string $slug)
     {
         $store = $this->getStore($slug);
-        $store->increment('total_views');
+        // The /negocios live preview (iframe, ?vitrina=1) is not a visit to the store.
+        if (!request()->boolean('vitrina')) {
+            $store->increment('total_views');
+        }
 
         $isEditor = request()->query('editor') == 1 || request()->query('preview') == 1;
         $data = app(StorefrontHomeData::class)->build($store, $isEditor);

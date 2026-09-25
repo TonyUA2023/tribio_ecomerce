@@ -34,12 +34,25 @@ class UpdateGoogleIntegrationRequest extends FormRequest
     {
         return [
             'is_active'            => ['nullable', 'boolean'],
+            'shopping_mode'        => ['required', 'in:' . StoreMarketingIntegration::SHOPPING_VIA_TRIBIO . ',' . StoreMarketingIntegration::SHOPPING_OWN_ACCOUNT . ',off'],
             'measurement_id'       => ['nullable', 'regex:/^G-[A-Z0-9]{4,20}$/'],
             'ads_conversion_id'    => ['nullable', 'regex:/^AW-\d{6,15}$/', 'required_with:ads_conversion_label'],
             'ads_conversion_label' => ['nullable', 'regex:/^[A-Za-z0-9_\-]{4,64}$/'],
             'domain_verification'  => ['nullable', 'regex:/^[A-Za-z0-9_\-]{20,100}$/'],
             'default_condition'    => ['required', 'in:' . implode(',', array_keys(StoreMarketingIntegration::CONDITIONS))],
         ];
+    }
+
+    /** Your own Merchant Center must verify a domain you own: not possible on a tribio.pe address. */
+    public function after(): array
+    {
+        return [function ($validator) {
+            $store = $this->user()?->currentStore();
+            $hasDomain = $store && $store->custom_domain && str_contains($store->custom_domain, '.');
+            if ($this->input('shopping_mode') === StoreMarketingIntegration::SHOPPING_OWN_ACCOUNT && !$hasDomain) {
+                $validator->errors()->add('shopping_mode', 'Para usar tu propia cuenta de Merchant Center necesitas un dominio propio. Elige "Tribio publica mis productos": funciona sin dominio.');
+            }
+        }];
     }
 
     public function messages(): array

@@ -17,6 +17,10 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @if(config('services.google_marketplace.site_verification'))
+    {{-- Verifica tribio.pe en el Merchant Center de Tribio (Google Shopping para todas las tiendas). --}}
+    <meta name="google-site-verification" content="{{ config('services.google_marketplace.site_verification') }}">
+    @endif
 
     @stack('head')
 </head>
@@ -35,7 +39,10 @@
                     <img src="{{ asset('images/logo/logo.png') }}" alt="Tribio" width="48" height="48" class="object-contain group-hover:scale-105 transition-transform">
                 </a>
 
-                <a href="{{ route('tribio-pass') }}" class="tribio-nav-pass {{ request()->routeIs('tribio-pass') ? 'is-active' : '' }}" @if(request()->routeIs('tribio-pass')) aria-current="page" @endif>Tribio Pass</a>
+                <div class="tribio-nav-center">
+                    <a href="{{ route('directory') }}" class="tribio-nav-pass tribio-nav-directory {{ request()->routeIs('directory') ? 'is-active' : '' }}" @if(request()->routeIs('directory')) aria-current="page" @endif>Negocios</a>
+                    <a href="{{ route('tribio-pass') }}" class="tribio-nav-pass {{ request()->routeIs('tribio-pass') ? 'is-active' : '' }}" @if(request()->routeIs('tribio-pass')) aria-current="page" @endif>Tribio Pass</a>
+                </div>
 
                 {{-- CTA Button --}}
                 <div class="tribio-nav-actions">

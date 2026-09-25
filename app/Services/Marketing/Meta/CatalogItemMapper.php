@@ -30,6 +30,9 @@ class CatalogItemMapper
     public const CURRENCY = 'PEN'; // prices are stored in PEN (see Multi-Currency-Pricing)
     private const MAX_ADDITIONAL_IMAGES = 10;
 
+    /** Set per items() call; see there. */
+    private ?string $platformUrl = null;
+
     public function __construct(private FeedImage $images) {}
 
     public static function itemId(int $productId, ?int $variantId = null): string
@@ -51,15 +54,21 @@ class CatalogItemMapper
     }
 
     /**
+     * $platformUrl (Tribio's own base URL, e.g. https://tribio.pe) is set by the Google
+     * marketplace feed: product links and images must then live on the domain Tribio
+     * verified in Merchant Center — /tienda/{slug}/… — even for stores that have their
+     * own domain (the path URL keeps working for them too).
+     *
      * @return list<array<string, string|list<string>>> field => value(s), without the "g:" prefix
      */
-    public function items(Product $product, Store $store, StoreMarketingIntegration $integration): array
+    public function items(Product $product, Store $store, StoreMarketingIntegration $integration, ?string $platformUrl = null): array
     {
         if ($this->exclusionReason($product) !== null) {
             return [];
         }
 
         $google = $integration->provider === StoreMarketingIntegration::PROVIDER_GOOGLE;
+        $this->platformUrl = $platformUrl ? rtrim($platformUrl, '/') : null;
         $base = $this->baseFields($product, $store, $integration, $google);
         $variants = $product->has_variants
             ? $product->variants->filter(fn (ProductVariant $v) => $v->is_active)
@@ -107,7 +116,9 @@ class CatalogItemMapper
             // 150 fits both limits (Google 150, Meta 200).
             'title'                 => $this->clip($product->name, 150),
             'description'           => $this->description($product),
-            'link'                  => rtrim($store->url, '/') . '/producto/' . rawurlencode($product->slug),
+            'link'                  => $this->platformUrl
+                ? "{$this->platformUrl}/tienda/" . rawurlencode($store->slug) . '/producto/' . rawurlencode($product->slug)
+                : rtrim($store->url, '/') . '/producto/' . rawurlencode($product->slug),
             'image_link'            => $this->imageUrl($product->image_path, $google),
             'additional_image_link' => array_map(fn ($path) => $this->imageUrl($path, $google), $gallery),
             'brand'                 => $this->clip($product->brand?->name ?: $store->name, 70),
@@ -173,7 +184,13 @@ class CatalogItemMapper
     /** Meta rejects WebP (served as a JPEG copy); Google accepts it as-is. */
     private function imageUrl(string $path, bool $google): string
     {
-        return $google ? asset('storage/' . ltrim($path, '/')) : $this->images->url($path);
+        if (!$google) {
+            return $this->images->url($path);
+        }
+
+        return $this->platformUrl
+            ? "{$this->platformUrl}/storage/" . ltrim($path, '/')
+            : asset('storage/' . ltrim($path, '/'));
     }
 
     private function description(Product $product): string

@@ -25,8 +25,9 @@ use App\Http\Controllers\Dashboard\TemplateController;
 //  PORTAL PÚBLICO TRIBIO
 // ═══════════════════════════════════════════════════════════════
 Route::get('/', [PublicController::class, 'home'])->name('home');
-Route::get('/buscar', [PublicController::class, 'search'])->name('search');
-Route::get('/negocios', [PublicController::class, 'directory'])->name('directory');
+Route::get('/buscar', [\App\Http\Controllers\DirectoryController::class, 'legacySearch'])->name('search');
+Route::get('/negocios', [\App\Http\Controllers\DirectoryController::class, 'index'])->name('directory');
+Route::get('/negocios/buscar', [\App\Http\Controllers\DirectoryController::class, 'search'])->name('directory.search')->middleware('throttle:60,1');
 Route::get('/terminos-y-condiciones', [PublicController::class, 'terms'])->name('legal.terms');
 Route::get('/privacidad', [PublicController::class, 'privacy'])->name('legal.privacy');
 Route::get('/reembolsos', [PublicController::class, 'refunds'])->name('legal.refunds');
@@ -166,12 +167,17 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
         ->middleware('throttle:10,1')->name('marketing.meta.test-event');
     Route::get('/marketing/google', [\App\Http\Controllers\Dashboard\GoogleIntegrationController::class, 'edit'])->name('marketing.google.edit');
     Route::put('/marketing/google', [\App\Http\Controllers\Dashboard\GoogleIntegrationController::class, 'update'])->name('marketing.google.update');
+    Route::post('/marketing/google/publicar', [\App\Http\Controllers\Dashboard\GoogleIntegrationController::class, 'publishViaTribio'])->name('marketing.google.publish');
 });
 
 // Catálogo de productos para Meta (Commerce Manager lo lee cada hora) y copias JPG de
 // las fotos WebP, que Meta no acepta. Ver App\Services\Marketing\Meta\CatalogFeed.
 Route::get('/feed-img/{path}', [\App\Http\Controllers\MarketingFeedController::class, 'image'])
     ->where('path', '.+\.webp\.jpg')->middleware('throttle:120,1')->name('marketing.feed-image');
+// Catálogo combinado para la cuenta de Merchant Center de Tribio (marketplace). El token
+// sale de GOOGLE_MARKETPLACE_FEED_TOKEN; sin token, 404. Ver Google\MarketplaceFeed.
+Route::get('/feeds/google-marketplace/{token}.xml', [\App\Http\Controllers\MarketingFeedController::class, 'googleMarketplace'])
+    ->where('token', '[A-Za-z0-9_\-]{16,128}')->middleware('throttle:30,1')->name('marketing.google-marketplace-feed');
 
 // ═══════════════════════════════════════════════════════════════
 //  SUPER ADMIN

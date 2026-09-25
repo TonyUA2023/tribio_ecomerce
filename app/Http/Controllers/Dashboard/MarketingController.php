@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\OrderAttribution;
 use App\Models\Store;
 use App\Services\Marketing\Google\GoogleIntegrationService;
+use App\Services\Marketing\Google\MarketplaceFeed;
 use App\Services\Marketing\Meta\CatalogFeed;
 use App\Services\Marketing\Meta\MetaIntegrationService;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 /** Dashboard → Marketing: overview of the store's ad channels (Meta, Google). */
 class MarketingController extends Controller
 {
-    public function index(MetaIntegrationService $meta, GoogleIntegrationService $google, CatalogFeed $feed)
+    public function index(MetaIntegrationService $meta, GoogleIntegrationService $google, CatalogFeed $feed, MarketplaceFeed $marketplace)
     {
         $store = Auth::user()->currentStore();
         $available = $meta->available();
@@ -32,6 +33,7 @@ class MarketingController extends Controller
             'googleCatalog'     => $googleIntegration ? $feed->diagnostics($store, $googleIntegration) : null,
             'googleSales'       => $googleIntegration ? $this->sales($store, OrderAttribution::CHANNEL_GOOGLE) : collect(),
             'hasCustomDomain'   => $store->custom_domain && str_contains($store->custom_domain, '.'),
+            'marketplaceEnabled' => $marketplace->enabled(),
         ]);
     }
 

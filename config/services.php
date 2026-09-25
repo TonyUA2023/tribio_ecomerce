@@ -69,4 +69,15 @@ return [
         'graph_version' => env('META_GRAPH_VERSION', 'v26.0'),
     ],
 
+    // Google Shopping via Tribio (marketplace): Tribio's own Merchant Center account lists
+    // the products of every store that chose "Tribio publica mis productos". Both empty =
+    // feature off. See tribio_brain Google-Marketing-Integration.
+    'google_marketplace' => [
+        // Secret part of the aggregated feed URL given to Merchant Center:
+        // {APP_URL}/feeds/google-marketplace/{token}.xml
+        'feed_token'        => env('GOOGLE_MARKETPLACE_FEED_TOKEN'),
+        // content="…" of Merchant Center's <meta name="google-site-verification"> for tribio.pe.
+        'site_verification' => env('GOOGLE_SITE_VERIFICATION'),
+    ],
+
 ];

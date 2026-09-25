@@ -43,38 +43,69 @@ class CatalogFeed
 
     public function build(Store $store, StoreMarketingIntegration $integration): string
     {
+        $xml = $this->open($store->name, $store->url, $store->tagline ?: $store->description ?: $store->name);
+        $this->writeStore($xml, $store, $integration);
+
+        return (string) $this->close($xml);
+    }
+
+    /**
+     * Starts an RSS 2.0 + g: document (shared with Google\MarketplaceFeed), in memory or
+     * streamed straight to $file for large catalogs.
+     */
+    public function open(string $title, string $link, string $description, ?string $file = null): \XMLWriter
+    {
         $xml = new \XMLWriter();
-        $xml->openMemory();
+        $file ? $xml->openUri($file) : $xml->openMemory();
         $xml->setIndent(true);
         $xml->startDocument('1.0', 'UTF-8');
         $xml->startElement('rss');
         $xml->writeAttribute('version', '2.0');
         $xml->writeAttribute('xmlns:g', 'http://base.google.com/ns/1.0');
         $xml->startElement('channel');
-        $xml->writeElement('title', $this->clean($store->name));
-        $xml->writeElement('link', $store->url);
-        $xml->writeElement('description', $this->clean($store->tagline ?: $store->description ?: $store->name));
+        $xml->writeElement('title', $this->clean($title));
+        $xml->writeElement('link', $link);
+        $xml->writeElement('description', $this->clean($description));
 
-        $this->products($store)->chunkById(200, function ($products) use ($xml, $store, $integration) {
-            foreach ($products as $product) {
-                try {
-                    $items = $this->mapper->items($product, $store, $integration);
-                } catch (\Throwable $e) {
-                    // One malformed product must never take the whole catalog down.
-                    Log::warning('Producto omitido del catálogo de Meta.', ['product_id' => $product->id, 'error' => $e->getMessage()]);
-                    continue;
-                }
-                foreach ($items as $item) {
-                    $this->writeItem($xml, $item);
-                }
-            }
-        });
+        return $xml;
+    }
 
+    /** The XML when opened in memory; the number of bytes written when streamed to a file. */
+    public function close(\XMLWriter $xml): string|int
+    {
         $xml->endElement(); // channel
         $xml->endElement(); // rss
         $xml->endDocument();
 
-        return $xml->outputMemory();
+        return $xml->flush();
+    }
+
+    /**
+     * Writes one store's items. $extra fields are added to every item (the marketplace
+     * feed's external_seller_id and shipping); $platformUrl: see CatalogItemMapper::items().
+     *
+     * @return int items written
+     */
+    public function writeStore(\XMLWriter $xml, Store $store, StoreMarketingIntegration $integration, ?string $platformUrl = null, array $extra = []): int
+    {
+        $count = 0;
+        $this->products($store)->chunkById(200, function ($products) use ($xml, $store, $integration, $platformUrl, $extra, &$count) {
+            foreach ($products as $product) {
+                try {
+                    $items = $this->mapper->items($product, $store, $integration, $platformUrl);
+                } catch (\Throwable $e) {
+                    // One malformed product must never take the whole catalog down.
+                    Log::warning('Producto omitido del catálogo.', ['product_id' => $product->id, 'error' => $e->getMessage()]);
+                    continue;
+                }
+                foreach ($items as $item) {
+                    $this->writeItem($xml, $item + $extra);
+                    $count++;
+                }
+            }
+        });
+
+        return $count;
     }
 
     /**
@@ -110,11 +141,24 @@ class CatalogFeed
             ->orderBy('id');
     }
 
-    /** @param array<string, string|list<string>> $item */
+    /**
+     * A list value repeats the element (additional_image_link); an associative array
+     * becomes a group element with g: children (<g:shipping><g:country>…).
+     *
+     * @param array<string, string|list<string>|array<string, string>> $item
+     */
     private function writeItem(\XMLWriter $xml, array $item): void
     {
         $xml->startElement('item');
         foreach ($item as $field => $value) {
+            if (is_array($value) && !array_is_list($value)) {
+                $xml->startElement('g:' . $field);
+                foreach ($value as $child => $childValue) {
+                    $xml->writeElement('g:' . $child, $this->clean((string) $childValue));
+                }
+                $xml->endElement();
+                continue;
+            }
             foreach ((array) $value as $single) {
                 $xml->writeElement('g:' . $field, $this->clean((string) $single));
             }

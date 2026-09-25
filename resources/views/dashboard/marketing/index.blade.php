@@ -101,12 +101,16 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
             <div class="rounded-xl border border-white/10 bg-white/5 p-3">
                 <p class="text-[11px] text-white/40 uppercase tracking-wider">Google Shopping</p>
-                <p class="text-sm text-white font-semibold mt-1">
-                    @if(!$hasCustomDomain) Necesita dominio propio
-                    @else {{ $googleCatalog['products_included'] }} {{ $googleCatalog['products_included'] === 1 ? 'producto listo' : 'productos listos' }}
-                    @endif
-                </p>
-                <p class="text-[11px] text-white/40 mt-0.5">{{ $googleIntegration->domain_verification ? 'Código de verificación guardado' : 'Falta verificar tu dominio' }}</p>
+                @if($googleIntegration->publishesViaTribio())
+                    <p class="text-sm text-white font-semibold mt-1">{{ $googleCatalog['products_included'] }} {{ $googleCatalog['products_included'] === 1 ? 'producto publicado' : 'productos publicados' }}</p>
+                    <p class="text-[11px] text-white/40 mt-0.5">{{ $marketplaceEnabled ? 'Tribio los envía a Google cada día' : 'Empiezan a aparecer apenas Tribio complete su alta en Google' }}</p>
+                @elseif($googleIntegration->usesOwnMerchantCenter())
+                    <p class="text-sm text-white font-semibold mt-1">{{ $googleCatalog['products_included'] }} {{ $googleCatalog['products_included'] === 1 ? 'producto listo' : 'productos listos' }}</p>
+                    <p class="text-[11px] text-white/40 mt-0.5">Tu cuenta de Merchant Center · {{ $googleIntegration->domain_verification ? 'código de verificación guardado' : 'falta verificar tu dominio' }}</p>
+                @else
+                    <p class="text-sm text-white font-semibold mt-1">Apagado</p>
+                    <p class="text-[11px] text-white/40 mt-0.5">Tus productos no se muestran en Google</p>
+                @endif
             </div>
             <div class="rounded-xl border border-white/10 bg-white/5 p-3">
                 <p class="text-[11px] text-white/40 uppercase tracking-wider">Google Analytics</p>
@@ -134,10 +138,18 @@
         @endif
 
         <div class="mt-4">
-            @if($googleAvailable)
-                <a href="{{ route('dashboard.marketing.google.edit') }}" class="btn-primary inline-flex text-xs sm:text-sm">
-                    {{ $googleIntegration ? 'Ver configuración' : 'Conectar con Google' }}
-                </a>
+            @if($googleAvailable && !$googleIntegration)
+                {{-- Un clic: Tribio publica la tienda en Google Shopping, sin cuentas ni dominio. --}}
+                <div class="flex flex-wrap items-center gap-3">
+                    <form method="POST" action="{{ route('dashboard.marketing.google.publish') }}">
+                        @csrf
+                        <button type="submit" class="btn-primary text-xs sm:text-sm">Mostrar mis productos en Google gratis</button>
+                    </form>
+                    <a href="{{ route('dashboard.marketing.google.edit') }}" class="text-xs text-tribio-cyan underline">Más opciones</a>
+                </div>
+                <p class="text-[11px] text-white/40 mt-2">Tribio los publica por ti: no necesitas cuenta de Google ni dominio propio.</p>
+            @elseif($googleAvailable)
+                <a href="{{ route('dashboard.marketing.google.edit') }}" class="btn-primary inline-flex text-xs sm:text-sm">Ver configuración</a>
             @else
                 <p class="text-xs text-white/50">⏳ Estamos activando la conexión con Google. No tienes que hacer nada.</p>
             @endif

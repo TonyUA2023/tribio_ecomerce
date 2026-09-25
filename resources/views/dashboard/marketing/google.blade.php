@@ -3,7 +3,8 @@
 @section('page_title', '📣 Marketing')
 @section('content')
 <div class="w-full max-w-5xl mx-auto space-y-5 sm:space-y-6">
-    <form method="POST" action="{{ route('dashboard.marketing.google.update') }}" class="space-y-5 sm:space-y-6" x-data="{ copied: false }">
+    <form method="POST" action="{{ route('dashboard.marketing.google.update') }}" class="space-y-5 sm:space-y-6"
+          x-data="{ copied: false, mode: @js(old('shopping_mode', $integration->shopping_mode ?? 'off')) }">
         @csrf
         @method('PUT')
 
@@ -58,16 +59,50 @@
         <div class="glass-card p-5 sm:p-6 space-y-4">
             <div>
                 <h3 class="text-white font-bold text-sm">1. Google Shopping <span class="badge badge-green align-middle">Gratis</span></h3>
-                <p class="text-xs text-white/50 mt-1">Tus productos aparecen en la pestaña Shopping, en Imágenes y en los resultados de Google, con foto y precio, sin pagar anuncios. Google lee tu catálogo todos los días: si cambias un precio o el stock en Tribio, se actualiza solo.</p>
+                <p class="text-xs text-white/50 mt-1">Tus productos aparecen en la pestaña Shopping, en Imágenes y en los resultados de Google, con foto y precio, sin pagar anuncios. Google recibe tu catálogo todos los días: si cambias un precio o el stock en Tribio, se actualiza solo.</p>
             </div>
 
-            @unless($hasCustomDomain)
-            <div class="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/60">
-                <p class="text-white/80 font-semibold">Necesitas un dominio propio</p>
-                <p class="mt-1">Google pide verificar que la tienda es tuya a través de su dominio (por ejemplo, <strong>mitienda.pe</strong>). Tu tienda hoy está en una dirección de Tribio, que no puedes verificar a tu nombre. Conecta tu dominio en <a href="{{ route('dashboard.store.edit') }}" class="text-tribio-cyan underline">Mi tienda</a>. Mientras tanto ya puedes usar Google Analytics y Google Ads (pasos 2 y 3).</p>
-            </div>
-            @endunless
+            @php($chipOn = 'bg-tribio-cyan/10 border-tribio-cyan/40')
+            <fieldset class="space-y-2">
+                <legend class="input-label">¿Cómo quieres aparecer en Google Shopping?</legend>
+                <label class="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-3 cursor-pointer" :class="mode === 'tribio' && @js($chipOn)">
+                    <input type="radio" name="shopping_mode" value="tribio" x-model="mode" class="mt-1 flex-shrink-0">
+                    <span class="min-w-0">
+                        <span class="text-sm text-white font-semibold">Tribio publica mis productos</span> <span class="badge badge-blue align-middle">Recomendado</span>
+                        <span class="block text-xs text-white/50 mt-0.5">Automático: no creas cuentas en Google ni necesitas dominio propio. Tus productos llevan a tu tienda en Tribio.</span>
+                    </span>
+                </label>
+                <label class="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-3 {{ $hasCustomDomain ? 'cursor-pointer' : 'opacity-60' }}" :class="mode === 'own' && @js($chipOn)">
+                    <input type="radio" name="shopping_mode" value="own" x-model="mode" class="mt-1 flex-shrink-0" @disabled(!$hasCustomDomain)>
+                    <span class="min-w-0">
+                        <span class="text-sm text-white font-semibold">Uso mi propia cuenta de Google Merchant Center</span>
+                        <span class="block text-xs text-white/50 mt-0.5">
+                            @if($hasCustomDomain) Para manejar tú mismo tu cuenta y tus anuncios de Shopping con tu dominio <strong class="text-white/70">{{ $store->custom_domain }}</strong>.
+                            @else Necesita un dominio propio. Puedes conectarlo en <a href="{{ route('dashboard.store.edit') }}" class="text-tribio-cyan underline">Mi tienda</a> cuando lo tengas.
+                            @endif
+                        </span>
+                    </span>
+                </label>
+                <label class="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-3 cursor-pointer" :class="mode === 'off' && @js($chipOn)">
+                    <input type="radio" name="shopping_mode" value="off" x-model="mode" class="mt-1 flex-shrink-0">
+                    <span class="text-sm text-white font-semibold">No mostrar mis productos en Google</span>
+                </label>
+            </fieldset>
 
+            {{-- Tribio publica: no hay nada que configurar --}}
+            <div x-show="mode === 'tribio'" x-cloak class="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/60">
+                @if($marketplaceEnabled)
+                    <p class="text-white/80 font-semibold">✅ Todo listo, no tienes que hacer nada más</p>
+                    <p class="mt-1">Tribio envía tus productos a Google todos los días. Google los revisa antes de mostrarlos (puede tardar unos días).</p>
+                @else
+                    <p class="text-white/80 font-semibold">⏳ Tribio está terminando su alta en Google</p>
+                    <p class="mt-1">Deja esta opción elegida y guarda: tus productos empezarán a aparecer apenas esté lista, sin que hagas nada.</p>
+                @endif
+                <p class="mt-1">Si más adelante compras tu dominio, no tienes que cambiar nada aquí.</p>
+            </div>
+
+            {{-- Cuenta propia: verificación + dirección del catálogo --}}
+            <div x-show="mode === 'own'" x-cloak class="space-y-4">
             @if($hasCustomDomain)
             <div>
                 <label class="input-label" for="domain_verification">Código de verificación de Google</label>
@@ -85,19 +120,9 @@
                         <span x-show="!copied">Copiar</span><span x-show="copied" x-cloak>¡Copiado!</span>
                     </button>
                 </div>
-                @unless($saved)
-                    <p class="text-[11px] text-white/40 mt-1">Esta dirección empieza a funcionar cuando guardas esta página.</p>
+                @unless($saved?->usesOwnMerchantCenter())
+                    <p class="text-[11px] text-white/40 mt-1">Esta dirección empieza a funcionar cuando guardas esta página con esta opción elegida.</p>
                 @endunless
-            </div>
-
-            <div>
-                <label class="input-label" for="default_condition">Condición de tus productos</label>
-                <select id="default_condition" name="default_condition" class="input-field">
-                    @foreach(\App\Models\StoreMarketingIntegration::CONDITIONS as $value => $label)
-                        <option value="{{ $value }}" @selected(old('default_condition', $integration->default_condition) === $value)>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <p class="text-[11px] text-white/40 mt-1">Google lo exige. Puedes cambiarlo en un producto puntual desde su ficha (sección Publicidad).</p>
             </div>
 
             <details class="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/60">
@@ -110,9 +135,20 @@
                     <li>Google revisa los productos (puede tardar unos días). Los aprobados aparecen gratis en Google.</li>
                 </ol>
             </details>
+            </div>
+
+            <div x-show="mode !== 'off'" x-cloak>
+                <label class="input-label" for="default_condition">Condición de tus productos</label>
+                <select id="default_condition" name="default_condition" class="input-field">
+                    @foreach(\App\Models\StoreMarketingIntegration::CONDITIONS as $value => $label)
+                        <option value="{{ $value }}" @selected(old('default_condition', $integration->default_condition) === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <p class="text-[11px] text-white/40 mt-1">Google lo exige. Puedes cambiarlo en un producto puntual desde su ficha (sección Publicidad).</p>
+            </div>
 
             @if($catalog)
-            <div class="rounded-xl border border-white/10 bg-white/5 p-3">
+            <div x-show="mode !== 'off'" x-cloak class="rounded-xl border border-white/10 bg-white/5 p-3">
                 <p class="text-sm text-white font-semibold">
                     {{ $catalog['products_included'] }} de {{ $catalog['products_total'] }} productos van a Google
                     @if($catalog['items'] !== $catalog['products_included'])<span class="text-white/40 font-normal">({{ $catalog['items'] }} artículos contando variantes)</span>@endif

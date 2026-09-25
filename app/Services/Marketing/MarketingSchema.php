@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Schema;
 class MarketingSchema
 {
     private const CACHE_KEY = 'marketing.schema_ready';
-    private const GOOGLE_CACHE_KEY = 'marketing.schema_google_ready';
+    private const GOOGLE_CACHE_KEY = 'marketing.schema_google_ready.v2';
 
     public function ready(): bool
     {
@@ -24,11 +24,15 @@ class MarketingSchema
             && Schema::hasColumn('products', 'exclude_from_ads'));
     }
 
-    /** The Google columns (2026_09_25_100000) on top of the base marketing tables. */
+    /**
+     * The Google columns on top of the base marketing tables: 2026_09_25_100000 (tags)
+     * and 2026_09_25_180000 (shopping_mode). Checking the latest implies the earlier.
+     */
     public function googleReady(): bool
     {
         return $this->ready()
-            && $this->remember(self::GOOGLE_CACHE_KEY, fn () => Schema::hasColumn('store_marketing_integrations', 'measurement_id'));
+            && $this->remember(self::GOOGLE_CACHE_KEY, fn () => Schema::hasColumn('store_marketing_integrations', 'measurement_id')
+                && Schema::hasColumn('store_marketing_integrations', 'shopping_mode'));
     }
 
     private function remember(string $key, \Closure $check): bool
