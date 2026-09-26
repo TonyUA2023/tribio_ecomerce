@@ -7,8 +7,9 @@
     // avoids threading googleReady through every one of them.
     $googleReady = filled(config('services.google.client_id'));
 @endphp
+{{-- Hidden by the ONE style attribute: a second style="" on the same tag is dropped by the browser, which made this panel flash open until Alpine loaded. --}}
 <div id="tribioCustomerModal"
-     style="--pay-accent: {{ $payAccent }}; --pay-accent-soft: {{ $paySecondary }};"
+     style="display: none; --pay-accent: {{ $payAccent }}; --pay-accent-soft: {{ $paySecondary }};"
      x-data="{
         isOpen: false,
         activeTab: 'orders',
@@ -255,7 +256,6 @@
         }
      }"
      x-show="isOpen"
-     style="display: none;"
      class="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-5 overflow-y-auto"
      aria-modal="true"
      role="dialog">

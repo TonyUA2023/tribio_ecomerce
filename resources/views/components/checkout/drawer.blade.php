@@ -20,8 +20,9 @@
     $defaultPayment = $hasMpCapable ? 'card' : (($hasFlowCapable && $flowCurrencyMatches) ? 'flow' : ($hasPaypalCapable ? 'paypal' : (in_array($store->checkout_mode, ['whatsapp', 'mixed']) ? 'whatsapp' : '')));
 @endphp
 <script>window.tribioCsrfToken = '{{ csrf_token() }}';</script>
+{{-- Hidden by the ONE style attribute: a second style="" on the same tag is dropped by the browser, which made this panel flash open until Alpine loaded. --}}
 <div id="cartDrawer"
-     style="--pay-accent: {{ $payAccent }}; --pay-accent-soft: {{ $paySecondary }};"
+     style="display: none; --pay-accent: {{ $payAccent }}; --pay-accent-soft: {{ $paySecondary }};"
      x-data="{
          cartOpen: false,
          checkoutStep: 1,
@@ -527,7 +528,6 @@
      @customer-authenticated.window="onCustomerAuth($event.detail)"
      @customer-logged-out.window="onCustomerLogout()"
      x-show="cartOpen"
-     style="display:none;"
      class="fixed inset-0 z-[999] flex justify-end">
 
     <div x-show="cartOpen" x-transition:enter="transition-opacity ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
