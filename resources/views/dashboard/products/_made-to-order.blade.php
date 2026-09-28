@@ -9,6 +9,8 @@
         'fields' => $mtoOldSchema !== null ? (json_decode($mtoOldSchema, true) ?: []) : ($product?->customization_schema ?? []),
         'types' => \App\Services\MadeToOrder\CustomizationSchema::TYPES,
         'maxFields' => \App\Services\MadeToOrder\CustomizationSchema::MAX_FIELDS,
+        // Sizes suggested by the store's rubro (textile S–XXL, sneakers 36–44…).
+        'sizes' => \App\Support\BusinessProfile::forStore($store)->sizes(),
     ];
 @endphp
 <div class="glass-card p-5 sm:p-6" x-data="madeToOrderBuilder(@js($mtoConfig))">
@@ -153,13 +155,15 @@ document.addEventListener('alpine:init', () => {
         leadTime: config.leadTime,
         types: config.types,
         maxFields: config.maxFields,
+        sizes: config.sizes && config.sizes.length ? config.sizes : ['S', 'M', 'L', 'XL'],
         fields: (config.fields || []).map(withId),
         add(type) {
             if (this.fields.length >= this.maxFields) return;
             this.fields.push(withId({ type, label: '', options: type === 'choice' ? [{ label: '', price: 0, color: null }] : [] }));
         },
         preset(name) {
-            presets[name].forEach((field) => {
+            const list = name === 'sizes' ? [{ type: 'sizes', label: 'Tallas', required: true, sizes: [...this.sizes] }] : presets[name];
+            list.forEach((field) => {
                 if (this.fields.length < this.maxFields && !this.fields.some((f) => f.type === field.type && (field.type === 'sizes' || f.label === field.label))) {
                     this.fields.push(withId(JSON.parse(JSON.stringify(field))));
                 }

@@ -91,7 +91,7 @@
                     <label class="input-label">Categoría / Rubro *</label>
                     <select name="category" class="input-field">
                         <option value="" disabled>Selecciona una categoría</option>
-                        @foreach(['moda' => 'Moda y Ropa', 'calzado' => 'Calzado', 'tecnologia' => 'Tecnología', 'alimentos' => 'Alimentos y Bebidas', 'joyeria' => 'Joyería y Accesorios', 'hogar' => 'Hogar y Decoración', 'deporte' => 'Deportes', 'salud' => 'Salud y Belleza', 'servicios' => 'Servicios', 'otros' => 'Otros'] as $value => $label)
+                        @foreach(\App\Support\BusinessProfile::options() as $value => $label)
                             <option value="{{ $value }}" {{ old('category', $store?->category) == $value ? 'selected' : '' }}>{{ $label }}</option>
                         @endforeach
                     </select>
@@ -306,7 +306,7 @@
             deposit: {{ (int) old('deposit_percent', $store?->deposit_percent ?? 100) }}
         }">
             <div>
-                <h3 class="text-white font-bold text-lg mb-1 flex items-center gap-2">✂️ Ventas por encargo</h3>
+                <h3 class="text-white font-bold text-lg mb-1 flex flex-wrap items-center gap-2">✂️ Ventas por encargo @if(\App\Support\BusinessProfile::forStore($store)->recommendsMadeToOrder()) <span class="badge badge-blue">Recomendado para {{ \App\Support\BusinessProfile::forStore($store)->label() }}</span>@endif</h3>
                 <p class="text-xs text-white/50">Para lo que haces a pedido: bordados, estampados, regalos personalizados. Tus clientes te dejan su texto, logo o tallas al comprar.</p>
             </div>
             <label class="flex items-center gap-3 cursor-pointer">

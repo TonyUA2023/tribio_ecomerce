@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Store;
 use App\Models\User;
 use App\Services\CulqiService;
+use App\Support\BusinessProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class SubscriptionController extends Controller
 {
@@ -41,13 +43,14 @@ class SubscriptionController extends Controller
         $rules = [
             'plan_key'       => 'required|string|in:basic,professional,enterprise',
             'store_name'     => 'required|string|max:255',
-            'store_category' => 'required|string',
+            'store_category' => ['required', 'string', Rule::in(BusinessProfile::keys())],
             'store_slug'     => 'required|string|alpha_dash|max:60|unique:stores,slug',
             'whatsapp_phone' => 'nullable|string|max:20',
         ];
 
         $messages = [
             'store_slug.unique' => 'Esta dirección de tienda ya está en uso.',
+            'store_category.in' => 'Elige el rubro de tu negocio de la lista.',
             'email.unique'      => 'Este correo electrónico ya está registrado. Inicia sesión con tu Tribio Pass para continuar.',
             'password.confirmed'=> 'La confirmación de la contraseña no coincide.',
         ];
@@ -76,7 +79,8 @@ class SubscriptionController extends Controller
                 'phone'    => $request->phone,
             ]);
 
-            return Store::create([
+            // Rubro defaults first (e.g. Textilería starts with "Ventas por encargo" on).
+            return Store::create(BusinessProfile::for($request->store_category)->creationDefaults() + [
                 'user_id'        => $user->id,
                 'name'           => $request->store_name,
                 'slug'           => $request->store_slug,

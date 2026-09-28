@@ -104,6 +104,9 @@
                             <h3>{{ $template['name'] }}</h3>
                             @if($isCurrent)<span class="badge badge-green">En uso</span>@else<span class="badge badge-blue">Disponible</span>@endif
                         </div>
+                        @if(in_array($key, $businessProfile->recommendedTemplates(), true))
+                            <p class="tpl-card-tagline"><span class="badge badge-gold">★ Recomendada para {{ $businessProfile->label() }}</span></p>
+                        @endif
                         <p class="tpl-card-tagline">{{ $template['tagline'] }}</p>
                         <p class="tpl-card-description">{{ $template['description'] }}</p>
                         <div class="tpl-card-meta">

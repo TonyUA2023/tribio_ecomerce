@@ -327,7 +327,7 @@
                 {{-- Variantes --}}
                 <div class="glass-card p-5 sm:p-6" x-data="{
                     hasVariants: false,
-                    options: [{ name: 'Color', valuesText: 'Negro, Blanco', values: ['Negro', 'Blanco'] }, { name: 'Talla', valuesText: 'S, M, L', values: ['S', 'M', 'L'] }],
+                    options: @js(collect(\App\Support\BusinessProfile::forStore($store)->variantOptions())->map(fn ($values, $name) => ['name' => $name, 'valuesText' => implode(', ', $values), 'values' => $values])->values()),
                     variants: [],
                     addOption() { this.options.push({ name: '', valuesText: '', values: [] }); },
                     removeOption(index) { this.options.splice(index, 1); this.generateVariants(); },

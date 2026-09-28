@@ -12,7 +12,7 @@
                 <div><p class="text-white/40">Plan</p><p class="text-white">{{ ucfirst($store->plan) }}</p></div>
                 <div><p class="text-white/40">Plantilla</p><p class="text-white">{{ $store->template_name }}</p></div>
                 <div><p class="text-white/40">WhatsApp</p><p class="text-white">{{ $store->whatsapp_phone ?? '—' }}</p></div>
-                <div><p class="text-white/40">Categoría</p><p class="text-white">{{ $store->category }}</p></div>
+                <div><p class="text-white/40">Categoría</p><p class="text-white">{{ \App\Support\BusinessProfile::forStore($store)->icon() }} {{ \App\Support\BusinessProfile::forStore($store)->label() }}</p></div>
             </div>
         </div>
         <div class="glass-card p-6">

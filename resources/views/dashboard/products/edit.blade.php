@@ -33,7 +33,7 @@
         }
     }
     if (empty($initialOptions)) {
-        $initialOptions = [['name' => 'Color', 'valuesText' => '', 'values' => []], ['name' => 'Talla', 'valuesText' => '', 'values' => []]];
+        $initialOptions = collect(\App\Support\BusinessProfile::forStore($store)->variantOptions())->keys()->map(fn ($name) => ['name' => $name, 'valuesText' => '', 'values' => []])->all();
     }
     $initialVariants = $product->variants->map(fn($v) => [
         'id' => $v->id, 'title' => $v->title, 'attributes' => $v->attributes ?? [],

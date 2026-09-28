@@ -17,12 +17,39 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Categorías de negocios disponibles al registrarse
+    | Rubros de negocio (stores.category)
     |--------------------------------------------------------------------------
+    | Única lista de rubros: registro, "Mi Tienda", directorio /negocios y admin la
+    | leen de aquí (App\Support\BusinessProfile). Las claves ya guardadas en la base
+    | no se cambian nunca; solo las etiquetas.
+    |
+    | Un rubro puede además ajustar la configuración de sus tiendas:
+    |   made_to_order    → tiendas nuevas empiezan con "Ventas por encargo" activo
+    |                      y el dashboard lo recomienda.
+    |   deposit_percent  → adelanto inicial de esas tiendas nuevas.
+    |   sizes            → tallas sugeridas (tabla de tallas por encargo).
+    |   variant_options  → opciones sugeridas al crear variantes de un producto.
+    |   templates        → plantillas recomendadas en el módulo "Plantillas".
+    | Lo que un rubro no define usa 'business_profile_defaults'.
     */
     'business_categories' => [
-        'moda'        => ['label' => 'Moda y Ropa',         'icon' => '👗'],
-        'calzado'     => ['label' => 'Calzado',              'icon' => '👟'],
+        'textileria'  => ['label' => 'Textilería y confección', 'icon' => '🧵',
+            'made_to_order'   => true,
+            'deposit_percent' => 50,
+            'sizes'           => ['S', 'M', 'L', 'XL', 'XXL'],
+            'variant_options' => ['Talla' => ['S', 'M', 'L', 'XL'], 'Color' => ['Blanco', 'Negro']],
+            'templates'       => ['soft-market', 'urban-style'],
+        ],
+        'moda'        => ['label' => 'Tienda de ropa',       'icon' => '👗',
+            'sizes'           => ['XS', 'S', 'M', 'L', 'XL'],
+            'variant_options' => ['Talla' => ['S', 'M', 'L', 'XL'], 'Color' => ['Negro', 'Blanco']],
+            'templates'       => ['urban-style'],
+        ],
+        'calzado'     => ['label' => 'Tienda de zapatillas', 'icon' => '👟',
+            'sizes'           => ['36', '37', '38', '39', '40', '41', '42', '43', '44'],
+            'variant_options' => ['Talla' => ['38', '39', '40', '41', '42', '43'], 'Color' => ['Negro', 'Blanco']],
+            'templates'       => ['sport-pro'],
+        ],
         'tecnologia'  => ['label' => 'Tecnología',           'icon' => '💻'],
         'alimentos'   => ['label' => 'Alimentos y Bebidas',  'icon' => '🍕'],
         'joyeria'     => ['label' => 'Joyería y Accesorios', 'icon' => '💍'],
@@ -31,6 +58,14 @@ return [
         'salud'       => ['label' => 'Salud y Belleza',      'icon' => '💄'],
         'servicios'   => ['label' => 'Servicios',            'icon' => '🔧'],
         'otros'       => ['label' => 'Otros',                'icon' => '🛍️'],
+    ],
+
+    'business_profile_defaults' => [
+        'made_to_order'   => false,
+        'deposit_percent' => null,
+        'sizes'           => ['S', 'M', 'L', 'XL'],
+        'variant_options' => ['Color' => ['Negro', 'Blanco'], 'Talla' => ['S', 'M', 'L']],
+        'templates'       => [],
     ],
 
     /*

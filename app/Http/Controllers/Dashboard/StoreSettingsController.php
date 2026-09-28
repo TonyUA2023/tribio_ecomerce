@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\Services\LogoPaletteService;
+use App\Support\BusinessProfile;
+use Illuminate\Validation\Rule;
 
 class StoreSettingsController extends Controller
 {
@@ -42,7 +44,7 @@ class StoreSettingsController extends Controller
             'slug'           => 'nullable|string|max:150|alpha_dash|unique:stores,slug,' . $store->id,
             'tagline'        => 'nullable|string|max:150',
             'description'    => 'nullable|string|max:1000',
-            'category'       => 'required|string|in:moda,calzado,tecnologia,alimentos,joyeria,hogar,deporte,salud,servicios,otros',
+            'category'       => ['required', 'string', Rule::in(BusinessProfile::keys())],
             'build_mode'     => 'required|string|in:builder,custom_code',
             'whatsapp_phone' => 'nullable|string|max:20',
             'phone'          => 'nullable|string|max:20',

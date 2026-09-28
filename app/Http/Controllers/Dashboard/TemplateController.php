@@ -12,6 +12,7 @@ use App\Services\Storefront\StorefrontHomeData;
 use App\Services\Storefront\StorefrontLinks;
 use App\Services\Storefront\StorefrontTheme;
 use App\Services\Storefront\TemplateRegistry;
+use App\Support\BusinessProfile;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -34,13 +35,19 @@ class TemplateController extends Controller
         $store = $this->store();
         $catalog = $this->registry->catalog();
         $current = $this->registry->find($store->template_name);
+        $profile = BusinessProfile::forStore($store);
+        // Designs recommended for the store's rubro go first (stable order otherwise).
+        $recommended = array_flip($profile->recommendedTemplates());
+        $available = array_filter($catalog, fn ($t, $key) => $this->registry->isSelectable($key), ARRAY_FILTER_USE_BOTH);
+        uksort($available, fn ($a, $b) => (isset($recommended[$a]) ? 0 : 1) <=> (isset($recommended[$b]) ? 0 : 1));
 
         return view('dashboard.templates.index', [
             'store' => $store,
             'current' => $current,
             'currentKey' => $store->template_name,
             'locked' => !$this->registry->canManage($store),
-            'available' => array_filter($catalog, fn ($t, $key) => $this->registry->isSelectable($key), ARRAY_FILTER_USE_BOTH),
+            'available' => $available,
+            'businessProfile' => $profile,
             'upcoming' => array_filter($catalog, fn ($t, $key) => !$this->registry->isSelectable($key), ARRAY_FILTER_USE_BOTH),
             'canPreviewCurrent' => $this->canFrame($store, $store->template_name),
             'customizable' => $this->registry->isCustomizable($store->template_name),
