@@ -12,7 +12,7 @@ use App\Models\Store;
  */
 class StorefrontLinks
 {
-    public const PATTERN = '/^(catalog|new|price_asc|contact|none|category:[A-Za-z0-9_-]{1,120})$/';
+    public const PATTERN = '/^(catalog|new|sale|price_asc|contact|none|category:[A-Za-z0-9_-]{1,120})$/';
 
     public static function isValid(mixed $token): bool
     {
@@ -25,6 +25,7 @@ class StorefrontLinks
         $options = [
             'catalog' => 'Todo el catálogo',
             'new' => 'Novedades (lo más reciente)',
+            'sale' => 'Ofertas (productos con descuento)',
             'price_asc' => 'Precios más bajos primero',
         ];
         foreach ($store->categories()->whereNull('parent_id')->orderBy('name')->get(['id', 'name', 'slug']) as $category) {
@@ -48,6 +49,7 @@ class StorefrontLinks
 
         return match ($token) {
             'new' => route('store.catalog', ['slug' => $store->slug, 'sort' => 'newest']),
+            'sale' => route('store.catalog', ['slug' => $store->slug, 'on_sale' => 1]),
             'price_asc' => route('store.catalog', ['slug' => $store->slug, 'sort' => 'price_asc']),
             'contact' => route('store.contact', $store->slug),
             default => route('store.catalog', $store->slug),

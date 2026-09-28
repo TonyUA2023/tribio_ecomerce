@@ -175,8 +175,18 @@ class StoreController extends Controller
         // Filtro: Solo con stock
         if ($request->boolean('in_stock')) {
             $query->where(function($q) {
-                $q->where('stock', '>', 0)->orWhere('manage_stock', false);
+                $q->where('stock', '>', 0)->orWhere('track_stock', false);
             });
+        }
+
+        // Filtro por atributos de variante: ?attr[Talla]=40&attr[Color]=Negro (tallas, colores…).
+        // El producto entra si tiene al menos una variante activa con ese valor.
+        foreach ((array) $request->input('attr', []) as $attrName => $attrValue) {
+            if (!is_string($attrName) || !preg_match('/^[\pL\pN _-]{1,40}$/u', $attrName)
+                || !is_scalar($attrValue) || trim((string) $attrValue) === '') {
+                continue;
+            }
+            $query->whereHas('activeVariants', fn($v) => $v->where('attributes->' . $attrName, trim((string) $attrValue)));
         }
 
         // Ordenamiento

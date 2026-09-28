@@ -77,6 +77,49 @@ $urbanSlide = static function (int $i, array $copy): array {
     ];
 };
 
+// Sport Pro: un banner de portada (título grande, subtítulo espaciado, botón).
+$sportSlide = static function (int $i, array $copy): array {
+    $n = $i + 1;
+    $fields = [];
+    if ($i > 0) {
+        $fields["hero.items.{$i}.enabled"] = ['type' => 'toggle', 'label' => "Mostrar banner {$n}", 'default' => $copy['enabled']];
+    }
+
+    return $fields + [
+        "hero.items.{$i}.image" => ['type' => 'image', 'label' => "Imagen para computadora {$n}", 'aspect' => 'wide',
+            'help' => 'Horizontal, ideal 1920 × 800 px. JPG, PNG o WEBP de hasta 4 MB.'],
+        "hero.items.{$i}.image_mobile" => ['type' => 'image', 'label' => "Imagen para celular {$n}", 'aspect' => 'tall',
+            'help' => 'Vertical, ideal 900 × 1200 px. Si no subes una, se usa la de computadora.'],
+        "hero.items.{$i}.tone" => ['type' => 'select', 'label' => "Estilo del texto {$n}", 'default' => $copy['tone'] ?? 'light',
+            'options' => ['light' => 'Texto blanco', 'dark' => 'Texto negro', 'image' => 'Solo la imagen (ya trae texto)']],
+        "hero.items.{$i}.align" => ['type' => 'select', 'label' => "Posición del texto {$n}", 'default' => $copy['align'] ?? 'left',
+            'options' => ['left' => 'Izquierda', 'center' => 'Centro', 'bottom' => 'Abajo al centro']],
+        "hero.items.{$i}.title" => ['type' => 'text', 'label' => "Título {$n}", 'max' => 48, 'optional' => true, 'default' => $copy['title'] ?? ''],
+        "hero.items.{$i}.subtitle" => ['type' => 'text', 'label' => "Subtítulo {$n}", 'max' => 60, 'optional' => true, 'default' => $copy['subtitle'] ?? '',
+            'help' => 'Se muestra con el color destacado y letras espaciadas.'],
+        "hero.items.{$i}.cta" => ['type' => 'text', 'label' => "Texto del botón {$n}", 'max' => 24, 'optional' => true, 'default' => $copy['cta'] ?? ''],
+        "hero.items.{$i}.link" => ['type' => 'link', 'label' => "Al hacer clic lleva a {$n}", 'default' => $copy['link'] ?? 'catalog'],
+    ];
+};
+
+// Sport Pro: una tarjeta de imagen con título y botón (bloques "Lo nuevo" y "Campañas").
+$sportCard = static function (string $group, int $i, array $copy, bool $withSubtitle = true): array {
+    $n = $i + 1;
+    $fields = [
+        "{$group}.items.{$i}.image" => ['type' => 'image', 'label' => "Foto {$n}", 'aspect' => $copy['aspect'] ?? 'portrait',
+            'help' => $copy['help'] ?? 'Sin foto se usa la de una categoría o un producto.'],
+        "{$group}.items.{$i}.title" => ['type' => 'text', 'label' => "Título {$n}", 'max' => 40, 'optional' => true, 'default' => $copy['title'] ?? ''],
+    ];
+    if ($withSubtitle) {
+        $fields["{$group}.items.{$i}.subtitle"] = ['type' => 'text', 'label' => "Subtítulo {$n}", 'max' => 60, 'optional' => true, 'default' => $copy['subtitle'] ?? ''];
+    }
+
+    return $fields + [
+        "{$group}.items.{$i}.cta" => ['type' => 'text', 'label' => "Texto del botón {$n}", 'max' => 20, 'optional' => true, 'default' => $copy['cta'] ?? ''],
+        "{$group}.items.{$i}.link" => ['type' => 'link', 'label' => "Lleva a {$n}", 'default' => $copy['link'] ?? 'catalog'],
+    ];
+};
+
 return [
 
     // Fuentes que una plantilla puede ofrecer en un campo type=font. La lista blanca
@@ -87,6 +130,7 @@ return [
         'playfair' => ['family' => "'Playfair Display', Georgia, serif", 'google' => 'Playfair+Display:wght@500;600;700;800'],
         'grotesk'  => ['family' => "'Space Grotesk', sans-serif", 'google' => 'Space+Grotesk:wght@400;500;600;700'],
         'poppins'  => ['family' => "'Poppins', sans-serif", 'google' => 'Poppins:wght@400;500;600;700;800;900'],
+        'barlow'   => ['family' => "'Barlow Condensed', 'Oswald', sans-serif", 'google' => 'Barlow+Condensed:wght@500;600;700;800'],
         'oswald'   => ['family' => "'Oswald', 'Poppins', sans-serif", 'google' => 'Oswald:wght@500;600;700'],
     ],
 
@@ -401,6 +445,185 @@ return [
                             'default' => ['es' => 'Entérate primero de las novedades', 'en' => 'Be the first to know']],
                         'footer.about' => ['type' => 'textarea', 'label' => 'Sobre tu tienda', 'max' => 240, 'fallback' => 'description',
                             'default' => ['es' => 'Moda para todos los días: prendas con estilo, buena calidad y precios que te encantan.', 'en' => 'Everyday fashion: stylish, quality pieces at prices you will love.']],
+                    ],
+                ],
+            ],
+        ],
+
+        'sport-pro' => [
+            'name'        => 'Sport Pro',
+            'tagline'     => 'Deportiva y audaz, como las grandes marcas',
+            'description' => 'Pensada para tiendas de zapatillas y ropa deportiva: header negro, banners de campaña a pantalla completa, carruseles de producto, filtros por talla y color, y una ficha de producto con selector de tallas.',
+            'ideal_for'   => ['Zapatillas', 'Deportes', 'Streetwear', 'Calzado'],
+            'tags'        => ['deportiva', 'zapatillas', 'tallas', 'banners'],
+            'status'      => 'available',
+            'thumbnail'   => null,
+            'swatches'    => ['#111111', '#D0021B', '#F2C94C', '#FFFFFF'],
+            'default_accent'    => '#D0021B',
+            'default_secondary' => '#F2C94C',
+            'default_bg'        => '#FFFFFF',
+            // Sin "multi-idioma" activado la tienda se muestra siempre en español.
+            'respects_language_setting' => true,
+            'settings' => [
+                [
+                    'key' => 'brand', 'title' => 'Colores y estilo', 'icon' => 'palette',
+                    'description' => 'El menú y los botones van en negro; tus colores marcan ofertas y detalles.',
+                    'fields' => [
+                        'colors.primary' => ['type' => 'color', 'label' => 'Color de ofertas', 'default' => '#D0021B', 'logo' => 'primary',
+                            'help' => 'Etiquetas de descuento, precios rebajados y "SALE" del menú.'],
+                        'colors.secondary' => ['type' => 'color', 'label' => 'Color destacado', 'default' => '#F2C94C', 'logo' => 'secondary',
+                            'help' => 'El subtítulo de los banners y pequeños detalles.'],
+                        'colors.background' => ['type' => 'select', 'label' => 'Fondo de la tienda', 'default' => 'white',
+                            'options' => ['white' => 'Blanco puro', 'mist' => 'Niebla', 'cream' => 'Crema', 'tint' => 'Tinte de tu color']],
+                        'typography.heading' => ['type' => 'font', 'label' => 'Estilo de títulos', 'default' => 'barlow', 'options' => [
+                            'barlow'  => 'Deportiva · Barlow Condensed',
+                            'oswald'  => 'Impacto · Oswald',
+                            'grotesk' => 'Tecnológica · Space Grotesk',
+                            'poppins' => 'Urbana · Poppins',
+                        ]],
+                        'style.header' => ['type' => 'select', 'label' => 'Color del menú', 'default' => 'dark',
+                            'options' => ['dark' => 'Negro', 'light' => 'Blanco']],
+                        'style.logo_mode' => ['type' => 'select', 'label' => 'Tu logo sobre el menú negro', 'default' => 'white',
+                            'options' => ['white' => 'En blanco (solo logos PNG con fondo transparente)', 'original' => 'Con sus colores originales'],
+                            'help' => 'Un logo con fondo (JPG o PNG con fondo de color) siempre se muestra con sus colores.'],
+                        'style.product_image' => ['type' => 'select', 'label' => 'Fotos de producto', 'default' => 'cover',
+                            'options' => ['cover' => 'Foto a todo el recuadro', 'contain' => 'Producto completo sobre gris (ideal para fotos con fondo blanco)']],
+                        'style.corners' => ['type' => 'select', 'label' => 'Esquinas de botones y fotos', 'default' => 'square',
+                            'options' => ['square' => 'Rectas (deportivo)', 'soft' => 'Suaves']],
+                    ],
+                ],
+                [
+                    'key' => 'topbars', 'title' => 'Barras superiores', 'icon' => 'megaphone', 'item_label' => 'Mensaje',
+                    'description' => 'La franja blanca con tres mensajes cortos y la franja gris bajo el menú.',
+                    'fields' => [
+                        'utility.enabled' => ['type' => 'toggle', 'label' => 'Mostrar la franja de mensajes', 'default' => true],
+                        'utility.items.0.text' => ['type' => 'text', 'label' => 'Mensaje 1', 'max' => 60, 'optional' => true,
+                            'default' => ['es' => 'Compra 100% segura', 'en' => '100% secure checkout']],
+                        'utility.items.1.text' => ['type' => 'text', 'label' => 'Mensaje 2', 'max' => 60, 'optional' => true,
+                            'default' => ['es' => 'Cambios de talla sin complicaciones', 'en' => 'Easy size exchanges']],
+                        'utility.items.2.text' => ['type' => 'text', 'label' => 'Mensaje 3', 'max' => 60, 'optional' => true,
+                            'default' => ['es' => 'Envíos a todo el país', 'en' => 'Nationwide shipping']],
+                        'utility.links' => ['type' => 'toggle', 'label' => 'Mostrar accesos "Mis pedidos" y "Contáctanos"', 'default' => true],
+                        'shipping.enabled' => ['type' => 'toggle', 'label' => 'Mostrar la franja gris bajo el menú', 'default' => true],
+                        'shipping.text' => ['type' => 'text', 'label' => 'Texto de la franja gris', 'max' => 80,
+                            'default' => ['es' => 'Envío en 48 horas para Lima y Callao*', 'en' => '48-hour delivery in Lima and Callao*']],
+                        'shipping.link' => ['type' => 'link', 'label' => 'Al hacer clic lleva a', 'default' => 'none'],
+                    ],
+                ],
+                [
+                    'key' => 'menu', 'title' => 'Menú', 'icon' => 'menu',
+                    'description' => 'Muestra tus categorías marcadas "Mostrar en el menú" (o las primeras seis) y un acceso destacado a ofertas.',
+                    'fields' => [
+                        'menu.sale_enabled' => ['type' => 'toggle', 'label' => 'Mostrar acceso destacado a ofertas', 'default' => true],
+                        'menu.sale_label' => ['type' => 'text', 'label' => 'Texto del acceso', 'max' => 16, 'default' => 'SALE'],
+                        'menu.sale_link' => ['type' => 'link', 'label' => 'El acceso lleva a', 'default' => 'sale'],
+                    ],
+                ],
+                [
+                    'key' => 'hero', 'title' => 'Banners de portada', 'icon' => 'image', 'item_label' => 'Banner',
+                    'description' => 'Hasta 4 banners de campaña a pantalla completa. Sube tus fotos o banners ya diseñados.',
+                    'fields' => [
+                        'hero.autoplay' => ['type' => 'toggle', 'label' => 'Cambiar de banner automáticamente', 'default' => true],
+                        'hero.height' => ['type' => 'select', 'label' => 'Alto de la portada', 'default' => 'tall',
+                            'options' => ['full' => 'Pantalla completa', 'tall' => 'Alta', 'medium' => 'Mediana']],
+                    ]
+                    + $sportSlide(0, ['tone' => 'light', 'align' => 'left', 'link' => 'new',
+                        'title' => ['es' => 'Hechas para moverte', 'en' => 'Made to move'],
+                        'subtitle' => ['es' => 'Nueva colección', 'en' => 'New collection'],
+                        'cta' => ['es' => 'Comprar ahora', 'en' => 'Shop now']])
+                    + $sportSlide(1, ['enabled' => true, 'tone' => 'light', 'align' => 'bottom', 'link' => 'catalog',
+                        'title' => ['es' => 'Estilo para cada paso', 'en' => 'Style for every step'],
+                        'subtitle' => ['es' => 'Clásicos que nunca fallan', 'en' => 'Classics that never fail'],
+                        'cta' => ['es' => 'Comprar', 'en' => 'Shop']])
+                    + $sportSlide(2, ['enabled' => false, 'tone' => 'light', 'align' => 'center', 'link' => 'sale',
+                        'title' => ['es' => 'Sale de temporada', 'en' => 'Season sale'],
+                        'subtitle' => ['es' => 'Precios que te van a encantar', 'en' => 'Prices you will love'],
+                        'cta' => ['es' => 'Ver ofertas', 'en' => 'Shop the sale']])
+                    + $sportSlide(3, ['enabled' => false, 'tone' => 'dark', 'align' => 'left', 'link' => 'catalog',
+                        'title' => ['es' => 'Rendimiento diario', 'en' => 'Everyday performance'],
+                        'cta' => ['es' => 'Descubre', 'en' => 'Discover']]),
+                ],
+                [
+                    'key' => 'rail', 'title' => 'Carrusel de productos', 'icon' => 'grid',
+                    'description' => 'La fila deslizable justo debajo de los banners.',
+                    'fields' => [
+                        'rail.enabled' => ['type' => 'toggle', 'label' => 'Mostrar el carrusel', 'default' => true],
+                        'rail.title' => ['type' => 'text', 'label' => 'Título (opcional)', 'max' => 40, 'default' => ''],
+                        'rail.source' => ['type' => 'select', 'label' => 'Qué productos mostrar', 'default' => 'featured',
+                            'options' => ['featured' => 'Destacados', 'newest' => 'Lo más nuevo', 'sale' => 'En oferta']],
+                    ],
+                ],
+                [
+                    'key' => 'tiles', 'title' => 'Lo nuevo', 'icon' => 'sparkles', 'item_label' => 'Tarjeta',
+                    'description' => 'Tres fotos verticales para destacar colecciones o categorías.',
+                    'fields' => [
+                        'tiles.enabled' => ['type' => 'toggle', 'label' => 'Mostrar esta sección', 'default' => true],
+                        'tiles.title' => ['type' => 'text', 'label' => 'Título de la sección', 'max' => 40, 'optional' => true,
+                            'default' => ['es' => 'Lo nuevo', 'en' => 'New in']],
+                    ]
+                    + $sportCard('tiles', 0, ['title' => ['es' => 'Mujer', 'en' => 'Women'], 'cta' => ['es' => 'Comprar', 'en' => 'Shop']], false)
+                    + $sportCard('tiles', 1, ['title' => ['es' => 'Hombre', 'en' => 'Men'], 'cta' => ['es' => 'Comprar', 'en' => 'Shop']], false)
+                    + $sportCard('tiles', 2, ['title' => ['es' => 'Niños', 'en' => 'Kids'], 'cta' => ['es' => 'Comprar', 'en' => 'Shop']], false),
+                ],
+                [
+                    'key' => 'campaigns', 'title' => 'Campañas', 'icon' => 'layout', 'item_label' => 'Campaña',
+                    'description' => 'Fotos grandes lado a lado con título, subtítulo y botón debajo.',
+                    'fields' => [
+                        'campaigns.enabled' => ['type' => 'toggle', 'label' => 'Mostrar campañas', 'default' => true],
+                        'campaigns.second_row' => ['type' => 'toggle', 'label' => 'Mostrar una segunda fila (campañas 3 y 4)', 'default' => false],
+                    ]
+                    + $sportCard('campaigns', 0, ['aspect' => 'wide', 'help' => 'Ideal 1200 × 850 px. Sin foto se usa la de un producto.', 'link' => 'new',
+                        'title' => ['es' => 'Clásicos urbanos', 'en' => 'Urban classics'], 'subtitle' => ['es' => 'Estilo que nunca pasa de moda', 'en' => 'Style that never fades'], 'cta' => ['es' => 'Descubre', 'en' => 'Discover']])
+                    + $sportCard('campaigns', 1, ['aspect' => 'wide', 'help' => 'Ideal 1200 × 850 px. Sin foto se usa la de un producto.',
+                        'title' => ['es' => 'Running', 'en' => 'Running'], 'subtitle' => ['es' => 'Hechas para ir más lejos', 'en' => 'Built to go further'], 'cta' => ['es' => 'Descubre', 'en' => 'Discover']])
+                    + $sportCard('campaigns', 2, ['aspect' => 'wide', 'help' => 'Ideal 1200 × 850 px.',
+                        'title' => ['es' => 'Entrenamiento', 'en' => 'Training'], 'subtitle' => ['es' => 'Rendimiento en cada paso', 'en' => 'Performance in every step'], 'cta' => ['es' => 'Ver todo', 'en' => 'View all']])
+                    + $sportCard('campaigns', 3, ['aspect' => 'wide', 'help' => 'Ideal 1200 × 850 px.', 'link' => 'sale',
+                        'title' => ['es' => 'Outlet', 'en' => 'Outlet'], 'subtitle' => ['es' => 'Precios que te van a encantar', 'en' => 'Prices you will love'], 'cta' => ['es' => 'Ver todo', 'en' => 'View all']]),
+                ],
+                [
+                    'key' => 'sections', 'title' => 'Categorías y productos', 'icon' => 'heading',
+                    'description' => 'Tus categorías con foto y la grilla de productos al final de la portada.',
+                    'fields' => [
+                        'categories.enabled' => ['type' => 'toggle', 'label' => 'Mostrar categorías', 'default' => true],
+                        'categories.title' => ['type' => 'text', 'label' => 'Categorías · título', 'max' => 60, 'optional' => true,
+                            'default' => ['es' => 'Tus favoritos', 'en' => 'Your favorites']],
+                        'sections.products_title' => ['type' => 'text', 'label' => 'Grilla · título', 'max' => 60,
+                            'default' => ['es' => 'Explora la colección', 'en' => 'Explore the collection']],
+                    ],
+                ],
+                [
+                    'key' => 'product', 'title' => 'Página de producto', 'icon' => 'tag',
+                    'description' => 'Textos de ayuda que ve el cliente al elegir su talla.',
+                    'fields' => [
+                        'product.shipping_note' => ['type' => 'text', 'label' => 'Nota bajo el botón de compra', 'max' => 90, 'optional' => true,
+                            'default' => ['es' => 'Envíos a todo el país · Pago 100% seguro', 'en' => 'Nationwide shipping · 100% secure payment']],
+                        'product.size_guide' => ['type' => 'textarea', 'label' => 'Guía de tallas (opcional)', 'max' => 600, 'default' => '',
+                            'help' => 'Una línea por talla, por ejemplo "39 = 25 cm". Si lo dejas vacío no se muestra el enlace "Guía de tallas".'],
+                        'product.returns' => ['type' => 'textarea', 'label' => 'Cambios y devoluciones', 'max' => 400, 'optional' => true,
+                            'default' => ['es' => 'Puedes solicitar un cambio de talla dentro de los 7 días posteriores a la entrega, con el producto sin uso y en su caja original.', 'en' => 'You can request a size exchange within 7 days of delivery, unused and in the original box.']],
+                    ],
+                ],
+                [
+                    'key' => 'signup', 'title' => 'Invitación a registrarse', 'icon' => 'star',
+                    'description' => 'La pestaña flotante abajo a la izquierda. Abre el registro de Tribio Pass (mis pedidos y datos guardados).',
+                    'fields' => [
+                        'signup.enabled' => ['type' => 'toggle', 'label' => 'Mostrar la pestaña', 'default' => true],
+                        'signup.text' => ['type' => 'text', 'label' => 'Texto', 'max' => 40,
+                            'default' => ['es' => 'Regístrate y compra más rápido', 'en' => 'Sign up and check out faster'],
+                            'help' => 'Si ofreces un descuento al registrarse, escríbelo aquí (por ejemplo "Regístrate y obtén 10% OFF").'],
+                    ],
+                ],
+                [
+                    'key' => 'footer', 'title' => 'Pie de página', 'icon' => 'layout',
+                    'description' => 'Incluye el Libro de Reclamaciones y la suscripción a novedades (llegan a tus mensajes).',
+                    'fields' => [
+                        'footer.newsletter_title' => ['type' => 'text', 'label' => 'Suscripción · título', 'max' => 40,
+                            'default' => ['es' => 'Mantente al día', 'en' => 'Stay in the loop']],
+                        'footer.newsletter_text' => ['type' => 'text', 'label' => 'Suscripción · texto', 'max' => 100,
+                            'default' => ['es' => 'Inscríbete y entérate primero de lanzamientos y ofertas.', 'en' => 'Sign up and be the first to hear about drops and sales.']],
+                        'footer.about' => ['type' => 'textarea', 'label' => 'Sobre tu tienda', 'max' => 240, 'fallback' => 'description',
+                            'default' => ['es' => 'Zapatillas y ropa deportiva originales para entrenar, correr y vivir la ciudad.', 'en' => 'Original sneakers and sportswear to train, run and live the city.']],
                     ],
                 ],
             ],
