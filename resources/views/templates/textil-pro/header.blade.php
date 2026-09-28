@@ -1,6 +1,7 @@
-{{-- Sport Pro header: franja de mensajes, menú negro (o blanco) con buscador de caja, franja de
-     envío. Funcionalmente es el header estándar de Tribio: idioma, país/moneda, Tribio Pass,
-     carrito, buscador y menú móvil. --}}
+{{-- Textil Pro header: franja de mensajes, menú con el color oscuro de la marca (o negro/blanco),
+     accesos a Servicios y Por mayor de la portada, botón "Cotizar" por WhatsApp y franja de envío.
+     Funcionalmente es el header estándar de Tribio: idioma, país/moneda, Tribio Pass, carrito,
+     buscador y menú móvil. --}}
 @php
     $isEn = \App\Helpers\TranslationHelper::isEn();
     $currentLang = \App\Helpers\TranslationHelper::currentLang();
@@ -34,6 +35,8 @@
     $utilityMessages = collect([0, 1, 2])->map(fn ($i) => $t->text("utility.items.{$i}.text"));
     $shippingUrl = $t->link('shipping.link');
     $saleUrl = $t->link('menu.sale_link');
+    $homeUrl = route('store.show', $store->slug);
+    $quoteUrl = $store->whatsapp_link ? $store->whatsapp_link . '?text=' . rawurlencode($t->text('contact.whatsapp_message')) : route('store.contact', $store->slug);
     $searchPlaceholder = $isEn ? 'Search products' : 'Buscar productos';
     $activeCategory = request()->routeIs('store.catalog') ? (string) request('category') : '';
 @endphp
@@ -110,6 +113,12 @@
                 <a href="{{ route('store.catalog', $store->slug) }}" class="{{ request()->routeIs('store.catalog') && !request()->hasAny(['on_sale', 'sort']) ? 'is-active' : '' }}">{{ $isEn ? 'Shop' : 'Catálogo' }}</a>
                 <a href="{{ route('store.catalog', ['slug' => $store->slug, 'sort' => 'newest']) }}">{{ $isEn ? 'New in' : 'Novedades' }}</a>
             @endforelse
+            @if($tplPreview || $t->enabled('services.enabled'))
+                <a href="{{ $homeUrl }}#servicios" data-tpl-show="services.enabled" @unless($t->enabled('services.enabled')) hidden @endunless>{{ $isEn ? 'Services' : 'Servicios' }}</a>
+            @endif
+            @if($tplPreview || $t->enabled('wholesale.enabled'))
+                <a href="{{ $homeUrl }}#por-mayor" data-tpl-show="wholesale.enabled" @unless($t->enabled('wholesale.enabled')) hidden @endunless>{{ $isEn ? 'Wholesale' : 'Por mayor' }}</a>
+            @endif
             @if(($tplPreview || $t->enabled('menu.sale_enabled')) && $saleUrl)
                 <a href="{{ $saleUrl }}" class="is-sale {{ request('on_sale') ? 'is-active' : '' }}" data-tpl-show="menu.sale_enabled" @unless($t->enabled('menu.sale_enabled')) hidden @endunless>
                     <span data-tpl-text="menu.sale_label">{{ $t->text('menu.sale_label') }}</span>
@@ -118,6 +127,12 @@
         </nav>
 
         <div class="tx-tools">
+            @if($tplPreview || $t->enabled('menu.quote_enabled'))
+                <a class="tx-quote-btn tx-hide-mobile" href="{{ $quoteUrl }}" @if($store->whatsapp_link) target="_blank" rel="noopener" @endif
+                   data-tpl-show="menu.quote_enabled" @unless($t->enabled('menu.quote_enabled')) hidden @endunless>
+                    <span data-tpl-text="menu.quote_label">{{ $t->text('menu.quote_label') }}</span>
+                </a>
+            @endif
             <button type="button" class="tx-search-btn" @click="searchOpen = true">
                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-4-4"/></svg>
                 {{ $isEn ? 'Search' : 'Buscar' }}
@@ -180,6 +195,15 @@
                             <a href="{{ route('store.catalog', ['slug' => $store->slug, 'category' => $cat->slug]) }}">{{ $cat->getTranslatedName() }} <span aria-hidden="true">›</span></a>
                         @endforeach
                         <a href="{{ route('store.catalog', ['slug' => $store->slug, 'sort' => 'newest']) }}">{{ $isEn ? 'New in' : 'Novedades' }} <span aria-hidden="true">›</span></a>
+                        @if($t->enabled('services.enabled'))
+                            <a href="{{ $homeUrl }}#servicios" @click="menuOpen = false">{{ $isEn ? 'Services' : 'Servicios' }} <span aria-hidden="true">›</span></a>
+                        @endif
+                        @if($t->enabled('wholesale.enabled'))
+                            <a href="{{ $homeUrl }}#por-mayor" @click="menuOpen = false">{{ $isEn ? 'Wholesale' : 'Por mayor' }} <span aria-hidden="true">›</span></a>
+                        @endif
+                        @if($t->enabled('menu.quote_enabled'))
+                            <a href="{{ $quoteUrl }}" class="is-sale" @if($store->whatsapp_link) target="_blank" rel="noopener" @endif>{{ $t->text('menu.quote_label') }} <span aria-hidden="true">›</span></a>
+                        @endif
                         @if($t->enabled('menu.sale_enabled') && $saleUrl)
                             <a href="{{ $saleUrl }}" class="is-sale">{{ $t->text('menu.sale_label') }} <span aria-hidden="true">›</span></a>
                         @endif

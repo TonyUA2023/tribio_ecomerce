@@ -49,6 +49,8 @@ class ColorScale
             'secondary-300'  => self::hex(self::mix($rgb, self::WHITE, .45)),
             'secondary-200'  => self::hex(self::mix($rgb, self::WHITE, .60)),
             'secondary-50'   => self::hex(self::mix($rgb, self::WHITE, .85)),
+            // Text color readable on the secondary color (Textil Pro paints its menu with it).
+            'on-secondary'   => self::luminance($rgb) > .5 ? '#1E1D1B' : '#FFFFFF',
         ];
     }
 

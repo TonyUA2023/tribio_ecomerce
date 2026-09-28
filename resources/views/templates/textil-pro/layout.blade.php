@@ -10,10 +10,10 @@
     @else
         <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     @endif
-    <!-- Barlow para textos y Barlow Condensed para títulos (si se elige otra fuente, _theme la agrega) -->
+    <!-- Plus Jakarta Sans para textos; la fuente de títulos elegida la agrega _theme -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @stack('preload')
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -41,6 +41,15 @@
     @include('components.checkout.gateway')
 
     @include('templates.textil-pro._signup')
+
+    {{-- Cotizar por WhatsApp siempre a mano: en un taller la venta empieza conversando. --}}
+    @if($store->whatsapp_link && (($templatePreview ?? false) || $storefrontTheme->enabled('contact.floating')))
+        <a class="tx-wa" href="{{ $store->whatsapp_link }}?text={{ rawurlencode($storefrontTheme->text('contact.whatsapp_message')) }}" target="_blank" rel="noopener"
+           data-tpl-show="contact.floating" @unless($storefrontTheme->enabled('contact.floating')) hidden @endunless aria-label="{{ \App\Helpers\TranslationHelper::isEn() ? 'Chat on WhatsApp' : 'Escríbenos por WhatsApp' }}">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7a11.4 11.4 0 0 1-4.4-3.9 5 5 0 0 1-1-2.7 2.9 2.9 0 0 1 .9-2.2 1 1 0 0 1 .7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.2-.3.3-.1.6a8.5 8.5 0 0 0 1.6 2 7.7 7.7 0 0 0 2.3 1.4c.3.1.5.1.6-.1l.9-1.1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3a2.3 2.3 0 0 1-.2 1.1Z"/></svg>
+            <span data-tpl-text="menu.quote_label">{{ $storefrontTheme->text('menu.quote_label') }}</span>
+        </a>
+    @endif
 
     {{-- Primera visita: país/moneda para mostrar precios y envíos correctos --}}
     @if(!request()->hasCookie('user_country') && !($templatePreview ?? false))

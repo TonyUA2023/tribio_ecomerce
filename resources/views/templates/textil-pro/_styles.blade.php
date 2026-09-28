@@ -90,6 +90,10 @@
     .tx-tools { display: flex; align-items: center; gap: 8px; margin-left: auto; }
     .tx-search-btn { display: inline-flex; align-items: center; gap: 12px; height: 42px; min-width: 150px; padding: 0 18px; border: 1px solid var(--tx-head-line); border-radius: var(--tx-radius); background: transparent; color: inherit; font: 700 16px var(--font-body); text-transform: uppercase; cursor: pointer; margin-right: 14px; }
     .tx-search-btn:hover { background: rgba(127, 127, 127, .18); }
+    .tx-search-btn { text-transform: none; font-weight: 600; font-size: 15px; min-width: 130px; }
+    .tx-quote-btn { display: inline-flex; align-items: center; height: 42px; padding: 0 18px; margin-right: 4px; border-radius: var(--tx-radius); background: var(--t-primary); color: var(--t-on-primary) !important; font: 800 15px var(--font-body); text-decoration: none; white-space: nowrap; transition: background-color .2s, color .2s; }
+    .tx-quote-btn:hover { background: var(--t-primary-dark); color: #fff !important; }
+    .tx-nav a { font-size: 16px; }
     .tx-search-btn svg { width: 19px; height: 19px; }
     .tx-icon-btn { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: 999px; background: none; color: inherit; cursor: pointer; text-decoration: none; }
     .tx-icon-btn:hover { background: rgba(127, 127, 127, .18); }

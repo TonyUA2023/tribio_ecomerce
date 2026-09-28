@@ -1,4 +1,4 @@
-{{-- Sport Pro footer. La suscripción y el Libro de Reclamaciones envían de verdad: ambos usan el
+{{-- Textil Pro footer. La suscripción y el Libro de Reclamaciones envían de verdad: ambos usan el
      formulario de contacto de la tienda (StoreController::submitContact), que guarda el mensaje
      para el dueño. Nada aquí simula un envío. --}}
 @php
