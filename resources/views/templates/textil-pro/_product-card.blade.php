@@ -23,7 +23,8 @@
             <span class="tx-badge is-dark">{{ $isEn ? 'New' : 'Nuevo' }}</span>
         @endif
     </a>
-    @if($product->has_variants)
+    @php $needsProductPage = $product->has_variants || \App\Services\Pricing\WholesalePricing::minQuantity($product) > 1; @endphp
+    @if($needsProductPage)
         <a href="{{ $productUrl }}" class="tx-card-add" title="{{ $isEn ? 'Choose size' : 'Elegir talla' }}" aria-label="{{ $isEn ? 'Choose size for' : 'Elegir talla de' }} {{ $product->name }}">
             <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h9.2a1 1 0 0 0 1-.8L20 8H6.2"/><circle cx="9.5" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></svg>
         </a>

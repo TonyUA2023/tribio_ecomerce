@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Store;
 use App\Services\ExchangeRateService;
 use App\Services\MadeToOrder\CustomizationSchema;
+use App\Services\Pricing\WholesalePricing;
 
 /**
  * Prices a storefront cart: line prices (product or variant, in the visitor's currency,
@@ -40,6 +41,9 @@ class CheckoutPricing
 
         $subtotal = 0;
         $orderItemsData = [];
+        // Per line: the unit price before customization extras, so "por mayor" tiers can be
+        // applied once every line of the same product is known (see applyWholesale()).
+        $lineBases = [];
         $madeToOrderLeadTimes = [];
         $requiredByDates = [];
         $currency = CurrencyHelper::currentCurrency();
@@ -92,6 +96,8 @@ class CheckoutPricing
             // Made-to-order: the buyer's answers are validated and priced here, server-side
             // (a size grid decides the quantity; chosen extras raise the unit price).
             $customization = null;
+            $basePrice = $price;
+            $basePriceUsd = $priceUsd;
             if ($isMadeToOrder) {
                 $evaluated = CustomizationSchema::evaluate(
                     $product->customization_schema ?? [], $item['customization'] ?? null, $qty,
@@ -112,6 +118,7 @@ class CheckoutPricing
 
             $itemSubtotal = $price * $qty;
             $subtotal += $itemSubtotal;
+            $lineBases[] = ['price' => $basePrice, 'price_usd' => $basePriceUsd, 'extra' => $price - $basePrice, 'extra_usd' => $priceUsd - $basePriceUsd];
 
             $orderItemsData[] = [
                 'product_id'         => $product->id,
@@ -126,6 +133,10 @@ class CheckoutPricing
                 'quantity'           => $qty,
                 'subtotal'           => $itemSubtotal,
             ] + ($isMadeToOrder ? ['customization' => $customization] : []);
+        }
+
+        if (WholesalePricing::ready()) {
+            $subtotal = $this->applyWholesale($products, $orderItemsData, $lineBases);
         }
 
         // Descuento por cantidad (compra al por mayor) — se calcula sobre el subtotal
@@ -167,5 +178,43 @@ class CheckoutPricing
             requiredBy: $requiredByDates[0] ?? null,
             estimatedReadyAt: today()->addDays(max($madeToOrderLeadTimes))->toDateString(),
         );
+    }
+
+    /**
+     * Product minimums and "por mayor" tiers, counted over the TOTAL units of each product
+     * (all its sizes/colors and made-to-order size grids). Re-prices the lines in place and
+     * returns the new subtotal. Customization extras are never discounted.
+     *
+     * @throws CheckoutPricingException when a product is below its minimum order quantity
+     */
+    private function applyWholesale($products, array &$orderItemsData, array $lineBases): float
+    {
+        $unitsByProduct = [];
+        foreach ($orderItemsData as $row) {
+            $unitsByProduct[$row['product_id']] = ($unitsByProduct[$row['product_id']] ?? 0) + $row['quantity'];
+        }
+
+        foreach ($unitsByProduct as $productId => $units) {
+            $product = $products[$productId];
+            $minimum = WholesalePricing::minQuantity($product);
+            if ($units < $minimum) {
+                throw new CheckoutPricingException("{$product->name}: el pedido mínimo es de {$minimum} unidades (llevas {$units}).");
+            }
+        }
+
+        $subtotal = 0;
+        foreach ($orderItemsData as $i => &$row) {
+            $factor = WholesalePricing::factor($products[$row['product_id']], $unitsByProduct[$row['product_id']]);
+            if ($factor < 1) {
+                $base = $lineBases[$i];
+                $row['price'] = round($base['price'] * $factor + $base['extra'], 2);
+                $row['price_usd'] = round($base['price_usd'] * $factor + $base['extra_usd'], 2);
+                $row['subtotal'] = $row['price'] * $row['quantity'];
+            }
+            $subtotal += $row['subtotal'];
+        }
+        unset($row);
+
+        return $subtotal;
     }
 }

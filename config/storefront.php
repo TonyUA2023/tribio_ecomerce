@@ -120,6 +120,25 @@ $sportCard = static function (string $group, int $i, array $copy, bool $withSubt
     ];
 };
 
+// Textil Pro: tarjetas repetidas (servicios, pasos, rangos de precio…) que comparten campos.
+// $fields: clave => definición (su 'label' recibe el número de tarjeta); $items: textos por
+// defecto de cada tarjeta, clave => valor.
+$textilItems = static function (string $group, array $fields, array $items): array {
+    $out = [];
+    foreach ($items as $i => $copy) {
+        foreach ($fields as $key => $spec) {
+            $field = $spec;
+            $field['label'] = $spec['label'] . ' ' . ($i + 1);
+            if (array_key_exists($key, $copy)) {
+                $field['default'] = $copy[$key];
+            }
+            $out["{$group}.items.{$i}.{$key}"] = $field;
+        }
+    }
+
+    return $out;
+};
+
 return [
 
     // Fuentes que una plantilla puede ofrecer en un campo type=font. La lista blanca
@@ -624,6 +643,291 @@ return [
                             'default' => ['es' => 'Inscríbete y entérate primero de lanzamientos y ofertas.', 'en' => 'Sign up and be the first to hear about drops and sales.']],
                         'footer.about' => ['type' => 'textarea', 'label' => 'Sobre tu tienda', 'max' => 240, 'fallback' => 'description',
                             'default' => ['es' => 'Zapatillas y ropa deportiva originales para entrenar, correr y vivir la ciudad.', 'en' => 'Original sneakers and sportswear to train, run and live the city.']],
+                    ],
+                ],
+            ],
+        ],
+
+        'textil-pro' => [
+            'name'        => 'Textil Pro',
+            'tagline'     => 'Para talleres de estampado, confección y personalizados',
+            'description' => 'Pensada para negocios textiles que venden por mayor y menor: cotización por WhatsApp a un clic, servicios, cómo funciona, precios por volumen, impresión por metro, para quién trabajas y preguntas frecuentes. Lista para pedidos por encargo con diseño del cliente.',
+            'ideal_for'   => ['Textilería', 'Estampados', 'Uniformes', 'Ropa'],
+            'tags'        => ['textil', 'estampado', 'por mayor', 'cotización'],
+            'status'      => 'available',
+            'thumbnail'   => null,
+            'swatches'    => ['#1F2A5C', '#FFC400', '#FFFFFF', '#141A2E'],
+            'default_accent'    => '#FFC400',
+            'default_secondary' => '#1F2A5C',
+            'default_bg'        => '#FFFFFF',
+            // Sin "multi-idioma" activado la tienda se muestra siempre en español.
+            'respects_language_setting' => true,
+            'settings' => [
+                [
+                    'key' => 'brand', 'title' => 'Colores y estilo', 'icon' => 'palette',
+                    'description' => 'Tu color vivo pinta los botones de cotizar y los destacados; tu color oscuro, el menú y las bandas.',
+                    'fields' => [
+                        'colors.primary' => ['type' => 'color', 'label' => 'Color vivo (botones y destacados)', 'default' => '#FFC400', 'logo' => 'primary',
+                            'help' => 'Botón "Cotizar", cifras, banda de impresión por metro y detalles.'],
+                        'colors.secondary' => ['type' => 'color', 'label' => 'Color oscuro (menú y bandas)', 'default' => '#1F2A5C', 'logo' => 'secondary',
+                            'help' => 'Usa un tono oscuro de tu logo: el texto encima se pone blanco solo.'],
+                        'colors.background' => ['type' => 'select', 'label' => 'Fondo de la tienda', 'default' => 'white',
+                            'options' => ['white' => 'Blanco puro', 'mist' => 'Niebla', 'cream' => 'Crema', 'tint' => 'Tinte de tu color']],
+                        'typography.heading' => ['type' => 'font', 'label' => 'Estilo de títulos', 'default' => 'poppins', 'options' => [
+                            'poppins' => 'Urbana · Poppins',
+                            'jakarta' => 'Moderna · Plus Jakarta Sans',
+                            'oswald'  => 'Impacto · Oswald',
+                            'grotesk' => 'Tecnológica · Space Grotesk',
+                            'fredoka' => 'Amigable · Fredoka',
+                        ]],
+                        'style.header' => ['type' => 'select', 'label' => 'Color del menú', 'default' => 'brand',
+                            'options' => ['brand' => 'Tu color oscuro', 'dark' => 'Negro', 'light' => 'Blanco']],
+                        'style.logo_mode' => ['type' => 'select', 'label' => 'Tu logo sobre el menú oscuro', 'default' => 'original',
+                            'options' => ['original' => 'Con sus colores originales', 'white' => 'En blanco (solo logos PNG con fondo transparente)']],
+                        'style.product_image' => ['type' => 'select', 'label' => 'Fotos de producto', 'default' => 'cover',
+                            'options' => ['cover' => 'Foto a todo el recuadro', 'contain' => 'Producto completo sobre gris (ideal para fotos con fondo blanco)']],
+                        'style.corners' => ['type' => 'select', 'label' => 'Esquinas de botones y fotos', 'default' => 'soft',
+                            'options' => ['soft' => 'Suaves', 'square' => 'Rectas']],
+                    ],
+                ],
+                [
+                    'key' => 'topbars', 'title' => 'Barras superiores', 'icon' => 'megaphone', 'item_label' => 'Mensaje',
+                    'description' => 'La franja de tres mensajes cortos arriba y la franja bajo el menú.',
+                    'fields' => [
+                        'utility.enabled' => ['type' => 'toggle', 'label' => 'Mostrar la franja de mensajes', 'default' => true],
+                        'utility.items.0.text' => ['type' => 'text', 'label' => 'Mensaje 1', 'max' => 60, 'optional' => true, 'default' => 'Atención por mayor y menor'],
+                        'utility.items.1.text' => ['type' => 'text', 'label' => 'Mensaje 2', 'max' => 60, 'optional' => true, 'default' => 'Diseños exclusivos con tu marca'],
+                        'utility.items.2.text' => ['type' => 'text', 'label' => 'Mensaje 3', 'max' => 60, 'optional' => true, 'default' => 'Envíos a todo el país'],
+                        'utility.links' => ['type' => 'toggle', 'label' => 'Mostrar accesos "Mis pedidos" y "Contáctanos"', 'default' => true],
+                        'shipping.enabled' => ['type' => 'toggle', 'label' => 'Mostrar la franja bajo el menú', 'default' => false],
+                        'shipping.text' => ['type' => 'text', 'label' => 'Texto de la franja bajo el menú', 'max' => 80, 'default' => 'Pedidos por mayor con precios especiales · ¡Cotiza hoy!'],
+                        'shipping.link' => ['type' => 'link', 'label' => 'Al hacer clic lleva a', 'default' => 'none'],
+                    ],
+                ],
+                [
+                    'key' => 'menu', 'title' => 'Menú', 'icon' => 'menu',
+                    'description' => 'Tus categorías marcadas "Mostrar en el menú" (o las primeras seis), accesos a Servicios y Por mayor, y el botón para cotizar.',
+                    'fields' => [
+                        'menu.quote_enabled' => ['type' => 'toggle', 'label' => 'Mostrar el botón para cotizar por WhatsApp', 'default' => true,
+                            'help' => 'Abre WhatsApp con tu mensaje de cotización. Sin WhatsApp configurado lleva a tu página de contacto.'],
+                        'menu.quote_label' => ['type' => 'text', 'label' => 'Texto del botón', 'max' => 24, 'default' => 'Cotizar por WhatsApp'],
+                        'menu.sale_enabled' => ['type' => 'toggle', 'label' => 'Mostrar acceso destacado a ofertas', 'default' => false],
+                        'menu.sale_label' => ['type' => 'text', 'label' => 'Texto del acceso a ofertas', 'max' => 16, 'default' => 'Ofertas'],
+                        'menu.sale_link' => ['type' => 'link', 'label' => 'El acceso a ofertas lleva a', 'default' => 'sale'],
+                    ],
+                ],
+                [
+                    'key' => 'hero', 'title' => 'Portada', 'icon' => 'image', 'item_label' => 'Ventaja',
+                    'description' => 'Lo primero que ve tu cliente: qué haces y un botón para cotizar. Sin foto se muestra una prenda con tus colores y tu logo estampado.',
+                    'fields' => [
+                        'hero.style' => ['type' => 'select', 'label' => 'Fondo de la portada', 'default' => 'brand',
+                            'options' => ['brand' => 'Tu color oscuro', 'light' => 'Claro']],
+                        'hero.eyebrow' => ['type' => 'text', 'label' => 'Texto pequeño sobre el título', 'max' => 48, 'optional' => true, 'default' => 'Estampado DTF · Por mayor y menor'],
+                        'hero.title' => ['type' => 'text', 'label' => 'Título', 'max' => 60, 'default' => 'Tu diseño, estampado'],
+                        'hero.title_highlight' => ['type' => 'text', 'label' => 'Segunda línea del título (con tu color vivo)', 'max' => 60, 'optional' => true, 'default' => 'en la prenda que quieras'],
+                        'hero.text' => ['type' => 'textarea', 'label' => 'Descripción', 'max' => 240, 'optional' => true,
+                            'default' => 'Polos, poleras, casacas y gorras con diseños exclusivos para empresas, colegios, emprendedores y eventos. Desde una unidad hasta pedidos por mayor.'],
+                        'hero.cta_primary' => ['type' => 'text', 'label' => 'Botón principal (abre WhatsApp)', 'max' => 28, 'default' => 'Cotizar por WhatsApp'],
+                        'hero.cta_secondary' => ['type' => 'text', 'label' => 'Botón secundario', 'max' => 24, 'optional' => true, 'default' => 'Ver catálogo'],
+                        'hero.cta_secondary_link' => ['type' => 'link', 'label' => 'El botón secundario lleva a', 'default' => 'catalog'],
+                        'hero.image' => ['type' => 'image', 'label' => 'Foto de portada (opcional)', 'aspect' => 'portrait',
+                            'help' => 'Una foto de tus prendas o de tu taller, ideal 1000 × 1100 px. Sin foto se muestra la prenda ilustrada.'],
+                    ]
+                    + $textilItems('hero.badges', ['text' => ['type' => 'text', 'label' => 'Ventaja', 'max' => 32, 'optional' => true]], [
+                        ['text' => 'Desde 1 unidad'],
+                        ['text' => 'Full color de alta duración'],
+                        ['text' => 'Envíos a todo el país'],
+                    ]),
+                ],
+                [
+                    'key' => 'stats', 'title' => 'Cifras', 'icon' => 'sparkles', 'item_label' => 'Cifra',
+                    'description' => 'La franja de tu color vivo con cuatro datos cortos. Deja una cifra vacía para ocultarla.',
+                    'fields' => [
+                        'stats.enabled' => ['type' => 'toggle', 'label' => 'Mostrar las cifras', 'default' => true],
+                    ]
+                    + $textilItems('stats', [
+                        'value' => ['type' => 'text', 'label' => 'Cifra', 'max' => 12, 'optional' => true],
+                        'label' => ['type' => 'text', 'label' => 'Descripción de la cifra', 'max' => 40, 'optional' => true],
+                    ], [
+                        ['value' => 'DTF', 'label' => 'Full color y alta duración'],
+                        ['value' => 'Desde 1', 'label' => 'unidad por diseño'],
+                        ['value' => 'Por mayor', 'label' => 'precios por volumen'],
+                        ['value' => 'Todo el país', 'label' => 'envíos seguros'],
+                    ]),
+                ],
+                [
+                    'key' => 'services', 'title' => 'Servicios', 'icon' => 'grid', 'item_label' => 'Servicio',
+                    'description' => 'Qué haces, en seis tarjetas. Deja un título vacío para ocultar esa tarjeta.',
+                    'fields' => [
+                        'services.enabled' => ['type' => 'toggle', 'label' => 'Mostrar servicios', 'default' => true],
+                        'services.eyebrow' => ['type' => 'text', 'label' => 'Texto pequeño sobre el título', 'max' => 40, 'optional' => true, 'default' => 'Lo que hacemos'],
+                        'services.title' => ['type' => 'text', 'label' => 'Título de la sección', 'max' => 60, 'default' => 'Estampamos todo lo que imaginas'],
+                    ]
+                    + $textilItems('services', [
+                        'icon' => ['type' => 'emoji', 'label' => 'Ícono'],
+                        'title' => ['type' => 'text', 'label' => 'Título', 'max' => 40, 'optional' => true],
+                        'text' => ['type' => 'text', 'label' => 'Descripción', 'max' => 110, 'optional' => true],
+                        'link' => ['type' => 'link', 'label' => 'Al hacer clic lleva a', 'default' => 'none'],
+                    ], [
+                        ['icon' => '🖨️', 'title' => 'Estampado DTF', 'text' => 'Full color, colores vivos y gran duración en algodón, poliéster y más.'],
+                        ['icon' => '👕', 'title' => 'Polos personalizados', 'text' => 'Con tu diseño, nombre, foto o logo. Desde una sola unidad.'],
+                        ['icon' => '🏢', 'title' => 'Uniformes corporativos', 'text' => 'Polos, casacas y gorras con el logo de tu empresa.'],
+                        ['icon' => '🎓', 'title' => 'Promociones y colegios', 'text' => 'Polos de promoción, egresados, aniversarios y actividades escolares.'],
+                        ['icon' => '🎉', 'title' => 'Eventos y fechas especiales', 'text' => 'Cumpleaños, bodas, campeonatos y recuerdos únicos.'],
+                        ['icon' => '🚀', 'title' => 'Tu propia marca', 'text' => 'Estampamos para emprendedores que venden con su propio estilo.'],
+                    ]),
+                ],
+                [
+                    'key' => 'process', 'title' => 'Cómo funciona', 'icon' => 'layout', 'item_label' => 'Paso',
+                    'description' => 'Los cuatro pasos de un pedido, para que el cliente sepa qué esperar.',
+                    'fields' => [
+                        'process.enabled' => ['type' => 'toggle', 'label' => 'Mostrar esta sección', 'default' => true],
+                        'process.title' => ['type' => 'text', 'label' => 'Título de la sección', 'max' => 60, 'default' => 'Pedir es así de fácil'],
+                    ]
+                    + $textilItems('process', [
+                        'title' => ['type' => 'text', 'label' => 'Paso', 'max' => 40],
+                        'text' => ['type' => 'text', 'label' => 'Detalle del paso', 'max' => 110, 'optional' => true],
+                    ], [
+                        ['title' => 'Elige tu prenda', 'text' => 'Polos, poleras, casacas, gorras, tazas y más.'],
+                        ['title' => 'Envíanos tu diseño', 'text' => 'Tu logo o tu idea. Si aún no tienes diseño, lo creamos contigo.'],
+                        ['title' => 'Aprueba la vista previa', 'text' => 'Te mostramos cómo quedará antes de producir.'],
+                        ['title' => 'Recibe tu pedido', 'text' => 'Lo producimos y lo enviamos a todo el país.'],
+                    ]),
+                ],
+                [
+                    'key' => 'wholesale', 'title' => 'Por mayor y menor', 'icon' => 'tag', 'item_label' => 'Rango',
+                    'description' => 'Tus rangos de cantidad y el beneficio de cada uno. El botón abre WhatsApp para cotizar.',
+                    'fields' => [
+                        'wholesale.enabled' => ['type' => 'toggle', 'label' => 'Mostrar esta sección', 'default' => true],
+                        'wholesale.eyebrow' => ['type' => 'text', 'label' => 'Texto pequeño sobre el título', 'max' => 40, 'optional' => true, 'default' => 'Precios por volumen'],
+                        'wholesale.title' => ['type' => 'text', 'label' => 'Título', 'max' => 60, 'default' => 'Por mayor y menor'],
+                        'wholesale.text' => ['type' => 'textarea', 'label' => 'Descripción', 'max' => 240,
+                            'default' => 'Mientras más unidades pidas, mejor es tu precio. Ideal para empresas, colegios, eventos y emprendedores que revenden.'],
+                        'wholesale.cta' => ['type' => 'text', 'label' => 'Texto del botón', 'max' => 28, 'default' => 'Cotizar pedido por mayor'],
+                        'wholesale.note' => ['type' => 'text', 'label' => 'Nota bajo los rangos', 'max' => 120, 'optional' => true,
+                            'default' => 'El precio final depende de la prenda y del diseño. Te lo confirmamos al cotizar.'],
+                    ]
+                    + $textilItems('wholesale', [
+                        'qty' => ['type' => 'text', 'label' => 'Cantidad', 'max' => 24, 'optional' => true],
+                        'benefit' => ['type' => 'text', 'label' => 'Beneficio', 'max' => 40, 'optional' => true],
+                    ], [
+                        ['qty' => '1 – 11 unidades', 'benefit' => 'Precio por menor'],
+                        ['qty' => '12 – 49 unidades', 'benefit' => 'Precio por mayor'],
+                        ['qty' => '50 – 99 unidades', 'benefit' => 'Mejor precio por volumen'],
+                        ['qty' => '100 a más', 'benefit' => 'Cotización especial'],
+                    ]),
+                ],
+                [
+                    'key' => 'promo', 'title' => 'Banda promocional', 'icon' => 'megaphone',
+                    'description' => 'Una banda de tu color vivo para un servicio estrella, por ejemplo impresión DTF por metro. Deja el precio vacío para no mostrarlo.',
+                    'fields' => [
+                        'promo.enabled' => ['type' => 'toggle', 'label' => 'Mostrar la banda', 'default' => true],
+                        'promo.eyebrow' => ['type' => 'text', 'label' => 'Texto pequeño sobre el título', 'max' => 40, 'optional' => true, 'default' => 'Impresión DTF'],
+                        'promo.title' => ['type' => 'text', 'label' => 'Título', 'max' => 60, 'default' => 'Imprimimos tus diseños por metro'],
+                        'promo.text' => ['type' => 'textarea', 'label' => 'Descripción', 'max' => 200, 'optional' => true,
+                            'default' => 'Envíanos tu archivo listo y te entregamos tus transfers full color, con colores vibrantes y calidad premium.'],
+                        'promo.price_prefix' => ['type' => 'text', 'label' => 'Antes del precio', 'max' => 16, 'optional' => true, 'default' => 'Desde'],
+                        'promo.price' => ['type' => 'text', 'label' => 'Precio', 'max' => 12, 'optional' => true, 'default' => '',
+                            'help' => 'Por ejemplo "S/25". Vacío = no se muestra el precio.'],
+                        'promo.price_note' => ['type' => 'text', 'label' => 'Después del precio', 'max' => 20, 'optional' => true, 'default' => 'el metro'],
+                        'promo.cta' => ['type' => 'text', 'label' => 'Texto del botón', 'max' => 24, 'default' => 'Pedir impresión'],
+                        'promo.link' => ['type' => 'link', 'label' => 'El botón lleva a', 'default' => 'none',
+                            'help' => '"Sin enlace" abre WhatsApp con tu mensaje de cotización.'],
+                        'promo.image' => ['type' => 'image', 'label' => 'Foto (opcional)', 'aspect' => 'wide',
+                            'help' => 'Tu máquina, rollos impresos o un trabajo terminado, ideal 1200 × 800 px.'],
+                    ],
+                ],
+                [
+                    'key' => 'segments', 'title' => 'Para quién trabajas', 'icon' => 'star', 'item_label' => 'Tarjeta',
+                    'description' => 'Cuatro tarjetas con tus tipos de cliente. Cada una abre WhatsApp para cotizar.',
+                    'fields' => [
+                        'segments.enabled' => ['type' => 'toggle', 'label' => 'Mostrar esta sección', 'default' => true],
+                        'segments.title' => ['type' => 'text', 'label' => 'Título de la sección', 'max' => 60, 'default' => '¿Para quién trabajamos?'],
+                    ]
+                    + $textilItems('segments', [
+                        'icon' => ['type' => 'emoji', 'label' => 'Ícono'],
+                        'title' => ['type' => 'text', 'label' => 'Título', 'max' => 32, 'optional' => true],
+                        'text' => ['type' => 'text', 'label' => 'Descripción', 'max' => 90, 'optional' => true],
+                        'image' => ['type' => 'image', 'label' => 'Foto (opcional)', 'aspect' => 'portrait', 'help' => 'Sin foto se muestra el ícono sobre tu color.'],
+                    ], [
+                        ['icon' => '🏢', 'title' => 'Empresas', 'text' => 'Uniformes y merchandising con tu logo.'],
+                        ['icon' => '🎓', 'title' => 'Colegios y promociones', 'text' => 'Polos de promoción, egresados y eventos.'],
+                        ['icon' => '🛍️', 'title' => 'Emprendedores', 'text' => 'Tu marca estampada para vender.'],
+                        ['icon' => '🎉', 'title' => 'Eventos', 'text' => 'Cumpleaños, campeonatos y celebraciones.'],
+                    ]),
+                ],
+                [
+                    'key' => 'sections', 'title' => 'Categorías y productos', 'icon' => 'heading',
+                    'description' => 'Tus categorías con foto y tus productos. Mientras no tengas productos se muestra una invitación a cotizar.',
+                    'fields' => [
+                        'categories.enabled' => ['type' => 'toggle', 'label' => 'Mostrar categorías', 'default' => true],
+                        'categories.title' => ['type' => 'text', 'label' => 'Categorías · título', 'max' => 60, 'optional' => true, 'default' => 'Elige tu prenda'],
+                        'sections.products_title' => ['type' => 'text', 'label' => 'Productos · título', 'max' => 60, 'default' => 'Nuestros productos'],
+                        'sections.empty_title' => ['type' => 'text', 'label' => 'Sin productos · título', 'max' => 60, 'default' => '¿Tienes un diseño en mente?'],
+                        'sections.empty_text' => ['type' => 'text', 'label' => 'Sin productos · texto', 'max' => 160,
+                            'default' => 'Cuéntanos qué prenda, cuántas unidades y tu idea. Te enviamos una cotización sin compromiso.'],
+                    ],
+                ],
+                [
+                    'key' => 'faq', 'title' => 'Preguntas frecuentes', 'icon' => 'heading', 'item_label' => 'Pregunta',
+                    'description' => 'Resuelve las dudas de siempre antes de que te escriban. Deja una pregunta vacía para ocultarla.',
+                    'fields' => [
+                        'faq.enabled' => ['type' => 'toggle', 'label' => 'Mostrar preguntas frecuentes', 'default' => true],
+                        'faq.title' => ['type' => 'text', 'label' => 'Título de la sección', 'max' => 60, 'default' => 'Preguntas frecuentes'],
+                    ]
+                    + $textilItems('faq', [
+                        'question' => ['type' => 'text', 'label' => 'Pregunta', 'max' => 90, 'optional' => true],
+                        'answer' => ['type' => 'textarea', 'label' => 'Respuesta', 'max' => 300, 'optional' => true],
+                    ], [
+                        ['question' => '¿Cuál es el pedido mínimo?', 'answer' => 'Estampamos desde una unidad. En pedidos por mayor obtienes mejores precios.'],
+                        ['question' => '¿Cómo envío mi diseño?', 'answer' => 'Por WhatsApp o al hacer tu pedido: tu logo o imagen en buena calidad (PNG, JPG o PDF). Si no tienes diseño, te ayudamos a crearlo.'],
+                        ['question' => '¿Cuánto demora mi pedido?', 'answer' => 'Depende de la cantidad y del tipo de prenda. Te confirmamos la fecha de entrega al cotizar.'],
+                        ['question' => '¿Hacen envíos?', 'answer' => 'Sí, enviamos a todo el país. También puedes recoger tu pedido en nuestro local.'],
+                        ['question' => '¿Cómo pago?', 'answer' => 'Con los medios de pago de la tienda. En pedidos por encargo puedes pagar un adelanto y el saldo antes de la entrega.'],
+                    ]),
+                ],
+                [
+                    'key' => 'contact', 'title' => 'Contacto y ubicación', 'icon' => 'megaphone',
+                    'description' => 'La banda final con tu dirección, horario, WhatsApp y redes (se toman de "Mi Tienda"), y el botón flotante de WhatsApp.',
+                    'fields' => [
+                        'contact.enabled' => ['type' => 'toggle', 'label' => 'Mostrar la banda de contacto', 'default' => true],
+                        'contact.title' => ['type' => 'text', 'label' => 'Título', 'max' => 60, 'default' => 'Visítanos o escríbenos'],
+                        'contact.text' => ['type' => 'text', 'label' => 'Texto', 'max' => 160, 'optional' => true,
+                            'default' => 'Te asesoramos para elegir la prenda y el estampado ideal para tu pedido.'],
+                        'contact.hours' => ['type' => 'text', 'label' => 'Horario de atención', 'max' => 80, 'optional' => true, 'default' => 'Lunes a sábado · 9:00 a. m. – 7:00 p. m.'],
+                        'contact.whatsapp_message' => ['type' => 'text', 'label' => 'Mensaje con el que el cliente abre WhatsApp', 'max' => 120,
+                            'default' => 'Hola, quiero cotizar un pedido de estampado.'],
+                        'contact.floating' => ['type' => 'toggle', 'label' => 'Mostrar el botón flotante de WhatsApp', 'default' => true],
+                    ],
+                ],
+                [
+                    'key' => 'product', 'title' => 'Página de producto', 'icon' => 'tag',
+                    'description' => 'Textos de ayuda que ve el cliente al elegir talla y cantidad.',
+                    'fields' => [
+                        'product.shipping_note' => ['type' => 'text', 'label' => 'Nota bajo el botón de compra', 'max' => 90, 'optional' => true,
+                            'default' => 'Envíos a todo el país · ¿Pedido por mayor? Cotiza por WhatsApp'],
+                        'product.size_guide' => ['type' => 'textarea', 'label' => 'Guía de tallas (opcional)', 'max' => 600, 'default' => '',
+                            'help' => 'Una línea por talla, por ejemplo "M = 52 cm de ancho × 72 cm de largo". Vacío = no se muestra "Guía de tallas".'],
+                        'product.returns' => ['type' => 'textarea', 'label' => 'Cambios y devoluciones', 'max' => 400, 'optional' => true,
+                            'default' => 'Los productos personalizados se fabrican a pedido, por eso no tienen cambio salvo fallas de fabricación. Revisa la vista previa antes de aprobar.'],
+                    ],
+                ],
+                [
+                    'key' => 'signup', 'title' => 'Invitación a registrarse', 'icon' => 'star',
+                    'description' => 'La pestaña flotante abajo a la izquierda. Abre el registro de Tribio Pass (mis pedidos y datos guardados).',
+                    'fields' => [
+                        'signup.enabled' => ['type' => 'toggle', 'label' => 'Mostrar la pestaña', 'default' => false],
+                        'signup.text' => ['type' => 'text', 'label' => 'Texto', 'max' => 40, 'default' => 'Regístrate y sigue tus pedidos'],
+                    ],
+                ],
+                [
+                    'key' => 'footer', 'title' => 'Pie de página', 'icon' => 'layout',
+                    'description' => 'Incluye el Libro de Reclamaciones y la suscripción a novedades (llegan a tus mensajes).',
+                    'fields' => [
+                        'footer.newsletter_title' => ['type' => 'text', 'label' => 'Suscripción · título', 'max' => 40, 'default' => 'Novedades y promociones'],
+                        'footer.newsletter_text' => ['type' => 'text', 'label' => 'Suscripción · texto', 'max' => 100, 'default' => 'Déjanos tu correo y entérate primero de nuevos diseños y ofertas.'],
+                        'footer.about' => ['type' => 'textarea', 'label' => 'Sobre tu negocio', 'max' => 240, 'fallback' => 'description',
+                            'default' => 'Taller de estampado y confección: diseños exclusivos por mayor y menor para empresas, colegios, emprendedores y eventos.'],
                     ],
                 ],
             ],

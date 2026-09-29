@@ -10,8 +10,19 @@
     $sizeNames = \App\Services\Storefront\CatalogFacets::SIZE_NAMES;
     $sizeGuide = collect(preg_split('/\r\n|\r|\n|;/', $t->text('product.size_guide')))->map(fn ($line) => trim($line))->filter()->values();
     $madeToOrder = $product->isMadeToOrder($store);
+    // Por mayor: escalas por cantidad total del producto y pedido mínimo (se cobran en el checkout).
+    $wholesaleReady = \App\Services\Pricing\WholesalePricing::ready();
+    $wholesaleTiers = $wholesaleReady ? \App\Services\Pricing\WholesalePricing::tiers($product) : [];
+    $wholesaleMin = $wholesaleReady ? \App\Services\Pricing\WholesalePricing::minQuantity($product) : 1;
+    $basePen = (float) $product->price;
+    $tierRows = collect($wholesaleTiers)->map(fn ($tier) => [
+        'min' => $tier['min_qty'],
+        'unit' => $basePen > 0 ? round($price * $tier['price'] / $basePen, 2) : $tier['price'],
+        'off' => $basePen > 0 ? (int) round((1 - $tier['price'] / $basePen) * 100) : 0,
+    ])->values();
     $productConfig = [
         'hasVariants' => (bool) $product->has_variants,
+        'minQuantity' => $wholesaleMin,
         'trackStock' => (bool) $product->track_stock,
         'basePrice' => $price,
         'baseComparePrice' => $compare,
@@ -141,6 +152,34 @@
             </template>
             <p class="tx-hint" x-show="hint" x-text="hint" x-cloak role="alert"></p>
 
+            @if($tierRows->isNotEmpty() || $wholesaleMin > 1)
+                {{-- Precio por cantidad: se suman todas las tallas y colores de este producto --}}
+                <div class="tx-tierbox">
+                    <p class="tx-tierbox-title">{{ $isEn ? 'Price per quantity' : 'Precio por cantidad' }}</p>
+                    @if($tierRows->isNotEmpty())
+                        <ul>
+                            @if($tierRows[0]['min'] > $wholesaleMin)
+                            <li :class="{ 'is-on': quantity < {{ $tierRows[0]['min'] }} }">
+                                <span>{{ $wholesaleMin }}{{ $tierRows[0]['min'] - 1 > $wholesaleMin ? ' – ' . ($tierRows[0]['min'] - 1) : '' }} {{ $isEn ? 'units' : 'unid.' }}</span>
+                                <strong>{{ $symbol }} {{ number_format($price, 2) }}</strong>
+                            </li>
+                            @endif
+                            @foreach($tierRows as $i => $row)
+                                @php $next = $tierRows[$i + 1]['min'] ?? null; @endphp
+                                <li :class="{ 'is-on': quantity >= {{ $row['min'] }}{{ $next ? ' && quantity < ' . $next : '' }} }">
+                                    <span>{{ $next ? $row['min'] . ' – ' . ($next - 1) : ($isEn ? $row['min'] . '+' : 'Desde ' . $row['min']) }} {{ $isEn ? 'units' : 'unid.' }}</span>
+                                    <strong>{{ $symbol }} {{ number_format($row['unit'], 2) }} @if($row['off'] > 0)<em>-{{ $row['off'] }}%</em>@endif</strong>
+                                </li>
+                            @endforeach
+                        </ul>
+                        <p class="tx-tierbox-note">{{ $isEn ? 'All sizes and colors of this product add up.' : 'Se suman todas las tallas y colores de este producto.' }}</p>
+                    @endif
+                    @if($wholesaleMin > 1)
+                        <p class="tx-tierbox-min">{{ $isEn ? 'Minimum order' : 'Pedido mínimo' }}: <strong>{{ $wholesaleMin }} {{ $isEn ? 'units' : 'unidades' }}</strong></p>
+                    @endif
+                </div>
+            @endif
+
             @if($madeToOrder)
                 {{-- Hecho a pedido: el comprador personaliza antes de añadir al carrito --}}
                 @include('templates.textil-pro._made-to-order')
@@ -156,8 +195,8 @@
                     @endif
                     <div class="tx-buy-row" x-ref="buy">
                         <div class="tx-qty">
-                            <button type="button" @click="quantity = Math.max(1, quantity - 1)" aria-label="{{ $isEn ? 'Less' : 'Menos' }}">−</button>
-                            <input type="number" min="1" x-model.number="quantity" aria-label="{{ $isEn ? 'Quantity' : 'Cantidad' }}">
+                            <button type="button" @click="quantity = Math.max(minQuantity || 1, quantity - 1)" aria-label="{{ $isEn ? 'Less' : 'Menos' }}">−</button>
+                            <input type="number" min="{{ $wholesaleMin }}" x-model.number="quantity" aria-label="{{ $isEn ? 'Quantity' : 'Cantidad' }}">
                             <button type="button" @click="quantity++" aria-label="{{ $isEn ? 'More' : 'Más' }}">+</button>
                         </div>
                         <button type="button" class="tx-btn is-block" @click="addToCart($event)" :disabled="isOutOfStock" x-text="buttonLabel">{{ $productConfig['texts']['add'] }}</button>
@@ -238,6 +277,13 @@
 @endsection
 
 @push('scripts')
+@if($tierRows->isNotEmpty() || $wholesaleMin > 1)
+<script>
+    // El carrito re-calcula el precio por unidad con estas escalas (TribioCart.applyWholesale).
+    window.TribioWholesale = window.TribioWholesale || {};
+    window.TribioWholesale[{{ $product->id }}] = @json(['base' => $basePen, 'tiers' => $wholesaleTiers, 'min' => $wholesaleMin]);
+</script>
+@endif
 <script>
     document.addEventListener('alpine:init', () => {
         // Misma API que las demás plantillas (currentPrice, currentVariant, quantity, addToCart):
@@ -245,7 +291,7 @@
         Alpine.data('txProduct', (config) => ({
             ...config,
             selected: {},
-            quantity: 1,
+            quantity: config.minQuantity || 1,
             hint: '',
             zoom: null,
             guideOpen: false,
@@ -316,7 +362,7 @@
                 if (this.isOutOfStock || !window.TribioCart) return;
                 const v = this.currentVariant;
                 const variant = v ? { id: v.id, title: v.title, attributes: v.attributes, sku: v.sku } : null;
-                const qty = Math.max(1, parseInt(this.quantity, 10) || 1);
+                const qty = Math.max(this.minQuantity || 1, parseInt(this.quantity, 10) || 1);
                 for (let i = 0; i < qty; i++) {
                     window.TribioCart.add(this.product.id, this.product.name, this.currentPrice, (v && v.image) || this.product.image, variant, i === 0 ? (event && event.currentTarget) : null);
                 }

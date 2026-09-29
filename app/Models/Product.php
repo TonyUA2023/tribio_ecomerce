@@ -22,6 +22,7 @@ class Product extends Model
         'weight', 'dimensions', 'tags', 'meta_title', 'meta_description',
         'views', 'sold_count', 'sort_order',
         'sale_mode', 'lead_time_days', 'customization_schema',
+        'price_tiers', 'min_quantity',
         'condition', 'exclude_from_ads',
     ];
 
@@ -52,6 +53,8 @@ class Product extends Model
         'sold_at'         => 'datetime',
         'lead_time_days'  => 'integer',
         'customization_schema' => 'array',
+        'price_tiers'     => 'array',
+        'min_quantity'    => 'integer',
         'exclude_from_ads' => 'boolean',
         // Derived by ProductReviewObserver — deliberately not in $fillable.
         'average_rating'  => 'decimal:2',

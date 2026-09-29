@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Mail\AccountEmailChanged;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class PasswordChangeTest extends TestCase
@@ -76,5 +78,50 @@ class PasswordChangeTest extends TestCase
         ])->assertSessionHasErrors('password');
 
         $this->assertTrue(Hash::check('old-password-123', $owner->fresh()->password));
+    }
+
+    public function test_owner_can_change_their_login_email_and_the_old_address_is_told(): void
+    {
+        Mail::fake();
+        $owner = $this->owner();
+        $old = $owner->email;
+        $this->actingAs($owner);
+
+        $this->get(route('dashboard.password.edit'))->assertOk()->assertSee('Correo de acceso')->assertSee($old);
+
+        $this->post(route('dashboard.account.email.update'), [
+            'email' => '  Ventas@ApachiPeru.com ', 'email_current_password' => 'old-password-123',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame('ventas@apachiperu.com', $owner->fresh()->email);
+        Mail::assertQueued(AccountEmailChanged::class, fn ($mail) => $mail->hasTo($old) && $mail->newEmail === 'ventas@apachiperu.com');
+        Mail::assertQueued(AccountEmailChanged::class, fn ($mail) => str_contains($mail->render(), 've•••') && !str_contains($mail->render(), 'ventas@apachiperu.com'));
+
+        // The new address works for signing in.
+        $this->post(route('logout'));
+        $this->post(route('login'), ['email' => 'ventas@apachiperu.com', 'password' => 'old-password-123']);
+        $this->assertAuthenticatedAs($owner->fresh());
+    }
+
+    public function test_email_change_needs_the_password_and_a_free_address(): void
+    {
+        Mail::fake();
+        $owner = $this->owner();
+        $taken = User::factory()->create(['email' => 'otro@example.test']);
+        $this->actingAs($owner);
+
+        $this->post(route('dashboard.account.email.update'), ['email' => 'nuevo@example.test', 'email_current_password' => 'mala'])
+            ->assertSessionHasErrors('email_current_password');
+        $this->post(route('dashboard.account.email.update'), ['email' => 'OTRO@example.test', 'email_current_password' => 'old-password-123'])
+            ->assertSessionHasErrors('email');
+        $this->assertNotSame('nuevo@example.test', $owner->fresh()->email);
+        Mail::assertNothingQueued();
+    }
+
+    public function test_google_linked_accounts_cannot_change_email_here(): void
+    {
+        $owner = User::factory()->create(['role' => 'store_owner', 'google_id' => 'g-123']);
+        $this->actingAs($owner)->post(route('dashboard.account.email.update'), ['email' => 'x@example.test', 'email_current_password' => 'x'])
+            ->assertForbidden();
     }
 }

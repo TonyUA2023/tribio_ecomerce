@@ -36,10 +36,10 @@ class TemplateController extends Controller
         $catalog = $this->registry->catalog();
         $current = $this->registry->find($store->template_name);
         $profile = BusinessProfile::forStore($store);
-        // Designs recommended for the store's rubro go first (stable order otherwise).
-        $recommended = array_flip($profile->recommendedTemplates());
+        // Designs recommended for the store's rubro go first, in the rubro's order of preference.
+        $rank = array_flip($profile->recommendedTemplates());
         $available = array_filter($catalog, fn ($t, $key) => $this->registry->isSelectable($key), ARRAY_FILTER_USE_BOTH);
-        uksort($available, fn ($a, $b) => (isset($recommended[$a]) ? 0 : 1) <=> (isset($recommended[$b]) ? 0 : 1));
+        uksort($available, fn ($a, $b) => ($rank[$a] ?? PHP_INT_MAX) <=> ($rank[$b] ?? PHP_INT_MAX));
 
         return view('dashboard.templates.index', [
             'store' => $store,

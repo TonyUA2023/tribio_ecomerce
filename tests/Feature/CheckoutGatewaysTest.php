@@ -210,7 +210,10 @@ class CheckoutGatewaysTest extends TestCase
         $this->assertEquals(25.0, $items->firstWhere('title', 'Costo de Envío')['unit_price']);
         $this->assertDatabaseCount('orders', 0);
 
+        // The return is checked against Mercado Pago before anything is credited.
+        $this->fakeMercadoPago([new Response(200, [], json_encode(['id' => 555, 'status' => 'approved', 'external_reference' => $reference]))]);
         $this->get(route('store.checkout.return', [$store->slug, $reference]) . '?collection_status=approved&payment_id=555')->assertRedirect();
+        $this->assertStringEndsWith('/v1/payments/555', (string) end($this->mpRequests)['request']->getUri());
         $this->assertSame('paid', Order::sole()->payment_status);
         $this->assertSame(8, $polo->fresh()->stock);
 
@@ -289,6 +292,29 @@ class CheckoutGatewaysTest extends TestCase
         $this->postJson(route('api.mercadopago.webhook', $store->id) . '?type=payment&data_id=777')->assertOk();
         $this->assertLedger($order->fresh(), [['full', 137.5, 'mercadopago', 'pref-2']]);
         $this->assertEquals(0.0, (float) $order->fresh()->balance_due);
+    }
+
+    public function test_a_forged_checkout_pro_return_credits_nothing(): void
+    {
+        $store = $this->store(['payment_gateway' => 'mercado_pago', 'mp_access_token' => 'TEST-token']);
+        [$polo, , $variant] = $this->catalog($store);
+        $this->fakeMercadoPago([new Response(201, [], json_encode(['id' => 'pref-3', 'sandbox_init_point' => 'https://mp.test/sandbox']))]);
+        $reference = $this->postJson(route('store.checkout', $store->slug), $this->cart($polo, $variant, ['payment_method' => 'mercadopago']))->json('order_number');
+
+        // Someone else's approved payment, pasted onto this checkout's return URL.
+        $this->fakeMercadoPago([new Response(200, [], json_encode(['id' => 999, 'status' => 'approved', 'external_reference' => 'OTHER-REF']))]);
+        $this->get(route('store.checkout.return', [$store->slug, $reference]) . '?collection_status=approved&payment_id=999')->assertRedirect();
+
+        $order = Order::sole();
+        $this->assertSame('pending', $order->payment_status, 'Only the answer from Mercado Pago marks an order paid');
+        $this->assertSame(10, $polo->fresh()->stock);
+        $this->assertLedger($order, []);
+
+        // The real payment arrives through the webhook and upgrades that same order.
+        $this->fakeMercadoPago([new Response(200, [], json_encode(['id' => 1000, 'status' => 'approved', 'external_reference' => $reference]))]);
+        $this->postJson(route('api.mercadopago.webhook', $store->id) . '?type=payment&data_id=1000')->assertOk();
+        $this->assertSame('paid', $order->fresh()->payment_status);
+        $this->assertSame(8, $polo->fresh()->stock);
     }
 
     public function test_a_ledger_conflict_never_loses_an_order_that_was_already_charged(): void

@@ -359,6 +359,7 @@
 
                 {{-- Venta por encargo (solo tiendas que la activaron en Mi Tienda) --}}
                 @includeWhen($store->made_to_order_enabled, 'dashboard.products._made-to-order', ['product' => $product])
+                @includeWhen(\App\Services\Pricing\WholesalePricing::ready(), 'dashboard.products._wholesale', ['product' => $product])
 
                 {{-- Inventario --}}
                 <div class="glass-card p-5 sm:p-6">

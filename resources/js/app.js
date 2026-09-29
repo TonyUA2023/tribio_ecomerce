@@ -145,6 +145,7 @@ window.TribioCart = {
     }),
 
     save() {
+        this.applyWholesale();
         localStorage.setItem('tribio_cart', JSON.stringify(this.items));
         this.updateUI();
         window.dispatchEvent(new CustomEvent('cart-updated', { detail: JSON.parse(JSON.stringify(this.items)) }));
@@ -171,6 +172,8 @@ window.TribioCart = {
                 cartKey,
                 name,
                 price: parseFloat(price) || 0,
+                unit_base: parseFloat(price) || 0,
+                unit_extra: 0,
                 image,
                 quantity: 1,
                 variant_id: variantId,
@@ -187,7 +190,9 @@ window.TribioCart = {
 
     // Made-to-order line: every distinct set of answers (text, logo, sizes…) is its own
     // line. `fixedQuantity` lines (quantity decided by a size grid) can't be +/- edited.
-    addCustom({ id, name, price, image = '', variant = null, quantity = 1, customization = {}, summary = [], fixedQuantity = false }, originEl) {
+    // `basePrice` (optional) is the unit price before customization extras, so "por mayor"
+    // tiers only discount the garment, never the extras.
+    addCustom({ id, name, price, basePrice = null, image = '', variant = null, quantity = 1, customization = {}, summary = [], fixedQuantity = false }, originEl) {
         const variantId = variant && variant.id ? variant.id : null;
         let hash = 0;
         for (const ch of JSON.stringify([variantId, customization])) hash = (Math.imul(hash, 31) + ch.charCodeAt(0)) | 0;
@@ -199,6 +204,8 @@ window.TribioCart = {
         } else {
             this.items.push({
                 id, cartKey, name, price: parseFloat(price) || 0, image, quantity,
+                unit_base: basePrice !== null ? parseFloat(basePrice) || 0 : parseFloat(price) || 0,
+                unit_extra: basePrice !== null ? Math.max(0, (parseFloat(price) || 0) - (parseFloat(basePrice) || 0)) : 0,
                 variant_id: variantId,
                 variant_title: variant && variant.title ? variant.title : null,
                 variant_attributes: variant && variant.attributes ? variant.attributes : null,
@@ -235,6 +242,36 @@ window.TribioCart = {
     clear() {
         this.items = [];
         this.save();
+    },
+
+    // "Por mayor": a product page registers its tiers in window.TribioWholesale[productId] =
+    // { base, tiers: [{min_qty, price}], min } (prices in the store's base currency). Every
+    // line of that product is re-priced from the TOTAL units of the product in the cart,
+    // mirroring App\Services\Pricing\WholesalePricing — the server re-prices anyway.
+    wholesaleFactor(rule, units) {
+        if (!rule || !Array.isArray(rule.tiers) || !(rule.base > 0)) return 1;
+        let reached = null;
+        rule.tiers.forEach((tier) => { if (units >= tier.min_qty) reached = tier; });
+        return reached ? Math.min(1, reached.price / rule.base) : 1;
+    },
+
+    applyWholesale() {
+        const registry = window.TribioWholesale || {};
+        const units = {};
+        this.items.forEach((i) => {
+            units[i.id] = (units[i.id] || 0) + (parseInt(i.quantity, 10) || 0);
+            if (registry[i.id]) i.wholesale = registry[i.id];
+        });
+        const rules = {};
+        this.items.forEach((i) => { if (i.wholesale) rules[i.id] = i.wholesale; });
+        this.items.forEach((i) => {
+            const rule = rules[i.id];
+            if (!rule) return;
+            i.wholesale = rule;
+            if (typeof i.unit_base !== 'number') { i.unit_base = parseFloat(i.price) || 0; i.unit_extra = 0; }
+            const factor = this.wholesaleFactor(rule, units[i.id]);
+            i.price = Math.round((i.unit_base * factor + (i.unit_extra || 0)) * 100) / 100;
+        });
     },
 
     total() {

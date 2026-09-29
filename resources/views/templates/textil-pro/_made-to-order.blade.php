@@ -8,6 +8,9 @@
         'name' => $product->name,
         'image' => $product->image_url,
         'basePrice' => (float) $product->resolvePrice(),
+        'minQuantity' => \App\Services\Pricing\WholesalePricing::ready() ? \App\Services\Pricing\WholesalePricing::minQuantity($product) : 1,
+        'wholesale' => \App\Services\Pricing\WholesalePricing::ready()
+            ? ['base' => (float) $product->price, 'tiers' => \App\Services\Pricing\WholesalePricing::tiers($product)] : null,
         'schema' => $product->customization_schema ?? [],
         'rate' => $mtoCurrency === 'PEN' ? 1 : app(\App\Services\ExchangeRateService::class)->getRate($mtoCurrency),
         'wholeUnits' => in_array($mtoCurrency, ['COP', 'CLP', 'ARS'], true),
@@ -28,7 +31,7 @@ document.addEventListener('alpine:init', () => {
         files: {},
         uploading: {},
         errors: {},
-        quantity: 1,
+        quantity: config.minQuantity || 1,
         init() {
             this.schema.forEach((field) => {
                 if (field.type === 'sizes') {
@@ -64,7 +67,10 @@ document.addEventListener('alpine:init', () => {
             }, 0);
         },
         get base() { return typeof this.currentPrice === 'number' ? this.currentPrice : config.basePrice; },
-        get unitPrice() { return this.base + (this.extraPen > 0 ? this.convert(this.extraPen) : 0); },
+        // Precio por mayor según las unidades de este pedido (el carrito lo ajusta con el total).
+        get tierFactor() { return config.wholesale && window.TribioCart ? window.TribioCart.wholesaleFactor(config.wholesale, this.units) : 1; },
+        get extraPrice() { return this.extraPen > 0 ? this.convert(this.extraPen) : 0; },
+        get unitPrice() { return Math.round((this.base * this.tierFactor + this.extraPrice) * 100) / 100; },
         get total() { return this.unitPrice * this.units; },
         extraLabel(pen) { return pen > 0 ? '+ ' + this.money(this.convert(pen)) : ''; },
         async upload(field, event) {
@@ -114,6 +120,7 @@ document.addEventListener('alpine:init', () => {
                 }
             });
             if (this.units < 1) this.errors._units = 'Elige al menos una unidad.';
+            else if (this.units < (config.minQuantity || 1)) this.errors._units = `El pedido mínimo es de ${config.minQuantity} unidades.`;
             return Object.keys(this.errors).length === 0;
         },
         summary() {
@@ -139,7 +146,8 @@ document.addEventListener('alpine:init', () => {
             } : null;
             window.TribioCart.addCustom({
                 id: config.productId, name: config.name, image: config.image, variant,
-                price: this.unitPrice, quantity: this.units,
+                // Sin descuento por mayor: el carrito lo aplica con el total de unidades del producto.
+                price: this.base + this.extraPrice, basePrice: this.base, quantity: this.units,
                 customization: JSON.parse(JSON.stringify(this.answers)),
                 summary: this.summary(),
                 fixedQuantity: !!this.sizeField,

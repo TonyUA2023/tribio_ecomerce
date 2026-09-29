@@ -158,7 +158,7 @@
                         <label><span class="tx-label">{{ $isEn ? 'Phone' : 'Teléfono' }}</span><input class="tx-input" type="tel" name="phone" value="{{ old('phone') }}" maxlength="20" autocomplete="tel"></label>
                         <label><span class="tx-label">{{ $isEn ? 'Subject' : 'Asunto' }}</span>
                             <select class="tx-input" name="subject">
-                                @foreach($isEn ? ['Sizes', 'My order', 'Exchanges', 'Other'] : ['Tallas', 'Mi pedido', 'Cambios', 'Otro'] as $subject)
+                                @foreach($isEn ? ['Quote', 'Wholesale order', 'My order', 'Other'] : ['Cotización', 'Pedido por mayor', 'Mi pedido', 'Otro'] as $subject)
                                     <option @selected(old('subject') === $subject)>{{ $subject }}</option>
                                 @endforeach
                             </select>

@@ -38,7 +38,7 @@ return [
             'deposit_percent' => 50,
             'sizes'           => ['S', 'M', 'L', 'XL', 'XXL'],
             'variant_options' => ['Talla' => ['S', 'M', 'L', 'XL'], 'Color' => ['Blanco', 'Negro']],
-            'templates'       => ['soft-market', 'urban-style'],
+            'templates'       => ['textil-pro', 'soft-market', 'urban-style'],
         ],
         'moda'        => ['label' => 'Tienda de ropa',       'icon' => '👗',
             'sizes'           => ['XS', 'S', 'M', 'L', 'XL'],

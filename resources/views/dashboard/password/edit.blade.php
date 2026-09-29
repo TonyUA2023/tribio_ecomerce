@@ -1,5 +1,5 @@
 @extends('layouts.dashboard')
-@section('title','Cambiar Contraseña') @section('page_title','🔒 Cambiar Contraseña')
+@section('title','Correo y contraseña') @section('page_title','🔒 Correo y contraseña')
 @section('content')
 <div class="w-full max-w-lg mx-auto space-y-5 sm:space-y-6">
 
@@ -32,6 +32,31 @@
     </div>
     @endif
 
+    {{-- Correo de acceso: un formulario propio (nunca anidado en el de contraseña). --}}
+    <div class="glass-card p-5 sm:p-6 space-y-4">
+        <h3 class="text-white font-bold text-sm mb-1">✉️ Correo de acceso</h3>
+        <p class="text-xs text-white/50">Es el correo con el que inicias sesión en Tribio: <strong class="text-white/80">{{ Auth::user()->email }}</strong>. El correo de contacto que ven tus clientes se cambia en "Configurar tienda".</p>
+        @if(Auth::user()->google_id)
+            <p class="text-xs text-white/60">Tu cuenta entra con Google, así que tu correo de acceso es el de tu cuenta de Google.</p>
+        @else
+            <form method="POST" action="{{ route('dashboard.account.email.update') }}" class="space-y-4">
+                @csrf
+                <div>
+                    <label class="input-label" for="account-email">Nuevo correo</label>
+                    <input id="account-email" type="email" name="email" value="{{ old('email') }}" class="input-field" autocomplete="email" placeholder="tucorreo@ejemplo.com">
+                    @error('email')<p class="text-xs text-red-400 mt-1">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label class="input-label" for="account-email-password">Tu contraseña actual</label>
+                    <input id="account-email-password" type="password" name="email_current_password" class="input-field" autocomplete="current-password">
+                    @error('email_current_password')<p class="text-xs text-red-400 mt-1">{{ $message }}</p>@enderror
+                </div>
+                <p class="text-[11px] text-white/40">Te avisaremos del cambio en tu correo actual, por seguridad.</p>
+                <button type="submit" class="btn-secondary !text-xs">Cambiar correo</button>
+            </form>
+        @endif
+    </div>
+
     <form id="password-form" method="POST" action="{{ route('dashboard.password.update') }}" class="space-y-5 sm:space-y-6" x-data="{ showCurrent: false, showNew: false, showConfirm: false }">
         @csrf
 
@@ -49,11 +74,11 @@
             </div>
         </div>
 
-        @if($errors->any())
+        @if($errors->hasAny(['current_password', 'password']))
         <div class="glass-card p-4 sm:p-5 border border-red-400/20 bg-red-500/5">
             <p class="text-red-400 font-bold text-xs sm:text-sm mb-1.5 flex items-center gap-2">⚠️ Revisa estos campos antes de guardar:</p>
             <ul class="text-xs text-red-400/90 space-y-1 list-disc list-inside">
-                @foreach($errors->all() as $error_msg)
+                @foreach(array_merge($errors->get('current_password'), $errors->get('password')) as $error_msg)
                     <li>{{ $error_msg }}</li>
                 @endforeach
             </ul>

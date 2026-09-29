@@ -48,6 +48,8 @@ class DashboardController extends Controller
                 ->where('stock', 0)
                 ->count(),
             'total_orders'       => $store->orders()->count(),
+            'unread_messages'    => \Illuminate\Support\Facades\Schema::hasTable('contact_messages')
+                ? $store->contactMessages()->where('is_read', false)->count() : 0,
             'pending_orders'     => $store->orders()->where('status', 'pending')->count(),
             'revenue_month'      => floatval($store->orders()
                 ->where('status', '!=', 'cancelled')

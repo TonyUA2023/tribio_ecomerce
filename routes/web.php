@@ -96,6 +96,11 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     // Cuenta
     Route::get('/mi-cuenta/contrasena', [\App\Http\Controllers\Dashboard\PasswordController::class, 'edit'])->name('password.edit');
     Route::post('/mi-cuenta/contrasena', [\App\Http\Controllers\Dashboard\PasswordController::class, 'update'])->name('password.update');
+    // Mensajes de la tienda (contacto, Libro de Reclamaciones, suscripciones).
+    Route::get('/mensajes', [\App\Http\Controllers\Dashboard\MessageController::class, 'index'])->name('mensajes.index');
+    Route::get('/mensajes/{message}', [\App\Http\Controllers\Dashboard\MessageController::class, 'show'])->whereNumber('message')->name('mensajes.show');
+    Route::patch('/mensajes/{message}/no-leido', [\App\Http\Controllers\Dashboard\MessageController::class, 'markUnread'])->whereNumber('message')->name('mensajes.unread');
+    Route::post('/mi-cuenta/correo', [\App\Http\Controllers\Dashboard\PasswordController::class, 'updateEmail'])->name('account.email.update')->middleware('throttle:6,1');
     Route::get('/mi-cuenta/google/conectar', [\App\Http\Controllers\Dashboard\GoogleAccountController::class, 'connect'])->name('google.connect');
     Route::get('/mi-cuenta/google/callback', [\App\Http\Controllers\Dashboard\GoogleAccountController::class, 'callback'])->name('google.callback');
 
@@ -227,7 +232,7 @@ Route::domain('{custom_domain}')
         Route::get('/pedido/{order}/confirmacion', [StoreController::class, 'orderConfirmation']);
         Route::get('/checkout/retorno/{reference}', [StoreController::class, 'checkoutReturn']);
         Route::get('/contacto', [StoreController::class, 'contact']);
-        Route::post('/contacto', [StoreController::class, 'submitContact']);
+        Route::post('/contacto', [StoreController::class, 'submitContact'])->middleware('throttle:10,1');
         Route::post('/adjuntos', [\App\Http\Controllers\AttachmentController::class, 'store'])->middleware('throttle:12,1');
         Route::post('/producto/{product}/resena', [\App\Http\Controllers\StoreReviewController::class, 'store'])->middleware('throttle:10,1');
         Route::get('/feed/facebook.xml', [\App\Http\Controllers\MarketingFeedController::class, 'meta'])->middleware('throttle:30,1');
@@ -250,7 +255,7 @@ Route::prefix('tienda')->name('store.')->group(function () {
     Route::get('/{slug}/pedido/{order}/confirmacion', [StoreController::class, 'orderConfirmation'])->name('order.confirmation');
     Route::get('/{slug}/checkout/retorno/{reference}', [StoreController::class, 'checkoutReturn'])->name('checkout.return');
     Route::get('/{slug}/contacto', [StoreController::class, 'contact'])->name('contact');
-    Route::post('/{slug}/contacto', [StoreController::class, 'submitContact'])->name('contact.submit');
+    Route::post('/{slug}/contacto', [StoreController::class, 'submitContact'])->name('contact.submit')->middleware('throttle:10,1');
     // Archivos del cliente para trabajos por encargo (logo a bordar, referencias).
     Route::post('/{slug}/adjuntos', [\App\Http\Controllers\AttachmentController::class, 'store'])->name('attachments.upload')->middleware('throttle:12,1');
     // Saldo de un pedido por encargo: enlace firmado que la tienda envía al cliente

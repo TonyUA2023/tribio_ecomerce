@@ -1053,24 +1053,31 @@ class StoreController extends Controller
         $collectionStatus = request()->query('collection_status') ?? request()->query('status');
         $paymentId        = request()->query('payment_id') ?? request()->query('collection_id');
 
-        if ($collectionStatus === 'approved') {
+        // The query string only says which payment to ask about: anyone can type
+        // "?collection_status=approved". Only Mercado Pago's own answer credits money.
+        $payment = in_array($collectionStatus, ['approved', 'pending', 'in_process', 'rejected', 'cancelled'], true)
+            ? app(\App\Services\Payments\MercadoPagoPayments::class)->verifiedPayment($store, is_scalar($paymentId) ? (string) $paymentId : null, $reference)
+            : null;
+        $verifiedStatus = $payment['status'] ?? null;
+
+        if ($verifiedStatus === 'approved') {
             $pending->materialize('paid', 'confirmed', decrementStock: true)->update([
                 'payment_method' => 'mercadopago',
-                'internal_notes' => 'Mercado Pago ID: ' . $paymentId . ' (Pago Aprobado)',
+                'internal_notes' => 'Mercado Pago ID: ' . $payment['id'] . ' (Pago Aprobado)',
             ]);
             return redirect(route('store.show', $store->slug) . '?pedido=' . urlencode($reference));
         }
-        if (in_array($collectionStatus, ['rejected', 'cancelled'], true)) {
+        if (in_array($verifiedStatus, ['rejected', 'cancelled'], true)) {
             $pending->materialize('failed', 'pending', decrementStock: false)->update([
                 'payment_method' => 'mercadopago',
-                'internal_notes' => 'Mercado Pago Estado: ' . $collectionStatus,
+                'internal_notes' => 'Mercado Pago Estado: ' . $verifiedStatus,
             ]);
             return redirect(route('store.show', $store->slug) . '?pedido=' . urlencode($reference));
         }
-        // 'pending' (p.ej. voucher de PagoEfectivo emitido, aún no pagado) u otro valor no
-        // definitivo: no se descuenta stock, pero sí se registra el intento para que la
-        // tienda sepa que existe un cobro en curso.
-        if ($collectionStatus === 'pending') {
+        // Still pending at Mercado Pago (e.g. a PagoEfectivo voucher not paid yet), or the
+        // return claims a result Mercado Pago couldn't confirm right now: record the attempt
+        // as pending — no stock, no money credited. The webhook upgrades it once paid.
+        if ($verifiedStatus !== null || in_array($collectionStatus, ['approved', 'pending', 'in_process'], true)) {
             $pending->materialize('pending', 'pending', decrementStock: false)->update(['payment_method' => 'mercadopago']);
             return redirect(route('store.show', $store->slug) . '?pedido=' . urlencode($reference));
         }
@@ -1191,15 +1198,25 @@ class StoreController extends Controller
     {
         $store = $this->getStore($slug);
         
-        $request->validate([
+        $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
             'phone' => 'nullable|string|max:20',
             'subject' => 'nullable|string|max:255',
-            'message' => 'required|string',
+            'message' => 'required|string|max:5000',
         ]);
 
-        $store->contactMessages()->create($request->all());
+        // Only the validated fields: a posted "is_read" must not skip the owner's inbox.
+        $contactMessage = $store->contactMessages()->create($data);
+
+        $ownerEmail = $store->contact_email ?: ($store->email ?: $store->user?->email);
+        if ($ownerEmail) {
+            try {
+                \Illuminate\Support\Facades\Mail::to($ownerEmail)->queue(new \App\Mail\StoreContactMessageReceived($contactMessage));
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('No se pudo avisar al dueño de un mensaje de contacto.', ['store_id' => $store->id, 'error' => $e->getMessage()]);
+            }
+        }
 
         return back()->with('success', '¡Gracias por contactarnos! Tu mensaje ha sido enviado exitosamente.');
     }

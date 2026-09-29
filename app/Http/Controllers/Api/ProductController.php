@@ -2,33 +2,41 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Products\SaveProduct;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Product;
-use Illuminate\Support\Str;
+use App\Models\ProductStateHistory;
+use App\Models\Store;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
+    private function noStore(): JsonResponse
+    {
+        return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);
+    }
+
     public function index(Request $request)
     {
         $store = $request->user()->currentStore();
 
         if (!$store) {
-            return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);
+            return $this->noStore();
         }
 
-        $query = $store->products()->with(['categories', 'category', 'brand']);
+        $query = $store->products()->with(['categories', 'category', 'brand'])->withCount('variants');
 
         // Por defecto, no listamos subcomponentes en el catálogo general
         if (!$request->has('include_subcomponents') || $request->include_subcomponents == 'false') {
             $query->whereNull('parent_id');
-        } else if ($request->has('parent_id')) {
+        } elseif ($request->has('parent_id')) {
             $query->where('parent_id', $request->parent_id);
         }
 
-        if ($request->has('search') && !empty($request->search)) {
+        if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('sku', 'like', "%{$search}%")
                   ->orWhere('description', 'like', "%{$search}%");
@@ -37,22 +45,22 @@ class ProductController extends Controller
 
         if ($request->has('category_id') && $request->category_id !== 'all') {
             $catId = $request->category_id;
-            $query->where(function($sub) use ($catId) {
+            $query->where(function ($sub) use ($catId) {
                 $sub->where('category_id', $catId)
-                    ->orWhereHas('categories', fn($sq) => $sq->where('categories.id', $catId));
+                    ->orWhereHas('categories', fn ($sq) => $sq->where('categories.id', $catId));
             });
         }
+
+        $query
+            ->when($request->status === 'active', fn ($q) => $q->where('is_active', true))
+            ->when($request->status === 'inactive', fn ($q) => $q->where('is_active', false))
+            ->when($request->stock === 'low', fn ($q) => $q->where('track_stock', true)->whereColumn('stock', '<=', 'low_stock_alert')->where('stock', '>', 0))
+            ->when($request->stock === 'out', fn ($q) => $q->where('track_stock', true)->where('stock', 0));
 
         $products = $query->orderBy('sort_order')->latest()->paginate(15);
 
         // Map Image URLs and financial indicators
-        $products->getCollection()->transform(function ($product) {
-            $product->image_url = $product->image_url;
-            $product->total_cost = $product->total_cost;
-            $product->revenue_generated = $product->revenue_generated;
-            $product->net_profit = $product->net_profit;
-            return $product;
-        });
+        $products->getCollection()->transform(fn ($product) => $this->present($product));
 
         return response()->json($products);
     }
@@ -62,140 +70,62 @@ class ProductController extends Controller
         $store = $request->user()->currentStore();
 
         if (!$store) {
-            return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);
+            return $this->noStore();
         }
 
         $product = $store->products()
-            ->with(['category', 'brand', 'children', 'stateHistories.user'])
+            ->with(['category', 'categories', 'brand', 'children', 'variants', 'stateHistories.user'])
             ->find($id);
 
         if (!$product) {
             return response()->json(['message' => 'Producto no encontrado.'], 404);
         }
 
-        $product->image_url = $product->image_url;
-        $product->total_cost = $product->total_cost;
-        $product->revenue_generated = $product->revenue_generated;
-        $product->net_profit = $product->net_profit;
-
-        $product->children->transform(function ($child) {
-            $child->image_url = $child->image_url;
-            $child->total_cost = $child->total_cost;
-            $child->revenue_generated = $child->revenue_generated;
-            $child->net_profit = $child->net_profit;
-            return $child;
-        });
-
+        $this->present($product);
+        $product->children->transform(fn ($child) => $this->present($child));
         $product->stateHistories->transform(function ($history) {
             $history->image_url = $history->image_url;
+
             return $history;
         });
 
         return response()->json($product);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, SaveProduct $saveProduct)
     {
         $store = $request->user()->currentStore();
 
         if (!$store) {
-            return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);
+            return $this->noStore();
         }
 
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'cost_price' => 'nullable|numeric|min:0',
-            'stock' => 'nullable|integer|min:0',
-            'category_id' => 'nullable|exists:categories,id',
-            'categories' => 'nullable|array',
-            'categories.*' => 'integer|exists:categories,id',
-            'brand_id' => 'nullable|exists:brands,id',
-            'parent_id' => 'nullable|exists:products,id',
-            'description' => 'nullable|string',
-            'short_description' => 'nullable|string',
-            'sku' => 'nullable|string',
-            'track_stock' => 'boolean',
-            'is_active' => 'boolean',
-            'is_featured' => 'boolean',
-            'is_composite' => 'boolean',
-            'composite_type' => 'nullable|string|in:assembly,bucket,unit',
-            'is_sold' => 'boolean',
-            'image' => 'nullable|image|max:5120',
-        ]);
+        // Same action the web form uses (see SaveProduct): one set of rules for both surfaces.
+        $product = $saveProduct->execute($request, $store, $request->user());
 
-        $data['store_id'] = $store->id;
-        $data['slug'] = Str::slug($data['name']);
-        
-        // Ensure slug is unique for store
-        $originalSlug = $data['slug'];
-        $count = 1;
-        while ($store->products()->where('slug', $data['slug'])->exists()) {
-            $data['slug'] = $originalSlug . '-' . $count++;
-        }
-
-        if ($request->hasFile('image')) {
-            $data['image_path'] = $request->file('image')->store("stores/{$store->id}/products", 'public');
-        }
-
-        if (isset($data['is_sold']) && $data['is_sold']) {
-            $data['sold_at'] = now();
-        }
-
-        unset($data['image']);
-
-        $categoryIds = $request->input('categories', []);
-        if (is_string($categoryIds)) {
-            $categoryIds = json_decode($categoryIds, true) ?? [];
-        }
-        if (!is_array($categoryIds)) {
-            $categoryIds = [];
-        }
-        $categoryIds = array_values(array_filter(array_map('intval', $categoryIds)));
-
-        if ($request->filled('category_id') && in_array((int)$request->category_id, $categoryIds)) {
-            $data['category_id'] = (int)$request->category_id;
-        } elseif (!empty($categoryIds)) {
-            $data['category_id'] = $categoryIds[0];
-        } elseif ($request->filled('category_id')) {
-            $data['category_id'] = (int)$request->category_id;
-            $categoryIds = [(int)$request->category_id];
-        }
-
-        $product = Product::create($data);
-
-        if (!empty($categoryIds)) {
-            $product->categories()->sync($categoryIds);
-        }
-
-        // Crear historial de registro inicial si hay imagen
+        // Registro inicial en el historial visual si hay imagen (lotes compuestos)
         if ($product->image_path) {
-            \App\Models\ProductStateHistory::create([
-                'product_id' => $product->id,
-                'user_id' => $request->user()->id,
+            ProductStateHistory::create([
+                'product_id'  => $product->id,
+                'user_id'     => $request->user()->id,
                 'action_type' => 'initial_registry',
                 'description' => 'Registro inicial del producto con foto.',
-                'image_path' => $product->image_path,
+                'image_path'  => $product->image_path,
             ]);
         }
 
-        $product->image_url = $product->image_url;
-        $product->total_cost = $product->total_cost;
-        $product->revenue_generated = $product->revenue_generated;
-        $product->net_profit = $product->net_profit;
-
         return response()->json([
             'message' => 'Producto creado con éxito.',
-            'product' => $product
+            'product' => $this->present($product->load(['variants', 'categories'])),
         ], 201);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, SaveProduct $saveProduct, $id)
     {
         $store = $request->user()->currentStore();
 
         if (!$store) {
-            return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);
+            return $this->noStore();
         }
 
         $product = $store->products()->find($id);
@@ -204,94 +134,22 @@ class ProductController extends Controller
             return response()->json(['message' => 'Producto no encontrado.'], 404);
         }
 
-        $data = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'price' => 'sometimes|required|numeric|min:0',
-            'cost_price' => 'nullable|numeric|min:0',
-            'stock' => 'nullable|integer|min:0',
-            'category_id' => 'nullable|exists:categories,id',
-            'categories' => 'nullable|array',
-            'categories.*' => 'integer|exists:categories,id',
-            'brand_id' => 'nullable|exists:brands,id',
-            'parent_id' => 'nullable|exists:products,id',
-            'description' => 'nullable|string',
-            'short_description' => 'nullable|string',
-            'sku' => 'nullable|string',
-            'track_stock' => 'boolean',
-            'is_active' => 'boolean',
-            'is_featured' => 'boolean',
-            'is_composite' => 'boolean',
-            'composite_type' => 'nullable|string|in:assembly,bucket,unit',
-            'is_sold' => 'boolean',
-            'image' => 'nullable|image|max:5120',
-        ]);
-
-        if (isset($data['name']) && $data['name'] !== $product->name) {
-            $data['slug'] = Str::slug($data['name']);
-            $originalSlug = $data['slug'];
-            $count = 1;
-            while ($store->products()->where('slug', $data['slug'])->where('id', '!=', $id)->exists()) {
-                $data['slug'] = $originalSlug . '-' . $count++;
-            }
-        }
+        // Partial: the app may send only the fields that changed (e.g. the visibility switch).
+        $product = $saveProduct->execute($request, $store, $request->user(), $product, partial: true);
 
         if ($request->hasFile('image')) {
-            if ($product->image_path) {
-                // Opcional: borrar imagen anterior si no está en historial (de momento la dejamos por seguridad)
-            }
-            $data['image_path'] = $request->file('image')->store("stores/{$store->id}/products", 'public');
-        }
-
-        if (isset($data['is_sold'])) {
-            if ($data['is_sold'] && !$product->is_sold) {
-                $data['sold_at'] = now();
-            } else if (!$data['is_sold']) {
-                $data['sold_at'] = null;
-            }
-        }
-
-        unset($data['image']);
-
-        $categoryIds = $request->input('categories', null);
-        if ($categoryIds !== null) {
-            if (is_string($categoryIds)) {
-                $categoryIds = json_decode($categoryIds, true) ?? [];
-            }
-            if (is_array($categoryIds)) {
-                $categoryIds = array_values(array_filter(array_map('intval', $categoryIds)));
-                if (!empty($categoryIds) && !$request->filled('category_id')) {
-                    $data['category_id'] = $categoryIds[0];
-                }
-            }
-        }
-
-        $product->update($data);
-
-        if ($categoryIds !== null && is_array($categoryIds)) {
-            $product->categories()->sync($categoryIds);
-        } elseif ($request->filled('category_id')) {
-            $product->categories()->sync([(int)$request->category_id]);
-        }
-
-        // Si se subió nueva imagen y no existía historial previo, podemos crearlo
-        if ($request->hasFile('image')) {
-            \App\Models\ProductStateHistory::create([
-                'product_id' => $product->id,
-                'user_id' => $request->user()->id,
+            ProductStateHistory::create([
+                'product_id'  => $product->id,
+                'user_id'     => $request->user()->id,
                 'action_type' => 'photo_updated',
                 'description' => 'Actualización manual de foto de producto.',
-                'image_path' => $product->image_path,
+                'image_path'  => $product->image_path,
             ]);
         }
 
-        $product->image_url = $product->image_url;
-        $product->total_cost = $product->total_cost;
-        $product->revenue_generated = $product->revenue_generated;
-        $product->net_profit = $product->net_profit;
-
         return response()->json([
             'message' => 'Producto actualizado con éxito.',
-            'product' => $product
+            'product' => $this->present($product->load(['variants', 'categories'])),
         ]);
     }
 
@@ -300,7 +158,7 @@ class ProductController extends Controller
         $store = $request->user()->currentStore();
 
         if (!$store) {
-            return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);
+            return $this->noStore();
         }
 
         $product = $store->products()->find($id);
@@ -311,16 +169,14 @@ class ProductController extends Controller
 
         $product->delete();
 
-        return response()->json([
-            'message' => 'Producto eliminado con éxito.'
-        ]);
+        return response()->json(['message' => 'Producto eliminado con éxito.']);
     }
 
     public function addStateHistory(Request $request, $id)
     {
         $store = $request->user()->currentStore();
         if (!$store) {
-            return response()->json(['message' => 'No tienes ninguna tienda configurada.'], 404);
+            return $this->noStore();
         }
 
         $product = $store->products()->find($id);
@@ -331,32 +187,45 @@ class ProductController extends Controller
         $data = $request->validate([
             'action_type' => 'required|string|in:initial_registry,child_sold,child_added,manual_adjustment,photo_updated',
             'description' => 'required|string',
-            'image' => 'required|image|max:5120',
-            'metadata' => 'nullable|string'
+            'image'       => 'required|image|max:5120',
+            'metadata'    => 'nullable|string',
         ]);
 
         $path = $request->file('image')->store("stores/{$store->id}/products/history", 'public');
 
-        $history = \App\Models\ProductStateHistory::create([
-            'product_id' => $product->id,
-            'user_id' => $request->user()->id,
+        $history = ProductStateHistory::create([
+            'product_id'  => $product->id,
+            'user_id'     => $request->user()->id,
             'action_type' => $data['action_type'],
             'description' => $data['description'],
-            'image_path' => $path,
-            'metadata' => $data['metadata'] ? json_decode($data['metadata'], true) : null,
+            'image_path'  => $path,
+            'metadata'    => $data['metadata'] ? json_decode($data['metadata'], true) : null,
         ]);
 
         // Actualizar foto principal del producto con el último estado visual
-        $product->update([
-            'image_path' => $path
-        ]);
+        $product->update(['image_path' => $path]);
 
         $history->image_url = $history->image_url;
 
         return response()->json([
             'message' => 'Historial de estado registrado con éxito.',
             'history' => $history,
-            'product_image_url' => $product->image_url
+            'product_image_url' => $product->image_url,
         ]);
+    }
+
+    // ─── Helpers ─────────────────────────────────────────────────
+
+    /** Adds the computed attributes the app reads (image URLs, financials). */
+    private function present(Product $product): Product
+    {
+        $product->image_url = $product->image_url;
+        $product->gallery_urls = $product->gallery_urls;
+        $product->video_url = $product->video_url;
+        $product->total_cost = $product->total_cost;
+        $product->revenue_generated = $product->revenue_generated;
+        $product->net_profit = $product->net_profit;
+
+        return $product;
     }
 }

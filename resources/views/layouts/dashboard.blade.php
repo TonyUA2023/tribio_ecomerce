@@ -87,6 +87,7 @@
                     ['dashboard.galeria.index', 'image', 'Galería', null],
                     ['dashboard.pedidos.index', 'cart', 'Pedidos', 'Operación'],
                     ['dashboard.resenas.index', 'star', 'Reseñas', null],
+                    ['dashboard.mensajes.index', 'mail', 'Mensajes', null],
                     ['dashboard.inventario.index', 'inventory', 'Inventario', null],
                     ['dashboard.shipping.index', 'truck', 'Zonas de envío', null],
                     ['dashboard.gateway.edit', 'wallet', 'Pasarela de pago', null],
@@ -94,12 +95,14 @@
                     ['dashboard.plantillas.index', 'palette', 'Plantillas', 'Personalización'],
                     ['dashboard.store.edit', 'store', 'Mi tienda', null],
                 ];
+                $unreadMessages = $dashboardStore ? $dashboardStore->contactMessages()->where('is_read', false)->count() : 0;
             @endphp
             @foreach($navItems as [$route, $icon, $label, $group])
                 @if($group)<p class="dash-nav-group dash-nav-label">{{ $group }}</p>@endif
                 @php $active = request()->routeIs($route === 'dashboard.index' ? $route : substr($route, 0, strrpos($route, '.')) . '.*'); @endphp
                 <a href="{{ route($route) }}" class="sidebar-link {{ $active ? 'active' : '' }}" @if($active) aria-current="page" @endif title="{{ $label }}">
                     <x-dashboard-icon :name="$icon"/><span class="dash-nav-label">{{ $label }}</span>
+                    @if($route === 'dashboard.mensajes.index' && $unreadMessages > 0)<span class="badge badge-gold dash-nav-label" style="margin-left: auto" aria-label="{{ $unreadMessages }} sin leer">{{ $unreadMessages }}</span>@endif
                     @if($active)<span class="dash-active-dot dash-nav-label"></span>@endif
                 </a>
             @endforeach
@@ -130,7 +133,7 @@
                 </button>
                 <div id="dashboard-account" x-cloak x-show="open" @click.outside="open = false" class="dash-account-menu">
                     <a href="{{ route('dashboard.store.edit') }}">Configurar tienda</a>
-                    <a href="{{ route('dashboard.password.edit') }}">Cambiar contraseña</a>
+                    <a href="{{ route('dashboard.password.edit') }}">Correo y contraseña</a>
                     <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit">Cerrar sesión</button></form>
                 </div>
             </div>
