@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\GalleryItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Store;
@@ -96,6 +97,72 @@ class TextilProTemplateTest extends TestCase
         $this->get(route('store.gallery', $store->slug))->assertOk();
     }
 
+    public function test_products_are_shown_right_below_the_hero(): void
+    {
+        $store = $this->textileStore();
+        foreach (range(1, 5) as $i) {
+            Product::create([
+                'store_id' => $store->id, 'name' => "Polo destacado {$i}", 'slug' => "polo-destacado-{$i}", 'price' => 30,
+                'stock' => 10, 'is_active' => true, 'is_featured' => true,
+            ]);
+        }
+        Product::create([
+            'store_id' => $store->id, 'name' => 'Casaca en oferta', 'slug' => 'casaca-oferta', 'price' => 80,
+            'compare_price' => 120, 'stock' => 10, 'is_active' => true,
+        ]);
+
+        $html = $this->get(route('store.show', $store->slug))->assertOk()
+            ->assertSee('id="destacados"', false)
+            ->assertSee('Lo más pedido')
+            ->assertSee('Todo el catálogo')
+            ->getContent();
+
+        // Arriba: justo después de la portada y antes de las cifras y los servicios.
+        $section = strpos($html, 'id="destacados"');
+        $this->assertGreaterThan(strpos($html, 'class="tx-hero'), $section);
+        $this->assertLessThan(strpos($html, 'id="servicios"'), $section);
+        // El carrusel no se queda en los 3 destacados que trae el controlador.
+        $rail = substr($html, $section, strpos($html, 'id="servicios"') - $section);
+        foreach (range(1, 5) as $i) {
+            $this->assertStringContainsString("Polo destacado {$i}", $rail);
+        }
+        $this->assertStringNotContainsString('Casaca en oferta', $rail);
+
+        $store->update(['template_settings' => ['textil-pro' => ['showcase' => ['source' => 'sale', 'title' => 'Ofertas del taller']]]]);
+        $html = $this->get(route('store.show', $store->slug))->assertOk()->assertSee('Ofertas del taller')->getContent();
+        $section = strpos($html, 'id="destacados"');
+        $rail = substr($html, $section, strpos($html, 'id="servicios"') - $section);
+        $this->assertStringContainsString('Casaca en oferta', $rail);
+        $this->assertStringNotContainsString('Polo destacado 1', $rail);
+
+        $store->update(['template_settings' => ['textil-pro' => ['showcase' => ['enabled' => false]]]]);
+        $this->get(route('store.show', $store->slug))->assertOk()->assertDontSee('id="destacados"', false);
+    }
+
+    public function test_without_products_the_top_section_shows_gallery_work_or_nothing(): void
+    {
+        $store = $this->textileStore();
+        $this->get(route('store.show', $store->slug))->assertOk()->assertDontSee('id="destacados"', false);
+
+        GalleryItem::create([
+            'store_id' => $store->id, 'image_path' => 'gallery/polos-promocion.jpg', 'title' => 'Polos para promoción 2026',
+            'type' => 'photo', 'is_active' => true, 'sort_order' => 1,
+        ]);
+        GalleryItem::create([
+            'store_id' => $store->id, 'image_path' => 'gallery/oculto.jpg', 'title' => 'Trabajo oculto',
+            'type' => 'photo', 'is_active' => false, 'sort_order' => 2,
+        ]);
+
+        $this->get(route('store.show', $store->slug))->assertOk()
+            ->assertSee('id="destacados"', false)
+            ->assertSee('Polos para promoción 2026')
+            ->assertSee('storage/gallery/polos-promocion.jpg', false)
+            ->assertDontSee('Trabajo oculto');
+
+        $store->update(['template_settings' => ['textil-pro' => ['showcase' => ['use_gallery' => false]]]]);
+        $this->get(route('store.show', $store->slug))->assertOk()->assertDontSee('id="destacados"', false);
+    }
+
     public function test_made_to_order_products_show_the_customization_form(): void
     {
         $store = $this->textileStore(['made_to_order_enabled' => true, 'deposit_percent' => 50]);
@@ -143,7 +210,9 @@ class TextilProTemplateTest extends TestCase
 
         $this->get(route('dashboard.plantillas.frame', 'textil-pro'))->assertOk()
             ->assertSee('data-tpl-img="hero.image"', false)
-            ->assertSee('data-tpl-show="faq.enabled"', false);
+            ->assertSee('data-tpl-show="faq.enabled"', false)
+            ->assertSee('data-tpl-show="showcase.enabled"', false)
+            ->assertSee('Aquí aparecerán tus productos destacados');
     }
 
     public function test_it_is_the_first_template_recommended_to_textile_stores(): void

@@ -740,6 +740,19 @@ return [
                     ]),
                 ],
                 [
+                    'key' => 'showcase', 'title' => 'Productos destacados (arriba)', 'icon' => 'grid',
+                    'description' => 'Un carrusel con tus productos justo debajo de la portada. Si aún no tienes productos, puede mostrar las fotos de tu Galería como trabajos realizados.',
+                    'fields' => [
+                        'showcase.enabled' => ['type' => 'toggle', 'label' => 'Mostrar esta sección', 'default' => true],
+                        'showcase.eyebrow' => ['type' => 'text', 'label' => 'Texto pequeño sobre el título', 'max' => 40, 'optional' => true, 'default' => 'Lo más pedido'],
+                        'showcase.title' => ['type' => 'text', 'label' => 'Título', 'max' => 60, 'default' => 'Nuestros productos'],
+                        'showcase.source' => ['type' => 'select', 'label' => 'Qué productos mostrar', 'default' => 'featured',
+                            'options' => ['featured' => 'Destacados (o los más nuevos)', 'newest' => 'Lo más nuevo', 'sale' => 'En oferta']],
+                        'showcase.cta' => ['type' => 'text', 'label' => 'Texto del enlace "ver todo"', 'max' => 28, 'optional' => true, 'default' => 'Ver todo el catálogo'],
+                        'showcase.use_gallery' => ['type' => 'toggle', 'label' => 'Sin productos, mostrar las fotos de tu Galería (trabajos realizados)', 'default' => true],
+                    ],
+                ],
+                [
                     'key' => 'stats', 'title' => 'Cifras', 'icon' => 'sparkles', 'item_label' => 'Cifra',
                     'description' => 'La franja de tu color vivo con cuatro datos cortos. Deja una cifra vacía para ocultarla.',
                     'fields' => [
@@ -862,7 +875,7 @@ return [
                     'fields' => [
                         'categories.enabled' => ['type' => 'toggle', 'label' => 'Mostrar categorías', 'default' => true],
                         'categories.title' => ['type' => 'text', 'label' => 'Categorías · título', 'max' => 60, 'optional' => true, 'default' => 'Elige tu prenda'],
-                        'sections.products_title' => ['type' => 'text', 'label' => 'Productos · título', 'max' => 60, 'default' => 'Nuestros productos'],
+                        'sections.products_title' => ['type' => 'text', 'label' => 'Catálogo al final · título', 'max' => 60, 'default' => 'Todo el catálogo'],
                         'sections.empty_title' => ['type' => 'text', 'label' => 'Sin productos · título', 'max' => 60, 'default' => '¿Tienes un diseño en mente?'],
                         'sections.empty_text' => ['type' => 'text', 'label' => 'Sin productos · texto', 'max' => 160,
                             'default' => 'Cuéntanos qué prenda, cuántas unidades y tu idea. Te enviamos una cotización sin compromiso.'],

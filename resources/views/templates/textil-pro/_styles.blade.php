@@ -89,6 +89,7 @@
     .tx-nav a:hover::after, .tx-nav a.is-active::after { transform: scaleX(1); }
     .tx-nav a.is-sale { color: var(--t-primary); }
     .tx-header[data-choice="dark"] .tx-nav a.is-sale { color: var(--t-primary-300); }
+    .tx-header[data-choice="light"] .tx-nav a.is-sale { color: var(--t-primary-deep); }
     .tx-tools { display: flex; align-items: center; gap: 8px; margin-left: auto; }
     .tx-search-btn { display: inline-flex; align-items: center; gap: 12px; height: 42px; min-width: 150px; padding: 0 18px; border: 1px solid var(--tx-head-line); border-radius: var(--tx-radius); background: transparent; color: inherit; font: 700 16px var(--font-body); text-transform: uppercase; cursor: pointer; margin-right: 14px; }
     .tx-search-btn:hover { background: rgba(127, 127, 127, .18); }
@@ -141,7 +142,7 @@
     .tx-drawer-head strong { font: 700 18px var(--font-body); text-transform: uppercase; letter-spacing: .03em; }
     .tx-drawer-body { flex: 1; overflow-y: auto; padding: 8px 16px 24px; }
     .tx-drawer-links a, .tx-drawer-links button { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 16px 2px; border: 0; border-bottom: 1px solid var(--tx-line); background: none; color: var(--tx-ink); font: 700 18px var(--font-body); text-decoration: none; text-align: left; cursor: pointer; }
-    .tx-drawer-links a.is-sale { color: var(--t-primary); }
+    .tx-drawer-links a.is-sale { color: var(--t-primary-deep); }
     .tx-drawer-links.is-small a, .tx-drawer-links.is-small button { font-size: 15px; font-weight: 500; padding: 13px 2px; }
     .tx-drawer-foot { display: grid; gap: 12px; margin-top: 20px; padding: 14px; background: var(--tx-soft); border-radius: var(--tx-radius); font-size: 14px; font-weight: 600; }
     .tx-drawer-foot > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -156,7 +157,7 @@
     .tx-drop { position: absolute; right: 0; top: calc(100% + 4px); z-index: 60; min-width: 220px; padding: 6px; background: #fff; color: var(--tx-ink); border: 1px solid var(--tx-line); box-shadow: 0 16px 40px rgba(0, 0, 0, .15); text-transform: none; }
     .tx-drop button { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 0; background: none; font: 600 14px var(--font-body); color: var(--tx-ink); cursor: pointer; text-align: left; }
     .tx-drop button:hover { background: var(--tx-soft); }
-    .tx-drop button.is-active { color: var(--t-primary); }
+    .tx-drop button.is-active { color: var(--t-primary-deep); }
     .tx-drop img { width: 18px; height: 13px; object-fit: cover; }
 
     /* ── Portada ────────────────────────────────────────────────────── */
@@ -281,6 +282,20 @@
     @media (max-width: 1023px) { .tx-segments { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 520px) { .tx-segments { grid-template-columns: minmax(0, 1fr); } .tx-segment { min-height: 200px; } }
 
+    /* Productos destacados (arriba) */
+    .tx-showcase { padding-top: 48px; }
+    .tx-rails[data-choice="featured"] .tx-rail-src:not([data-src="featured"]),
+    .tx-rails[data-choice="newest"] .tx-rail-src:not([data-src="newest"]),
+    .tx-rails[data-choice="sale"] .tx-rail-src:not([data-src="sale"]) { display: none; }
+    .tx-muted-note { color: var(--tx-muted); padding: 20px 0; margin: 0; }
+    .tx-works { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, calc((100% - 3 * 16px) / 4)); gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 4px; }
+    .tx-works::-webkit-scrollbar { display: none; }
+    .tx-work { position: relative; display: block; aspect-ratio: 4 / 5; overflow: hidden; border-radius: calc(var(--tx-radius) * 1.2); background: var(--tx-card); scroll-snap-align: start; text-decoration: none; }
+    .tx-work img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s ease; }
+    .tx-work:hover img { transform: scale(1.05); }
+    .tx-work span { position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 16px 14px; background: linear-gradient(0deg, rgba(0, 0, 0, .72), rgba(0, 0, 0, 0)); color: #fff; font-weight: 700; font-size: 15px; }
+    @media (max-width: 767px) { .tx-showcase { padding-top: 32px; } .tx-works { grid-auto-columns: 70%; } }
+
     /* Catálogo vacío: invitación a cotizar */
     .tx-custom-cta { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding: 34px; border-radius: calc(var(--tx-radius) * 1.4); background: var(--t-primary-50); border: 2px dashed var(--t-primary); }
     .tx-custom-cta h3 { margin: 0; font-family: var(--font-brand); font-size: 24px; font-weight: 800; }
@@ -368,7 +383,8 @@
     .tx-card-name { font-size: 16px; font-weight: 600; line-height: 1.3; color: var(--tx-ink); text-decoration: none; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .tx-card-name:hover { text-decoration: underline; }
     .tx-price { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 17px; font-weight: 700; }
-    .tx-price .is-sale { color: var(--t-primary); }
+    /* Tono profundo: un primario claro (amarillo) no se lee sobre blanco. */
+    .tx-price .is-sale { color: var(--t-primary-deep); }
     .tx-price s { color: #8C8C8C; font-weight: 500; font-size: 15px; }
     .tx-tag { display: inline-block; padding: 3px 8px; background: var(--tx-ink); color: #fff; font: 700 12px var(--font-body); letter-spacing: .04em; text-transform: uppercase; }
 
@@ -515,7 +531,7 @@
     .tx-stock i { width: 8px; height: 8px; border-radius: 99px; background: #1E9E57; }
     .tx-stock.is-warn i { background: #D98A00; }
     .tx-stock.is-out i { background: var(--t-primary); }
-    .tx-hint { font-size: 14px; color: var(--t-primary); font-weight: 600; }
+    .tx-hint { font-size: 14px; color: var(--t-primary-deep); font-weight: 600; }
     .tx-specs { display: grid; grid-template-columns: max-content 1fr; gap: 8px 22px; margin: 0; }
     .tx-specs dt { color: var(--tx-muted); }
     .tx-specs dd { margin: 0; font-weight: 600; }

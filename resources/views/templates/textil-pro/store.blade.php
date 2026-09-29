@@ -17,7 +17,8 @@
     $secondaryLink = $t->link('hero.cta_secondary_link') ?? route('store.catalog', $store->slug);
 
     $products = collect($allProducts->items());
-    $showcase = $featuredProducts->isNotEmpty() ? $featuredProducts->take(8) : $products->take(8);
+    // La cuadrícula de abajo es el catálogo general; los destacados van arriba (sección showcase).
+    $catalogGrid = $products->take(8);
     $cats = $categories->where('is_featured', true);
     if ($cats->isEmpty()) {
         $cats = $categories->take(8);
@@ -87,6 +88,69 @@
             </div>
         </div>
     </section>
+
+    {{-- ═════ Productos destacados (arriba) ═════
+         Lo primero bajo la portada: productos (destacados, nuevos u ofertas) o, si todavía no
+         hay productos, las fotos de Galería como trabajos realizados. Vacío = no se muestra. --}}
+    @php
+        $pricedQuery = fn () => $store->activeProducts()
+            ->where(fn ($q) => $q->where('price', '>', 0)->orWhere('price_usd', '>', 0))
+            ->with(['categories', 'category']);
+        $showcaseSources = [
+            // El controlador solo trae 3 destacados; aquí se piden hasta 12 (o los más nuevos si no hay).
+            'featured' => fn () => $featuredProducts->isNotEmpty()
+                ? $pricedQuery()->where('is_featured', true)->orderBy('sort_order')->orderByDesc('id')->limit(12)->get()
+                : $pricedQuery()->orderByDesc('id')->limit(12)->get(),
+            'newest' => fn () => $pricedQuery()->orderByDesc('id')->limit(12)->get(),
+            'sale' => fn () => $pricedQuery()->whereNotNull('compare_price')->whereColumn('compare_price', '>', 'price')->orderBy('sort_order')->limit(12)->get(),
+        ];
+        $showcaseSource = $t->choice('showcase.source');
+        // En la vista previa se arman las tres listas para que el selector cambie al instante.
+        $showcaseRails = collect($tplPreview ? array_keys($showcaseSources) : [$showcaseSource])
+            ->mapWithKeys(fn ($key) => [$key => $showcaseSources[$key]()]);
+        $hasShowcaseProducts = $showcaseRails->contains(fn ($items) => $items->isNotEmpty());
+        $works = !$hasShowcaseProducts && ($tplPreview || $t->enabled('showcase.use_gallery'))
+            ? $store->galleryItems()->where('is_active', true)->where('type', '!=', 'hero')->orderBy('sort_order')->limit(12)->get()
+            : collect();
+    @endphp
+    @if(($tplPreview || $t->enabled('showcase.enabled')) && ($hasShowcaseProducts || $works->isNotEmpty() || $tplPreview))
+    <section class="tx-section tx-showcase" id="destacados" data-tpl-show="showcase.enabled" {{ $hideAttr('showcase.enabled') }}>
+        <div class="tx-narrow">
+            <div class="tx-head">
+                <div>
+                    <p class="tx-eyebrow" data-tpl-text="showcase.eyebrow" data-tpl-hide-empty @if($t->text('showcase.eyebrow') === '') hidden @endif>{{ $t->text('showcase.eyebrow') }}</p>
+                    <h2 class="tx-h2 is-left" data-tpl-text="showcase.title">{{ $t->text('showcase.title') }}</h2>
+                </div>
+                <a class="tx-link" href="{{ $hasShowcaseProducts ? route('store.catalog', $store->slug) : route('store.gallery', $store->slug) }}"
+                   data-tpl-text="showcase.cta" data-tpl-hide-empty @if($t->text('showcase.cta') === '') hidden @endif>{{ $t->text('showcase.cta') }}</a>
+            </div>
+            @if($hasShowcaseProducts)
+                <div class="tx-rails" data-tpl-choice="showcase.source" data-choice="{{ $showcaseSource }}">
+                    @foreach($showcaseRails as $source => $railProducts)
+                        <div class="tx-rail-src" data-src="{{ $source }}">
+                            @if($railProducts->isEmpty())
+                                <p class="tx-muted-note">{{ $isEn ? 'No products here yet.' : 'Aún no hay productos para mostrar aquí.' }}</p>
+                            @else
+                                @include('templates.textil-pro._rail', ['products' => $railProducts])
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            @elseif($works->isNotEmpty())
+                <div class="tx-works">
+                    @foreach($works as $work)
+                        <a class="tx-work" href="{{ $work->link_url ?: route('store.gallery', $store->slug) }}">
+                            <img src="{{ $work->image_url }}" alt="{{ $work->title ?: $store->name }}" loading="lazy">
+                            @if($work->title)<span>{{ $work->title }}</span>@endif
+                        </a>
+                    @endforeach
+                </div>
+            @else
+                <p class="tx-custom-cta">{{ $isEn ? 'Your featured products will appear here. Add products, or photos of your work in Gallery.' : 'Aquí aparecerán tus productos destacados. Agrega productos, o fotos de tus trabajos en Galería.' }}</p>
+            @endif
+        </div>
+    </section>
+    @endif
 
     {{-- Promociones automáticas de la tienda (envío gratis, descuento por volumen) --}}
     @php $storePromos = $store->activePromoMessages($isEn); @endphp
@@ -247,11 +311,11 @@
         <div class="tx-narrow">
             <div class="tx-head">
                 <h2 class="tx-h2 is-left" data-tpl-text="sections.products_title">{{ $t->text('sections.products_title') }}</h2>
-                @if($showcase->isNotEmpty())
+                @if($catalogGrid->isNotEmpty())
                     <a class="tx-link" href="{{ route('store.catalog', $store->slug) }}">{{ $isEn ? 'View all' : 'Ver todo' }}</a>
                 @endif
             </div>
-            @if($showcase->isEmpty())
+            @if($catalogGrid->isEmpty())
                 {{-- Catálogo aún vacío: la portada invita a cotizar en vez de mostrar un hueco. --}}
                 <div class="tx-custom-cta">
                     <div>
@@ -262,7 +326,7 @@
                 </div>
             @else
                 <div class="tx-grid">
-                    @foreach($showcase as $product)
+                    @foreach($catalogGrid as $product)
                         @include('templates.textil-pro._product-card', ['product' => $product])
                     @endforeach
                 </div>
