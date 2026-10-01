@@ -38,6 +38,7 @@
                     </label>
                 @endforeach
             </div>
+            @if(!empty($field['help']))<p class="tpl-help">{{ $field['help'] }}</p>@endif
             @if($error)<p class="tpl-error">{{ $error }}</p>@endif
         </fieldset>
         @break

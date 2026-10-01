@@ -9,6 +9,8 @@ use App\Models\Store;
 use App\Models\User;
 use App\Services\MadeToOrder\CustomizationSchema;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -95,6 +97,58 @@ class TextilProTemplateTest extends TestCase
         $this->get(route('store.product', [$store->slug, $polo->slug]))->assertOk()->assertSee('Polo algodón estampado')->assertSee('Talla');
         $this->get(route('store.contact', $store->slug))->assertOk();
         $this->get(route('store.gallery', $store->slug))->assertOk();
+    }
+
+    public function test_the_owner_uploads_a_full_width_banner_and_can_change_it(): void
+    {
+        Storage::fake('public');
+        $store = $this->textileStore();
+        $save = fn (array $settings, array $extra = []) => $this->actingAs($store->user)
+            ->put(route('dashboard.plantillas.update'), ['settings' => $settings] + $extra);
+
+        // Sin banner: la prenda ilustrada y ninguna imagen de portada.
+        $this->get(route('store.show', $store->slug))->assertOk()
+            ->assertDontSee('data-tpl-img-host data-has-image', false)
+            ->assertSee('class="tx-shirt"', false)
+            ->assertSee('media="not all"', false);
+
+        $save(['hero' => ['image' => UploadedFile::fake()->image('campana.jpg', 1920, 800)]])->assertSessionHasNoErrors();
+        $banner = $store->fresh()->template_settings['textil-pro']['hero']['image'];
+        Storage::disk('public')->assertExists($banner);
+
+        // El banner ocupa la portada, con el título y los botones encima.
+        $this->get(route('store.show', $store->slug))->assertOk()
+            ->assertSee('data-tpl-img-host data-has-image', false)
+            ->assertSee('<link rel="preload" as="image" href="' . asset('storage/' . $banner) . '">', false)
+            ->assertSee('data-tpl-choice="hero.banner_text" data-choice="overlay"', false)
+            ->assertSee('data-tpl-choice="hero.height" data-choice="tall"', false)
+            ->assertSee('data-tpl-choice="hero.shade" data-choice="dark"', false)
+            ->assertSee('Tu diseño, estampado');
+
+        // Versión para celular + "solo el banner" (la imagen ya trae el texto).
+        $save(['hero' => [
+            'image_mobile' => UploadedFile::fake()->image('campana-movil.jpg', 900, 1100),
+            'banner_text' => 'image', 'height' => 'medium', 'shade' => 'none', 'cta_secondary_link' => 'new',
+        ]])->assertSessionHasNoErrors();
+        $settings = $store->fresh()->template_settings['textil-pro']['hero'];
+        $this->assertSame($banner, $settings['image']);
+        $html = $this->get(route('store.show', $store->slug))->assertOk()
+            ->assertSee('data-tpl-choice="hero.banner_text" data-choice="image"', false)
+            ->assertSee('media="(max-width: 900px)" data-media="(max-width: 900px)"', false)
+            ->assertSee('srcset="' . asset('storage/' . $settings['image_mobile']) . '"', false)
+            ->assertSee('media="(min-width: 901px)"', false)
+            ->getContent();
+        // El banner entero lleva a donde apunta el botón secundario.
+        $this->assertMatchesRegularExpression('/class="tx-hero-link" href="[^"]*sort=newest"/', $html);
+
+        // Cambiar el banner borra el anterior; quitarlo vuelve a la prenda ilustrada.
+        $save(['hero' => ['image' => UploadedFile::fake()->image('navidad.png', 1920, 800)]])->assertSessionHasNoErrors();
+        Storage::disk('public')->assertMissing($banner);
+        $save([], ['remove_images' => ['hero.image', 'hero.image_mobile']])->assertSessionHasNoErrors();
+        $this->get(route('store.show', $store->slug))->assertOk()->assertDontSee('data-tpl-img-host data-has-image', false);
+
+        $save(['hero' => ['image' => UploadedFile::fake()->create('banner.pdf', 10, 'application/pdf'), 'banner_text' => 'video']])
+            ->assertSessionHasErrors(['settings.hero.image', 'settings.hero.banner_text']);
     }
 
     public function test_products_are_shown_right_below_the_hero(): void
@@ -189,7 +243,9 @@ class TextilProTemplateTest extends TestCase
             ->assertSee('Personalizar · Textil Pro', false)
             ->assertSee('Servicio 6')
             ->assertSee('Rango 4')
-            ->assertSee('Mensaje con el que el cliente abre WhatsApp');
+            ->assertSee('Mensaje con el que el cliente abre WhatsApp')
+            ->assertSee('Banner para computadora')
+            ->assertSee('Solo el banner (mi imagen ya trae el texto)');
 
         $this->put(route('dashboard.plantillas.update'), ['settings' => [
             'colors' => ['primary' => '#FDD835', 'secondary' => '#27306B'],
@@ -210,6 +266,7 @@ class TextilProTemplateTest extends TestCase
 
         $this->get(route('dashboard.plantillas.frame', 'textil-pro'))->assertOk()
             ->assertSee('data-tpl-img="hero.image"', false)
+            ->assertSee('data-tpl-img="hero.image_mobile"', false)
             ->assertSee('data-tpl-show="faq.enabled"', false)
             ->assertSee('data-tpl-show="showcase.enabled"', false)
             ->assertSee('Aquí aparecerán tus productos destacados');

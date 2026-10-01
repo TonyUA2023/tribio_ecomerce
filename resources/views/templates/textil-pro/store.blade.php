@@ -13,7 +13,10 @@
     $quoteUrl = $store->whatsapp_link
         ? $store->whatsapp_link . '?text=' . rawurlencode($t->text('contact.whatsapp_message'))
         : route('store.contact', $store->slug);
+    // Banner de portada: versión de computadora y, opcional, de celular (se usa la que haya).
     $heroImage = $t->image('hero.image');
+    $heroMobile = $t->image('hero.image_mobile');
+    $heroSrc = $heroImage ?: $heroMobile;
     $secondaryLink = $t->link('hero.cta_secondary_link') ?? route('store.catalog', $store->slug);
 
     $products = collect($allProducts->items());
@@ -37,14 +40,31 @@
 @section('title', $store->name . ' - ' . ($store->tagline ?: ($isEn ? 'Custom printing' : 'Estampados y confección')))
 
 @push('preload')
-    @if($heroImage)
-        <link rel="preload" as="image" href="{{ $heroImage }}">
+    @if($heroImage && $heroMobile)
+        <link rel="preload" as="image" href="{{ $heroImage }}" media="(min-width: 901px)">
+        <link rel="preload" as="image" href="{{ $heroMobile }}" media="(max-width: 900px)">
+    @elseif($heroSrc)
+        <link rel="preload" as="image" href="{{ $heroSrc }}">
     @endif
 @endpush
 
 @section('content')
     {{-- ═════ Portada ═════ --}}
-    <section class="tx-hero" data-tpl-choice="hero.style" data-choice="{{ $t->choice('hero.style') }}">
+    {{-- Con banner, la imagen ocupa todo el ancho: con el título y los botones encima, o sola
+         si ya trae el texto (los botones pasan debajo). Sin banner se muestra la prenda
+         ilustrada. Cada envoltorio lleva una opción para que la vista previa cambie al instante. --}}
+    <section class="tx-hero" data-tpl-choice="hero.style" data-choice="{{ $t->choice('hero.style') }}" data-tpl-img-host{{ $heroSrc ? ' data-has-image' : '' }}>
+        <div class="tx-hero-mode" data-tpl-choice="hero.banner_text" data-choice="{{ $t->choice('hero.banner_text') }}">
+        <div class="tx-hero-size" data-tpl-choice="hero.height" data-choice="{{ $t->choice('hero.height') }}">
+        <div class="tx-hero-media">
+            <picture>
+                <source media="{{ $heroMobile ? '(max-width: 900px)' : 'not all' }}" data-media="(max-width: 900px)"
+                        srcset="{{ $heroMobile ?? '' }}" data-tpl-img="hero.image_mobile">
+                <img src="{{ $heroSrc ?? '' }}" alt="{{ $store->name }}" data-tpl-img="hero.image" fetchpriority="high" @unless($heroSrc) hidden @endunless>
+            </picture>
+            <a class="tx-hero-link" href="{{ $secondaryLink }}" aria-label="{{ $t->text('hero.cta_secondary') ?: $store->name }}"></a>
+        </div>
+        <div class="tx-hero-scrim" data-tpl-choice="hero.shade" data-choice="{{ $t->choice('hero.shade') }}"></div>
         <div class="tx-narrow tx-hero-grid">
             <div class="tx-hero-copy">
                 <p class="tx-eyebrow" data-tpl-text="hero.eyebrow" data-tpl-hide-empty @if($t->text('hero.eyebrow') === '') hidden @endif>{{ $t->text('hero.eyebrow') }}</p>
@@ -67,9 +87,8 @@
                 </ul>
             </div>
 
-            <div class="tx-hero-visual" data-tpl-img-host @if($heroImage) data-has-image @endif>
-                <img class="tx-hero-photo" src="{{ $heroImage ?? '' }}" alt="" data-tpl-img="hero.image" fetchpriority="high" @unless($heroImage) hidden @endunless>
-                {{-- Sin foto: una prenda ilustrada con los colores de la tienda y su marca estampada. --}}
+            <div class="tx-hero-visual">
+                {{-- Sin banner: una prenda ilustrada con los colores de la tienda y su marca estampada. --}}
                 <div class="tx-shirt" aria-hidden="true">
                     <svg viewBox="0 0 400 420" class="tx-shirt-svg">
                         <path class="tx-shirt-body" d="M130 30c14 22 40 34 70 34s56-12 70-34l96 42-34 88-44-18v248H112V142l-44 18-34-88Z"/>
@@ -86,6 +105,8 @@
                 <span class="tx-float is-a" data-tpl-text="hero.badges.items.0.text" data-tpl-hide-empty @if($t->text('hero.badges.items.0.text') === '') hidden @endif>{{ $t->text('hero.badges.items.0.text') }}</span>
                 <span class="tx-float is-b" data-tpl-text="hero.badges.items.1.text" data-tpl-hide-empty @if($t->text('hero.badges.items.1.text') === '') hidden @endif>{{ $t->text('hero.badges.items.1.text') }}</span>
             </div>
+        </div>
+        </div>
         </div>
     </section>
 
