@@ -43,6 +43,13 @@ class CustomerAuthController extends Controller
             'name'     => 'required|string|max:255',
             'phone'    => 'nullable|string|max:25',
             'password' => 'required|string|min:6',
+            // Optional home address, same fields as the web Tribio Pass registration.
+            'address'  => 'nullable|string|max:255',
+            'city'     => 'nullable|string|max:100',
+            'state'    => 'nullable|string|max:100',
+            'country'  => 'nullable|string|size:2',
+            'zipcode'  => 'nullable|string|max:20',
+            'type'     => 'nullable|string|in:casa,trabajo,otro',
         ]);
 
         $email = trim(strtolower($request->email));
@@ -66,6 +73,12 @@ class CustomerAuthController extends Controller
             'email'    => $email,
             'phone'    => $request->phone,
             'password' => $request->password,
+            'address'  => $request->address,
+            'city'     => $request->city,
+            'state'    => $request->state,
+            'country'  => $request->country ? strtoupper($request->country) : null,
+            'zipcode'  => $request->zipcode ? trim($request->zipcode) : null,
+            'type'     => $request->type,
         ]);
 
         $token = $user->createToken('mobile-app')->plainTextToken;

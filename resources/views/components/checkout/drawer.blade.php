@@ -741,6 +741,10 @@
                                             <input x-show="!geoStates.length" type="text" x-model="customer.state" @blur="updateShipping" class="w-full bg-white border border-[var(--pay-border)] rounded-lg px-3 py-2.5 text-sm outline-none">
                                         </div>
                                     </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-[var(--pay-text-muted)] mb-1">Código postal (ZIP)</label>
+                                        <input type="text" x-model="customer.zipcode" maxlength="20" autocomplete="postal-code" placeholder="Ej. 15074" class="w-full bg-white border border-[var(--pay-border)] rounded-lg px-3 py-2.5 text-sm outline-none">
+                                    </div>
                                 </div>
                             </template>
                         </div>

@@ -92,6 +92,32 @@ class CustomerAuthApiTest extends TestCase
         $this->assertNull(Cache::get('otp_nueva@example.test'));
     }
 
+    public function test_verify_otp_saves_the_zipcode_with_the_home_address(): void
+    {
+        config(['services.brevo.api_key' => null]);
+        Cache::put('otp_nueva@example.test', '123456', now()->addMinutes(15));
+
+        $this->postJson('/api/customer/register/verify', [
+            'email' => 'nueva@example.test', 'token' => '123456', 'name' => 'Compradora Nueva', 'password' => 'secret123',
+            'address' => 'Av. Arequipa 123', 'city' => 'Lima', 'state' => 'Lima', 'country' => 'pe', 'zipcode' => ' 15074 ',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('customer_addresses', ['address' => 'Av. Arequipa 123', 'country' => 'PE', 'zipcode' => '15074', 'is_default' => true]);
+    }
+
+    public function test_web_register_saves_the_zipcode_with_the_home_address(): void
+    {
+        config(['services.brevo.api_key' => null]);
+        Cache::put('otp_web@example.test', '123456', now()->addMinutes(15));
+
+        $this->postJson(route('customer.register.verify'), [
+            'email' => 'web@example.test', 'token' => '123456', 'name' => 'Web', 'password' => 'secret123',
+            'address' => 'Calle 1', 'country' => 'PE', 'zipcode' => '04001',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('customer_addresses', ['address' => 'Calle 1', 'zipcode' => '04001']);
+    }
+
     public function test_verify_otp_reassociates_prior_guest_orders_to_the_new_account(): void
     {
         $store = Store::create(['user_id' => User::factory()->create(['role' => 'store_owner'])->id, 'name' => 'Tienda', 'slug' => 'tienda', 'status' => 'active']);
