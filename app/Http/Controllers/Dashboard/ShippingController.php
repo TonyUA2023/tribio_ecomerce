@@ -32,14 +32,20 @@ class ShippingController extends Controller
             'cost'         => 'required|numeric|min:0',
         ]);
 
-        $store->shippingRates()->create([
-            'country_code' => strtoupper($request->country_code),
-            'state'        => $request->state,
-            'cost'         => $request->cost,
-            'is_active'    => true,
-        ]);
+        $country = strtoupper($request->country_code);
+        $geo = app(\App\Services\Geo\GeoCatalog::class);
+        $state = $country === 'ALL' ? null : $geo->canonical($country, $request->state);
+        if ($state && !$geo->isValidState($country, $state)) {
+            return back()->withErrors(['state' => 'Ese departamento/estado no existe para el país elegido.'])->withInput();
+        }
 
-        return back()->with('success', 'Tarifa de envío agregada correctamente.');
+        // One rate per destination: re-saving a zone updates its cost instead of duplicating it.
+        $store->shippingRates()->updateOrCreate(
+            ['country_code' => $country, 'state' => $state],
+            ['cost' => $request->cost, 'is_active' => true],
+        );
+
+        return back()->with('success', 'Tarifa de envío guardada correctamente.');
     }
 
     public function destroy(ShippingRate $shipping)

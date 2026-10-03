@@ -26,12 +26,10 @@ class ShippingRateController extends Controller
 
     public function store(SaveShippingRateRequest $request): JsonResponse
     {
-        $rate = $this->currentStore()->shippingRates()->create([
-            'country_code' => $request->country_code,
-            'state'        => $request->state,
-            'cost'         => $request->cost,
-            'is_active'    => true,
-        ]);
+        $rate = $this->currentStore()->shippingRates()->updateOrCreate(
+            ['country_code' => $request->country_code, 'state' => $request->state],
+            ['cost' => $request->cost, 'is_active' => true],
+        );
 
         return response()->json(['message' => 'Tarifa de envío agregada correctamente.', 'rate' => new ShippingRateResource($rate)], 201);
     }

@@ -326,8 +326,9 @@ class StoreController extends Controller
     public function getShippingCost(Request $request, string $slug)
     {
         $store = $this->getStore($slug);
-        $country = $request->input('country', 'PE');
-        $state = $request->input('state');
+        $geo = app(\App\Services\Geo\GeoCatalog::class);
+        $country = strtoupper((string) $request->input('country', 'PE')) ?: 'PE';
+        $state = $geo->canonical($country, $request->input('state'));
         $quantity = (int) $request->input('quantity', 0);
         $subtotal = (float) $request->input('subtotal', 0);
 
@@ -339,6 +340,8 @@ class StoreController extends Controller
 
         return response()->json([
             'cost'          => $cost,
+            'country'       => $country,
+            'state'         => $state,
             'free_shipping' => $freeShipping,
             'discount'      => $store->calculateBulkDiscount($subtotal, $quantity),
         ]);
@@ -423,8 +426,9 @@ class StoreController extends Controller
             'express_shipping' => 'nullable|boolean',
         ]);
 
-        $country = $request->customer_country ?? 'PE';
-        $state   = $request->customer_state;
+        // One normalized destination feeds the quote, the order and every gateway.
+        $country = strtoupper((string) ($request->customer_country ?: 'PE'));
+        $state   = app(\App\Services\Geo\GeoCatalog::class)->canonical($country, $request->customer_state);
 
         // The courier needs the buyer's ID. If the checkout form didn't send one, the
         // Mercado Pago card form's payer identification is the same person's document.

@@ -64,6 +64,7 @@
          currentCurrency: '{{ \App\Helpers\CurrencyHelper::currentCurrency() }}',
          currencySymbol: '{{ \App\Helpers\CurrencyHelper::symbol() }}',
          shippingCost: 0,
+         geoStates: [],
          discount: 0,
          freeShippingActive: false,
          hasMercadoPago: {{ $hasMpCapable ? 'true' : 'false' }},
@@ -387,8 +388,25 @@
              this.onCustomerLogout();
              window.dispatchEvent(new CustomEvent('customer-logged-out'));
          },
+         loadGeoStates() {
+             const country = this.customer.country;
+             if (!country) { this.geoStates = []; return; }
+             fetch(`/api/geo/countries/${country}/states`)
+                 .then(r => r.json())
+                 .then(d => {
+                     if (country !== this.customer.country) return;
+                     this.geoStates = d.data || [];
+                     if (this.customer.state && this.geoStates.length && !this.geoStates.includes(this.customer.state)) {
+                         const norm = v => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+                         this.customer.state = this.geoStates.find(s => norm(s) === norm(this.customer.state)) || '';
+                     }
+                     this.updateShipping();
+                 })
+                 .catch(() => { this.geoStates = []; });
+         },
          updateShipping() {
              if (!this.customer.country) return;
+             if (this._geoCountry !== this.customer.country) { this._geoCountry = this.customer.country; this.loadGeoStates(); }
              const params = new URLSearchParams({
                  country: this.customer.country,
                  state: this.customer.state || '',
@@ -716,7 +734,11 @@
                                         </div>
                                         <div>
                                             <label class="block text-xs font-bold text-[var(--pay-text-muted)] mb-1">Estado / Depto.</label>
-                                            <input type="text" x-model="customer.state" @blur="updateShipping" class="w-full bg-white border border-[var(--pay-border)] rounded-lg px-3 py-2.5 text-sm outline-none">
+                                            <select x-show="geoStates.length" x-model="customer.state" @change="updateShipping()" class="w-full bg-white border border-[var(--pay-border)] rounded-lg px-3 py-2.5 text-sm outline-none">
+                                                <option value="">Selecciona…</option>
+                                                <template x-for="s in geoStates" :key="s"><option :value="s" x-text="s"></option></template>
+                                            </select>
+                                            <input x-show="!geoStates.length" type="text" x-model="customer.state" @blur="updateShipping" class="w-full bg-white border border-[var(--pay-border)] rounded-lg px-3 py-2.5 text-sm outline-none">
                                         </div>
                                     </div>
                                 </div>
