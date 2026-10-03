@@ -12,16 +12,6 @@
         </div>
     @endif
 
-    <div class="p-4 rounded-xl bg-white/3 border border-white/10 flex items-center justify-between gap-4 flex-wrap">
-        <p class="text-xs text-white/60">🎁 ¿Buscas envío gratis por cantidad/monto o descuentos por compra al por mayor? Eso se configura en <strong class="text-white">Mi Tienda</strong>, junto a las tarifas de envío.</p>
-        <a href="{{ route('dashboard.store.edit') }}#" class="btn-secondary py-2 px-4 text-xs flex-shrink-0">Ir a Mi Tienda →</a>
-    </div>
-
-    <div class="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 flex items-center justify-between gap-4 flex-wrap">
-        <p class="text-xs text-white/60">⚠️ <strong class="text-white">Mi Tienda</strong> también tiene una tarifa para "todo el Perú" y una caja por país (US, ES, MX, CO, EC, CL, AR). Si ese campo tiene un valor ahí, gana <strong class="text-white">esa</strong> tarifa y las zonas de abajo para ese mismo país (sin departamento/estado) se ignoran — usa esta página para tarifas por departamento/estado, o para el costo "Resto del Mundo".</p>
-        <a href="{{ route('dashboard.store.edit') }}#" class="btn-secondary py-2 px-4 text-xs flex-shrink-0">Ir a Mi Tienda →</a>
-    </div>
-
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         <!-- Formulario -->
@@ -44,7 +34,7 @@
                     @csrf
                     <div>
                         <label class="input-label">País</label>
-                        <select name="country_code" class="input-field" required x-model="country" @change="state = ; load()">
+                        <select name="country_code" class="input-field" required x-model="country" @change="state = ''; load()">
                             <option value="ALL">🌎 Resto del Mundo (ALL)</option>
                             @foreach($countries as $country)
                                 <option value="{{ $country['code'] }}">{{ $country['flag'] }} {{ $country['name'] }} ({{ $country['code'] }})</option>

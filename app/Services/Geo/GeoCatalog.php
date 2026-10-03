@@ -5,6 +5,7 @@ namespace App\Services\Geo;
 use App\Helpers\CurrencyHelper;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -125,8 +126,10 @@ class GeoCatalog
         $data['PE']['states'] = self::PERU;
 
         try {
-            $res = Http::timeout(15)->acceptJson()->get('https://countriesnow.space/api/v0.1/countries/states');
+            $res = Http::timeout(30)->retry(2, 500, throw: false)->acceptJson()->get('https://countriesnow.space/api/v0.1/countries/states');
             if (!$res->ok() || $res->json('error') || !is_array($res->json('data'))) {
+                Log::warning('GeoCatalog: countriesnow.space unusable, using offline fallback', ['status' => $res->status()]);
+
                 return ['live' => false, 'data' => $data];
             }
             foreach ($res->json('data') as $row) {
@@ -145,7 +148,9 @@ class GeoCatalog
             }
 
             return ['live' => true, 'data' => $data];
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            Log::warning('GeoCatalog: countriesnow.space request failed, using offline fallback', ['error' => $e->getMessage()]);
+
             return ['live' => false, 'data' => $data];
         }
     }
