@@ -473,8 +473,8 @@
     .sp-pay { display: flex; gap: 8px; flex-wrap: wrap; }
     .sp-pay span { display: inline-flex; align-items: center; justify-content: center; height: 26px; min-width: 42px; padding: 0 6px; background: #fff; color: #1a1f71; border-radius: 3px; font: 800 11px var(--font-body); letter-spacing: .02em; }
     .sp-footer-copy { color: #BDBDBD; font-size: 13px; }
-    @media (max-width: 1023px) { .sp-footer-grid { grid-template-columns: 1fr 1fr; } }
-    @media (max-width: 639px) { .sp-footer-grid { grid-template-columns: 1fr; gap: 30px; } }
+    @media (max-width: 1023px) { .sp-footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 639px) { .sp-footer-grid { grid-template-columns: minmax(0, 1fr); gap: 30px; } }
 
     /* Pestaña "Regístrate" y WhatsApp */
     .sp-signup { position: fixed; left: 24px; bottom: 24px; z-index: 44; display: inline-flex; align-items: center; background: #fff; border: 1px solid var(--sp-ink); box-shadow: 0 6px 20px rgba(0, 0, 0, .12); border-radius: var(--sp-radius); }
