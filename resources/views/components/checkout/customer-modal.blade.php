@@ -24,7 +24,7 @@
         errorMessage: '',
         successMessage: '',
         loginData: { email: '', password: '' },
-        registerData: { name: '', email: '', phone: '', password: '', address: '', city: '', state: '', country: '{{ \App\Helpers\CurrencyHelper::currentCountry() }}', type: 'casa' },
+        registerData: { name: '', email: '', phone: '', password: '', address: '', city: '', state: '', zipcode: '', country: '{{ \App\Helpers\CurrencyHelper::currentCountry() }}', type: 'casa' },
         trackData: { order_number: '', email: '' },
         showAddressForm: false,
         newAddress: { id: null, type: 'casa', address: '', city: '', state: '', country: '{{ \App\Helpers\CurrencyHelper::currentCountry() }}', zipcode: '', reference: '', phone: '', is_default: false },
@@ -52,6 +52,7 @@
                 if (e.detail && e.detail.address) this.registerData.address = e.detail.address;
                 if (e.detail && e.detail.city) this.registerData.city = e.detail.city;
                 if (e.detail && e.detail.state) this.registerData.state = e.detail.state;
+                if (e.detail && e.detail.zipcode) this.registerData.zipcode = e.detail.zipcode;
                 if (e.detail && e.detail.country) this.registerData.country = e.detail.country;
                 if (e.detail && e.detail.fromCheckout) this.fromCheckout = true;
                 if (this.isLoggedIn) { this.loadOrders(); this.loadAddresses(); }
@@ -108,14 +109,19 @@
 
         async fetchCountries() {
             try {
-                const res = await fetch('https://countriesnow.space/api/v0.1/countries/states');
+                // Same country/department catalog the store owner uses for shipping zones (GeoCatalog).
+                const res = await fetch('/api/geo/countries');
                 const data = await res.json();
-                if (!data.error) { this.countriesList = data.data; this.updateStates(this.registerData.country); }
+                if (Array.isArray(data.data)) { this.countriesList = data.data; this.updateStates(this.registerData.country); }
             } catch (e) {}
         },
-        updateStates(countryIso2) {
+        async updateStates(countryIso2) {
             const country = this.countriesList.find(c => c.iso2 === countryIso2 || c.name === countryIso2);
-            this.statesList = country ? country.states : [];
+            if (!country) { this.statesList = []; return; }
+            try {
+                const res = await fetch(`/api/geo/countries/${country.iso2}/states`);
+                this.statesList = ((await res.json()).data || []).map(n => ({ name: n, state_code: n }));
+            } catch (e) { this.statesList = []; }
         },
         searchAddress(query) {
             if (!query || query.length < 4) { this.addressSuggestions = []; return; }
@@ -133,6 +139,7 @@
             if (item.address) {
                 if (item.address.city || item.address.town || item.address.village) this.registerData.city = item.address.city || item.address.town || item.address.village;
                 if (item.address.state) this.registerData.state = item.address.state;
+                if (item.address.postcode) this.registerData.zipcode = item.address.postcode;
             }
             this.addressSuggestions = [];
         },
@@ -492,7 +499,10 @@
                                 </div>
                             </div>
 
-                            <input type="text" x-model="registerData.city" placeholder="Ciudad / Provincia (Ej. Lima)" class="w-full bg-white border border-[var(--pay-border)] rounded-xl px-3 py-2 text-xs outline-none">
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="text" x-model="registerData.city" placeholder="Ciudad / Provincia (Ej. Lima)" class="w-full bg-white border border-[var(--pay-border)] rounded-xl px-3 py-2 text-xs outline-none">
+                                <input type="text" x-model="registerData.zipcode" maxlength="20" autocomplete="postal-code" placeholder="Código postal (ZIP)" class="w-full bg-white border border-[var(--pay-border)] rounded-xl px-3 py-2 text-xs outline-none">
+                            </div>
                         </div>
 
                         <button type="submit" :disabled="loading" style="background: var(--pay-accent);" class="w-full py-3 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 hover:opacity-90">
@@ -694,6 +704,10 @@
                                 <label class="block text-xs font-bold text-[var(--pay-text-muted)] mb-1">Departamento / Estado</label>
                                 <input type="text" x-model="newAddress.state" placeholder="Lima, Cusco, etc." class="w-full bg-white border border-[var(--pay-border)] rounded-xl px-3 py-2 text-xs outline-none">
                             </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-[var(--pay-text-muted)] mb-1">Código postal (ZIP)</label>
+                            <input type="text" x-model="newAddress.zipcode" maxlength="20" autocomplete="postal-code" placeholder="Ej. 15074" class="w-full bg-white border border-[var(--pay-border)] rounded-xl px-3 py-2 text-xs outline-none">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-[var(--pay-text-muted)] mb-1">Referencia</label>

@@ -10,7 +10,7 @@ class GeoController extends Controller
 {
     public function countries(GeoCatalog $geo): JsonResponse
     {
-        return response()->json(['data' => $geo->countries()]);
+        return response()->json(['data' => collect($geo->countries())->map(fn ($c) => $c + ['iso2' => $c['code']])->all()]);
     }
 
     public function states(GeoCatalog $geo, string $country): JsonResponse

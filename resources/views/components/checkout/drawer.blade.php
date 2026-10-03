@@ -18,6 +18,10 @@
     $hasFlowCapable = in_array($store->checkout_mode, ['card', 'mixed']) && $store->payment_gateway === 'flow' && app(\App\Services\FlowService::class)->isConfigured($store);
     $flowCurrencyMatches = \App\Helpers\CurrencyHelper::currentCurrency() === $store->flow_currency;
     $defaultPayment = $hasMpCapable ? 'card' : (($hasFlowCapable && $flowCurrencyMatches) ? 'flow' : ($hasPaypalCapable ? 'paypal' : (in_array($store->checkout_mode, ['whatsapp', 'mixed']) ? 'whatsapp' : '')));
+    // Con varios medios de pago ninguno arranca elegido: así el formulario de tarjeta no ocupa
+    // todo el panel y el comprador escoge él mismo (ver `paymentLocked` más abajo).
+    $paymentOptionCount = ($hasMpCapable ? 2 : 0) + (int) $hasFlowCapable + (int) $hasPaypalCapable + (int) in_array($store->checkout_mode, ['whatsapp', 'mixed']);
+    $initialPayment = $paymentOptionCount > 1 ? '' : $defaultPayment;
 @endphp
 <script>window.tribioCsrfToken = '{{ csrf_token() }}';</script>
 {{-- Hidden by the ONE style attribute: a second style="" on the same tag is dropped by the browser, which made this panel flash open until Alpine loaded. --}}
@@ -77,7 +81,8 @@
          paypalReady: false,
          paypalSession: null,
          paypalOrderNumber: null,
-         paymentMethod: '{{ $defaultPayment }}',
+         paymentMethod: '{{ $initialPayment }}',
+         hasAnyPayment: {{ $defaultPayment !== '' ? 'true' : 'false' }},
          hasActiveToken: {{ (!empty($store->mp_access_token) || !empty($store->gateway_access_token)) ? 'true' : 'false' }},
 @if($store->made_to_order_enabled)
          depositPercent: {{ $store->depositPercent() }},
@@ -508,9 +513,12 @@
          },
          submitOrder() {
              if (this.submitting) return;
-             if (!this.paymentMethod) { this.errors.payment = 'La tienda todavía no tiene un medio de pago disponible.'; return; }
              if (!this.customerLoggedIn) {
                  this.openTribioPass('register');
+                 return;
+             }
+             if (!this.paymentMethod) {
+                 this.errors.payment = this.hasAnyPayment ? 'Selecciona un método de pago para continuar.' : 'La tienda todavía no tiene un medio de pago disponible.';
                  return;
              }
              if (this.paymentMethod === 'paypal') {
@@ -741,6 +749,10 @@
                                             <input x-show="!geoStates.length" type="text" x-model="customer.state" @blur="updateShipping" class="w-full bg-white border border-[var(--pay-border)] rounded-lg px-3 py-2.5 text-sm outline-none">
                                         </div>
                                     </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-[var(--pay-text-muted)] mb-1">Código postal (ZIP)</label>
+                                        <input type="text" x-model="customer.zipcode" maxlength="20" autocomplete="postal-code" placeholder="Ej. 15074" class="w-full bg-white border border-[var(--pay-border)] rounded-lg px-3 py-2.5 text-sm outline-none">
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -760,8 +772,17 @@
                     </template>
 
                     <div class="pt-1">
-                        <label class="block text-xs font-bold text-[var(--pay-text)] uppercase tracking-wider mb-2">Método de pago</label>
-                        <div class="space-y-2.5">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-xs font-bold text-[var(--pay-text)] uppercase tracking-wider">Método de pago</label>
+                            <span x-show="!customerLoggedIn" x-cloak class="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--pay-text-muted)]">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                Inicia sesión para elegir
+                            </span>
+                        </div>
+                        {{-- Bloqueado hasta iniciar sesión: se ve pero no se puede tocar; un clic abre Tribio Pass. --}}
+                        <div class="relative" :class="!customerLoggedIn ? 'opacity-60 select-none' : ''" :aria-disabled="!customerLoggedIn ? 'true' : 'false'">
+                        <div x-show="!customerLoggedIn" x-cloak @click="openTribioPass('login')" class="absolute inset-0 z-10 cursor-pointer rounded-xl" title="Inicia sesión o crea tu cuenta Tribio Pass para elegir cómo pagar"></div>
+                        <div class="space-y-2.5" :inert="!customerLoggedIn">
                             <template x-if="hasMercadoPago">
                                 <label :class="paymentMethod === 'card' ? 'border-[var(--pay-accent)] bg-[var(--pay-surface-muted)] ring-1 ring-[var(--pay-accent)]' : 'border-[var(--pay-border)] bg-white'"
                                        class="flex flex-col p-3.5 rounded-xl border cursor-pointer transition-all">
@@ -858,6 +879,7 @@
                             @endif
                             <span role="alert" x-show="errors.payment" x-text="errors.payment" class="pay-field-error-msg"></span>
                         </div>
+                        </div>
                     </div>
 
                     <div class="pay-trust-strip">
@@ -934,7 +956,7 @@
                         <template x-if="customerLoggedIn && paymentMethod !== 'paypal'">
                             <button id="btnSubmitOrder" @click="submitOrder" :disabled="submitting" style="background: var(--pay-accent);" class="flex-1 py-3 rounded-xl font-bold text-white transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-60 hover:opacity-90">
                                 <span x-show="submitting" class="pay-spinner"></span>
-                                <span x-text="submitting ? 'Procesando...' : (paymentMethod === 'card' ? 'Pagar ahora' : (paymentMethod === 'flow' ? 'Continuar a Flow' : (paymentMethod === 'mercadopago_other' ? 'Continuar al pago' : 'Confirmar pedido')))"></span>
+                                <span x-text="submitting ? 'Procesando...' : (paymentMethod === 'card' ? 'Pagar ahora' : (paymentMethod === 'flow' ? 'Continuar a Flow' : (paymentMethod === 'mercadopago_other' ? 'Continuar al pago' : (paymentMethod ? 'Confirmar pedido' : 'Elige un método de pago'))))"></span>
                             </button>
                         </template>
                         <template x-if="customerLoggedIn && paymentMethod === 'paypal'">

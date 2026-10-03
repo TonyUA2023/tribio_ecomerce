@@ -43,14 +43,14 @@
                                 } }" x-init="load()">
                     @csrf
                     <div>
-                        <label class="input-label">País (Código 2 letras)</label>
+                        <label class="input-label">País</label>
                         <select name="country_code" class="input-field" required x-model="country" @change="state = ; load()">
-                            @foreach($supported as $code => $country)
-                                <option value="{{ $code }}">{{ $country['flag'] }} {{ $country['name'] }} ({{ $code }})</option>
-                            @endforeach
                             <option value="ALL">🌎 Resto del Mundo (ALL)</option>
+                            @foreach($countries as $country)
+                                <option value="{{ $country['code'] }}">{{ $country['flag'] }} {{ $country['name'] }} ({{ $country['code'] }})</option>
+                            @endforeach
                         </select>
-                        <p class="text-[10px] text-white/40 mt-1">Usa 'ALL' para el costo por defecto de otros países.</p>
+                        <p class="text-[10px] text-white/40 mt-1">Lista mundial: la misma que ve el comprador al registrar su dirección. "Resto del Mundo" aplica a los países sin tarifa propia.</p>
                     </div>
 
                     <div>
@@ -64,7 +64,7 @@
                         <template x-if="!states.length">
                             <input type="text" name="state" class="input-field" placeholder="Ej: Lima, California" x-model="state" :disabled="country === 'ALL'">
                         </template>
-                        <p class="text-[10px] text-white/40 mt-1"><span x-show="loading">Cargando departamentos…</span><span x-show="!loading">Los departamentos vienen de la misma API que usa el checkout. Déjalo en "Todo el país" para aplicar a todo el país.</span></p>
+                        <p class="text-[10px] text-white/40 mt-1"><span x-show="loading">Cargando departamentos…</span><span x-show="!loading">Los departamentos/estados son los mismos que ve el comprador al registrarse. "Todo el país" aplica a todo el país.</span></p>
                         @error('state')<p class="text-[11px] text-red-400 mt-1">{{ $message }}</p>@enderror
                     </div>
 
@@ -118,7 +118,7 @@
                             @endphp
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4 font-bold text-white">
-                                    {{ $rate->country_code === 'ALL' ? '🌎 Resto del Mundo' : $rate->country_code }}
+                                    {{ $rate->country_code === 'ALL' ? '🌎 Resto del Mundo' : (app(\App\Services\Geo\GeoCatalog::class)->countryName($rate->country_code) ?? $rate->country_code) }}
                                     @if($isShadowed)
                                         <span class="ml-1.5 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 text-[10px] font-semibold align-middle" title="Mi Tienda tiene un valor para este país, así que esa tarifa se usa en vez de esta.">⚠️ Sobrescrita por Mi Tienda</span>
                                     @endif
