@@ -20,6 +20,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(\App\Services\Geo\GeoCatalog::class);
         $this->app->singleton(TemplateRegistry::class);
     }
 

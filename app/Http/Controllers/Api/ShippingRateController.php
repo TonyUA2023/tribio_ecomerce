@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Helpers\CurrencyHelper;
+use App\Services\Geo\GeoCatalog;
 use App\Http\Controllers\Api\Concerns\ResolvesCurrentStore;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\SaveShippingRateRequest;
@@ -18,9 +18,7 @@ class ShippingRateController extends Controller
     {
         return response()->json([
             'data'      => ShippingRateResource::collection($this->currentStore()->shippingRates()->orderBy('country_code')->orderBy('state')->get()),
-            'countries' => collect(CurrencyHelper::supportedCountries())
-                ->map(fn (array $c) => ['code' => $c['code'], 'name' => $c['name'], 'flag' => $c['flag'], 'currency' => $c['currency'], 'symbol' => $c['symbol']])
-                ->values(),
+            'countries' => app(GeoCatalog::class)->countries(),
         ]);
     }
 

@@ -2,10 +2,8 @@
 
 namespace App\Http\Requests\Api;
 
-use App\Helpers\CurrencyHelper;
 use Illuminate\Foundation\Http\FormRequest;
 use App\Services\Geo\GeoCatalog;
-use Illuminate\Validation\Rule;
 
 class SaveShippingRateRequest extends FormRequest
 {
@@ -26,7 +24,11 @@ class SaveShippingRateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'country_code' => ['required', 'string', Rule::in(array_keys(CurrencyHelper::supportedCountries()))],
+            'country_code' => ['required', 'string', function ($attr, $value, $fail) {
+                if ($value !== 'ALL' && !app(GeoCatalog::class)->isValidCountry($value)) {
+                    $fail('Ese país no existe.');
+                }
+            }],
             'state'        => ['nullable', 'string', 'max:100', function ($attr, $value, $fail) {
                 if ($value && !app(GeoCatalog::class)->isValidState($this->input('country_code'), $value)) {
                     $fail('Ese departamento/estado no existe para el país elegido.');
@@ -38,6 +40,6 @@ class SaveShippingRateRequest extends FormRequest
 
     public function messages(): array
     {
-        return ['country_code.in' => 'Ese país todavía no está disponible para envíos.'];
+        return [];
     }
 }

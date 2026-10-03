@@ -109,14 +109,19 @@
 
         async fetchCountries() {
             try {
-                const res = await fetch('https://countriesnow.space/api/v0.1/countries/states');
+                // Same country/department catalog the store owner uses for shipping zones (GeoCatalog).
+                const res = await fetch('/api/geo/countries');
                 const data = await res.json();
-                if (!data.error) { this.countriesList = data.data; this.updateStates(this.registerData.country); }
+                if (Array.isArray(data.data)) { this.countriesList = data.data; this.updateStates(this.registerData.country); }
             } catch (e) {}
         },
-        updateStates(countryIso2) {
+        async updateStates(countryIso2) {
             const country = this.countriesList.find(c => c.iso2 === countryIso2 || c.name === countryIso2);
-            this.statesList = country ? country.states : [];
+            if (!country) { this.statesList = []; return; }
+            try {
+                const res = await fetch(`/api/geo/countries/${country.iso2}/states`);
+                this.statesList = ((await res.json()).data || []).map(n => ({ name: n, state_code: n }));
+            } catch (e) { this.statesList = []; }
         },
         searchAddress(query) {
             if (!query || query.length < 4) { this.addressSuggestions = []; return; }

@@ -17,39 +17,52 @@ use Illuminate\Support\Str;
  */
 class GeoCatalog
 {
+    private ?array $memo = null;
+
     private const PERU = [
         'Amazonas', 'Áncash', 'Apurímac', 'Arequipa', 'Ayacucho', 'Cajamarca', 'Callao', 'Cusco',
         'Huancavelica', 'Huánuco', 'Ica', 'Junín', 'La Libertad', 'Lambayeque', 'Lima', 'Loreto',
         'Madre de Dios', 'Moquegua', 'Pasco', 'Piura', 'Puno', 'San Martín', 'Tacna', 'Tumbes', 'Ucayali',
     ];
 
-    /** countriesnow.space names that differ from CurrencyHelper's Spanish names. */
-    private const API_NAMES = [
-        'PE' => 'Peru', 'US' => 'United States', 'ES' => 'Spain', 'MX' => 'Mexico',
-        'CO' => 'Colombia', 'EC' => 'Ecuador', 'CL' => 'Chile', 'AR' => 'Argentina',
-    ];
+    private const WORLD_KEY = 'geo.world.v2';
 
-    /** @return list<array{code: string, name: string, flag: ?string, currency: string}> */
+    /**
+     * Every country in the world (the same countriesnow.space dataset the buyer's registration
+     * form used to read directly), supported-currency countries first, then A–Z.
+     *
+     * @return list<array{code: string, name: string, flag: string, currency: ?string, supported: bool}>
+     */
     public function countries(): array
     {
-        return collect(CurrencyHelper::supportedCountries())
-            ->map(fn (array $c) => ['code' => $c['code'], 'name' => $c['name'], 'flag' => $c['flag'] ?? null, 'currency' => $c['currency']])
+        $supported = CurrencyHelper::supportedCountries();
+
+        return collect($this->world())
+            ->map(fn (array $c, string $code) => [
+                'code'      => $code,
+                'name'      => $c['name'],
+                'flag'      => $this->flag($code),
+                'currency'  => $supported[$code]['currency'] ?? null,
+                'supported' => isset($supported[$code]),
+            ])
+            ->sortBy(fn (array $c) => ($c['supported'] ? '0' : '1') . Str::ascii($c['name']))
             ->values()->all();
+    }
+
+    public function countryName(string $country): ?string
+    {
+        return $this->world()[strtoupper($country)]['name'] ?? null;
+    }
+
+    public function isValidCountry(string $country): bool
+    {
+        return isset($this->world()[strtoupper(trim($country))]);
     }
 
     /** @return list<string> sorted state names; empty when the country has no known subdivisions */
     public function states(string $country): array
     {
-        $country = strtoupper(trim($country));
-        if (!isset(CurrencyHelper::supportedCountries()[$country])) {
-            return [];
-        }
-
-        return Cache::remember("geo.states.v1.{$country}", now()->addDays(30), function () use ($country) {
-            $fromApi = $this->fetchFromApi($country);
-
-            return $fromApi ?: ($country === 'PE' ? self::PERU : []);
-        });
+        return $this->world()[strtoupper(trim($country))]['states'] ?? [];
     }
 
     /** Canonical spelling of a state for a country, or the trimmed input when unknown. */
@@ -82,26 +95,63 @@ class GeoCatalog
     {
         $key = Str::of(Str::ascii((string) $state))->lower()->squish()->toString();
         $key = preg_replace('/^(departamento|provincia|estado|region|state|province|prov\.?|dpto\.?)\s+(de(l)?\s+)?/', '', $key);
-        $key = preg_replace('/\s+(metropolitana|province|department|state)$/', '', $key);
+        $key = preg_replace('/\s+(metropolitana|province|department|state|region)$/', '', $key);
 
         return trim($key);
     }
 
-    /** @return list<string> */
-    private function fetchFromApi(string $country): array
+    /** @return array<string, array{name: string, states: list<string>}> keyed by ISO alpha-2 */
+    private function world(): array
     {
-        try {
-            $res = Http::timeout(6)->acceptJson()->post('https://countriesnow.space/api/v0.1/countries/states', ['country' => self::API_NAMES[$country] ?? $country]);
-            if (!$res->ok() || $res->json('error')) {
-                return [];
-            }
-            $names = collect($res->json('data.states', []))->pluck('name')
-                ->map(fn ($n) => trim(preg_replace('/\s+(Department|Province|State|Region)$/i', '', (string) $n)))
-                ->filter()->unique()->sort(SORT_LOCALE_STRING)->values()->all();
-
-            return count($names) >= 2 ? $names : [];
-        } catch (\Throwable) {
-            return [];
+        if ($this->memo !== null) {
+            return $this->memo;
         }
+        $world = Cache::get(self::WORLD_KEY);
+        if (!is_array($world)) {
+            $world = $this->fetchWorld();
+            // A failed fetch only sticks briefly so the API gets retried soon.
+            Cache::put(self::WORLD_KEY, $world['data'], $world['live'] ? now()->addDays(30) : now()->addMinutes(10));
+            $world = $world['data'];
+        }
+
+        return $this->memo = $world;
+    }
+
+    /** @return array{live: bool, data: array<string, array{name: string, states: list<string>}>} */
+    private function fetchWorld(): array
+    {
+        $names = require config_path('geo_countries.php');
+        $data = collect($names)->map(fn ($name) => ['name' => $name, 'states' => []])->all();
+        $data['PE']['states'] = self::PERU;
+
+        try {
+            $res = Http::timeout(15)->acceptJson()->get('https://countriesnow.space/api/v0.1/countries/states');
+            if (!$res->ok() || $res->json('error') || !is_array($res->json('data'))) {
+                return ['live' => false, 'data' => $data];
+            }
+            foreach ($res->json('data') as $row) {
+                $code = strtoupper((string) ($row['iso2'] ?? ''));
+                if (!preg_match('/^[A-Z]{2}$/', $code)) {
+                    continue;
+                }
+                $states = collect($row['states'] ?? [])->pluck('name')
+                    ->map(fn ($n) => trim(preg_replace('/\s+(Department|Province|State|Region)$/i', '', (string) $n)))
+                    ->filter()->unique()->sort(SORT_LOCALE_STRING)->values()->all();
+                $data[$code] = [
+                    'name'   => $data[$code]['name'] ?? (string) ($row['name'] ?? $code),
+                    // Keep our own list when the API has too little to be useful (e.g. a lone "Peru").
+                    'states' => count($states) >= 2 ? $states : ($data[$code]['states'] ?? []),
+                ];
+            }
+
+            return ['live' => true, 'data' => $data];
+        } catch (\Throwable) {
+            return ['live' => false, 'data' => $data];
+        }
+    }
+
+    private function flag(string $code): string
+    {
+        return collect(str_split($code))->map(fn ($ch) => mb_chr(0x1F1E6 + ord($ch) - 65))->implode('');
     }
 }

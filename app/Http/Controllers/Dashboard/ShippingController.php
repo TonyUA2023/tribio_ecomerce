@@ -18,8 +18,8 @@ class ShippingController extends Controller
     {
         $store = $this->getStore();
         $rates = $store->shippingRates()->orderBy('country_code')->get();
-        $supported = \App\Helpers\CurrencyHelper::supportedCountries();
-        return view('dashboard.shipping.index', compact('store', 'rates', 'supported'));
+        $countries = app(\App\Services\Geo\GeoCatalog::class)->countries();
+        return view('dashboard.shipping.index', compact('store', 'rates', 'countries'));
     }
 
     public function store(Request $request)
@@ -34,6 +34,9 @@ class ShippingController extends Controller
 
         $country = strtoupper($request->country_code);
         $geo = app(\App\Services\Geo\GeoCatalog::class);
+        if ($country !== 'ALL' && !$geo->isValidCountry($country)) {
+            return back()->withErrors(['country_code' => 'Ese país no existe.'])->withInput();
+        }
         $state = $country === 'ALL' ? null : $geo->canonical($country, $request->state);
         if ($state && !$geo->isValidState($country, $state)) {
             return back()->withErrors(['state' => 'Ese departamento/estado no existe para el país elegido.'])->withInput();

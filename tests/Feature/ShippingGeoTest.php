@@ -39,15 +39,26 @@ class ShippingGeoTest extends TestCase
 
         $this->assertCount(25, $states);
         $this->assertContains('Cusco', $states);
+        $this->assertContains('BR', array_column($this->getJson('/api/geo/countries')->json('data'), 'code'));
     }
 
-    public function test_states_come_from_the_api_and_are_cached(): void
+    public function test_countries_and_states_come_from_the_world_api_and_are_cached(): void
     {
         Cache::flush();
-        Http::fake(['countriesnow.space/*' => Http::response(['error' => false, 'data' => ['states' => [['name' => 'Jalisco'], ['name' => 'Yucatán State']]]])]);
+        Http::fake(['countriesnow.space/*' => Http::response(['error' => false, 'data' => [
+            ['name' => 'Brazil', 'iso2' => 'BR', 'states' => [['name' => 'Bahia', 'state_code' => 'BA'], ['name' => 'São Paulo', 'state_code' => 'SP']]],
+            ['name' => 'Mexico', 'iso2' => 'MX', 'states' => [['name' => 'Jalisco'], ['name' => 'Yucatán State']]],
+        ]])]);
 
         $this->getJson('/api/geo/countries/MX/states')->assertOk()->assertJsonPath('data', ['Jalisco', 'Yucatán']);
-        $this->getJson('/api/geo/countries/MX/states')->assertOk();
+        $this->getJson('/api/geo/countries/br/states')->assertOk()->assertJsonPath('data', ['Bahia', 'São Paulo']);
+        $countries = $this->getJson('/api/geo/countries')->assertOk()->json('data');
+
+        $this->assertGreaterThan(200, count($countries));
+        $firstEight = array_slice(array_column($countries, 'code'), 0, 8);
+        sort($firstEight);
+        $this->assertSame(['AR', 'CL', 'CO', 'EC', 'ES', 'MX', 'PE', 'US'], $firstEight, 'countries with a store currency come first');
+        $this->assertContains('BR', array_column($countries, 'code'));
         Http::assertSentCount(1);
     }
 
@@ -77,9 +88,12 @@ class ShippingGeoTest extends TestCase
         $this->post(route('dashboard.shipping.store'), ['country_code' => 'PE', 'state' => 'CUSCO', 'cost' => 18])->assertSessionHasNoErrors();
         $this->post(route('dashboard.shipping.store'), ['country_code' => 'PE', 'state' => 'Atlantida', 'cost' => 1])->assertSessionHasErrors('state');
 
-        $this->assertSame(1, $store->shippingRates()->count());
-        $this->assertSame('Cusco', $store->shippingRates()->first()->state);
-        $this->assertSame('18.00', (string) $store->shippingRates()->first()->cost);
+        $this->post(route('dashboard.shipping.store'), ['country_code' => 'BR', 'cost' => 40])->assertSessionHasNoErrors();
+        $this->post(route('dashboard.shipping.store'), ['country_code' => 'ZZ', 'cost' => 40])->assertSessionHasErrors('country_code');
+
+        $this->assertSame(2, $store->shippingRates()->count());
+        $this->assertSame('Cusco', $store->shippingRates()->where('country_code', 'PE')->first()->state);
+        $this->assertSame('18.00', (string) $store->shippingRates()->where('country_code', 'PE')->first()->cost);
     }
 
     public function test_shipping_cost_endpoint_echoes_the_normalized_destination(): void
