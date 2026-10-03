@@ -13,6 +13,7 @@
      x-data="{
         isOpen: false,
         activeTab: 'orders',
+        carts: [],
         isLoggedIn: false,
         user: null,
         addresses: [],
@@ -206,6 +207,13 @@
             finally { this.loading = false; }
         },
 
+        // Carritos guardados en este navegador, uno por tienda (ver TribioCart.allCarts()).
+        loadCarts() { this.carts = window.TribioCart ? window.TribioCart.allCarts() : []; },
+        clearStoreCart(scope) {
+            if (!confirm('¿Vaciar el carrito de esta tienda?')) return;
+            if (scope === window.TribioCart.scope) { window.TribioCart.clear(); } else { localStorage.removeItem('tribio_cart:' + scope); }
+            this.loadCarts();
+        },
         async loadAddresses() {
             if (!this.isLoggedIn) return;
             try {
@@ -336,6 +344,13 @@
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                         Mis Pedidos
                         <span x-show="orders.length > 0" class="px-1.5 py-0.2 text-[10px] rounded-full" :class="activeTab === 'orders' ? 'bg-white/25 text-white' : 'bg-stone-200 text-stone-700'" x-text="orders.length"></span>
+                    </button>
+                    <button @click="activeTab = 'carts'; loadCarts();"
+                            :style="activeTab === 'carts' ? 'background: var(--pay-accent); color: #fff;' : ''"
+                            :class="activeTab !== 'carts' ? 'bg-[var(--pay-surface-muted)] text-[var(--pay-text-muted)] hover:bg-stone-200' : 'shadow-sm'"
+                            class="flex-1 py-2 px-3 rounded-xl transition text-center flex items-center justify-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                        Mis Carritos
                     </button>
                     <button @click="activeTab = 'addresses'; loadAddresses();"
                             :style="activeTab === 'addresses' ? 'background: var(--pay-accent); color: #fff;' : ''"
@@ -668,6 +683,38 @@
             </template>
 
             {{-- 4. ADDRESSES --}}
+            <template x-if="isLoggedIn && activeTab === 'carts'">
+                <div class="space-y-3" x-init="loadCarts()">
+                    <p class="text-xs text-[var(--pay-text-muted)]">Cada tienda tiene su propio carrito. Aquí ves lo que dejaste en cada una.</p>
+                    <template x-if="carts.length === 0">
+                        <div class="py-8 text-center bg-[var(--pay-surface-muted)] rounded-2xl border border-dashed border-[var(--pay-border)]">
+                            <p class="text-xs text-[var(--pay-text-muted)]">No tienes carritos con productos.</p>
+                        </div>
+                    </template>
+                    <template x-for="cart in carts" :key="cart.scope">
+                        <div class="p-3.5 rounded-2xl border border-[var(--pay-border)] bg-white space-y-2.5">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="min-w-0">
+                                    <p class="font-bold text-sm text-[var(--pay-text)] truncate" x-text="cart.name"></p>
+                                    <p class="text-[11px] text-[var(--pay-text-muted)]"><span x-text="cart.units"></span> producto(s)<span x-show="cart.current"> · tienda actual</span></p>
+                                </div>
+                                <p class="font-black text-sm text-[var(--pay-text)] whitespace-nowrap" x-text="(cart.total).toFixed(2)"></p>
+                            </div>
+                            <ul class="text-xs text-[var(--pay-text-muted)] space-y-0.5">
+                                <template x-for="it in cart.items.slice(0, 3)" :key="it.cartKey">
+                                    <li class="truncate" x-text="it.quantity + ' × ' + it.name"></li>
+                                </template>
+                                <li x-show="cart.items.length > 3" x-text="'… y ' + (cart.items.length - 3) + ' más'"></li>
+                            </ul>
+                            <div class="flex gap-2">
+                                <a :href="cart.url" style="background: var(--pay-accent);" class="flex-1 py-2.5 text-center text-white text-xs font-bold rounded-xl hover:opacity-90">Ir a esta tienda</a>
+                                <button type="button" @click="clearStoreCart(cart.scope)" class="px-3 py-2.5 text-xs font-bold rounded-xl border border-[var(--pay-border)] text-[var(--pay-text-muted)] hover:bg-[var(--pay-surface-muted)]">Vaciar</button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
             <template x-if="isLoggedIn && activeTab === 'addresses'">
                 <div class="space-y-4">
                     <div class="flex items-center justify-between">

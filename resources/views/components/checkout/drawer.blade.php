@@ -23,6 +23,7 @@
     $paymentOptionCount = ($hasMpCapable ? 2 : 0) + (int) $hasFlowCapable + (int) $hasPaypalCapable + (int) in_array($store->checkout_mode, ['whatsapp', 'mixed']);
     $initialPayment = $paymentOptionCount > 1 ? '' : $defaultPayment;
 @endphp
+<meta name="tribio-store-name" content="{{ $store->name }}">
 <script>window.tribioCsrfToken = '{{ csrf_token() }}';</script>
 {{-- Hidden by the ONE style attribute: a second style="" on the same tag is dropped by the browser, which made this panel flash open until Alpine loaded. --}}
 <div id="cartDrawer"

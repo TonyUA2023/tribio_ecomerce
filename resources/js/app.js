@@ -136,17 +136,49 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // 🛒 Cart system (Tribio store public pages) 🛒
+// One cart PER STORE: the key is scoped by the store's slug (tribioshop.com/tienda/{slug})
+// or, on a custom domain, by the hostname. The old shared 'tribio_cart' key mixed products
+// from different stores, so it is dropped (its items can't be attributed to a store).
+const cartScope = (() => {
+    const m = window.location.pathname.match(/^\/tienda\/([^/]+)/);
+    return (m ? decodeURIComponent(m[1]) : window.location.hostname).toLowerCase();
+})();
+const CART_PREFIX = 'tribio_cart:';
+const CART_KEY = CART_PREFIX + cartScope;
+try { localStorage.removeItem('tribio_cart'); } catch (e) {}
+const readCart = (key) => { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { return []; } };
+
 window.TribioCart = {
-    items: JSON.parse(localStorage.getItem('tribio_cart') || '[]').map(i => {
+    scope: cartScope,
+    items: readCart(CART_KEY).map(i => {
         if (!i.cartKey) {
             i.cartKey = i.variant_id ? `${i.id}-${i.variant_id}` : `${i.id}`;
         }
         return i;
     }),
 
+    // Every store's cart in this browser, for the buyer's "Mis carritos" view.
+    allCarts() {
+        const carts = [];
+        for (let n = 0; n < localStorage.length; n++) {
+            const key = localStorage.key(n);
+            if (!key || !key.startsWith(CART_PREFIX)) continue;
+            const items = readCart(key);
+            if (!items.length) continue;
+            const scope = key.slice(CART_PREFIX.length);
+            const total = items.reduce((sum, i) => sum + (parseFloat(i.price) || 0) * (parseInt(i.quantity, 10) || 0), 0);
+            const units = items.reduce((sum, i) => sum + (parseInt(i.quantity, 10) || 0), 0);
+            carts.push({ scope, name: (localStorage.getItem('tribio_cart_name:' + scope) || scope), url: scope.includes('.') ? `https://${scope}` : `/tienda/${scope}`, items, total, units, current: scope === cartScope });
+        }
+        return carts.sort((a, b) => (b.current - a.current) || a.name.localeCompare(b.name));
+    },
+
     save() {
         this.applyWholesale();
-        localStorage.setItem('tribio_cart', JSON.stringify(this.items));
+        localStorage.setItem(CART_KEY, JSON.stringify(this.items));
+        // Remember a readable store name for the carts list (layouts expose it as <meta name="tribio-store-name">).
+        const storeName = document.querySelector('meta[name="tribio-store-name"]')?.content;
+        if (storeName) localStorage.setItem('tribio_cart_name:' + cartScope, storeName);
         this.updateUI();
         window.dispatchEvent(new CustomEvent('cart-updated', { detail: JSON.parse(JSON.stringify(this.items)) }));
     },
