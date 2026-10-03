@@ -23,6 +23,7 @@
     $paymentOptionCount = ($hasMpCapable ? 2 : 0) + (int) $hasFlowCapable + (int) $hasPaypalCapable + (int) in_array($store->checkout_mode, ['whatsapp', 'mixed']);
     $initialPayment = $paymentOptionCount > 1 ? '' : $defaultPayment;
 @endphp
+<meta name="tribio-store-name" content="{{ $store->name }}">
 <script>window.tribioCsrfToken = '{{ csrf_token() }}';</script>
 {{-- Hidden by the ONE style attribute: a second style="" on the same tag is dropped by the browser, which made this panel flash open until Alpine loaded. --}}
 <div id="cartDrawer"
@@ -628,9 +629,9 @@
                                 <div class="flex justify-between items-center mt-2">
                                     <p class="text-[var(--pay-text)] font-bold text-sm" x-text="formatMoney(item.price * item.quantity)"></p>
                                     <div class="flex items-center gap-2 text-[var(--pay-text-muted)] text-xs bg-white rounded-full border border-[var(--pay-border)] p-1"@if($store->made_to_order_enabled) x-show="!item.fixed_quantity"@endif>
-                                        <button @click="window.TribioCart.updateQuantity(item.cartKey || item.id, item.quantity - 1)" class="w-5 h-5 rounded-full hover:bg-[var(--pay-surface-muted)] flex items-center justify-center font-bold">-</button>
+                                        <button @click="window.TribioCart.updateQuantity(item.cartKey || item.id, item.quantity - 1)" class="w-8 h-8 sm:w-6 sm:h-6 text-base rounded-full hover:bg-[var(--pay-surface-muted)] active:bg-[var(--pay-surface-muted)] flex items-center justify-center font-bold">-</button>
                                         <span x-text="item.quantity" class="w-4 text-center font-medium"></span>
-                                        <button @click="window.TribioCart.updateQuantity(item.cartKey || item.id, item.quantity + 1)" class="w-5 h-5 rounded-full hover:bg-[var(--pay-surface-muted)] flex items-center justify-center font-bold">+</button>
+                                        <button @click="window.TribioCart.updateQuantity(item.cartKey || item.id, item.quantity + 1)" class="w-8 h-8 sm:w-6 sm:h-6 text-base rounded-full hover:bg-[var(--pay-surface-muted)] active:bg-[var(--pay-surface-muted)] flex items-center justify-center font-bold">+</button>
                                     </div>
                                 </div>
                             </div>
@@ -934,7 +935,7 @@
                 </template>
 @endif
                 <p x-show="checkoutStep === 2 && paymentMethod === 'paypal'" x-cloak class="text-[11px] text-[var(--pay-text-muted)] text-right mb-3">PayPal te cobrará el equivalente en USD, no en soles.</p>
-                <p x-show="checkoutStep === 2" x-cloak class="text-[11px] leading-relaxed text-[var(--pay-text-muted)] mb-3">Al continuar, consulta los <a href="{{ route('legal.terms') }}" target="_blank" rel="noopener noreferrer" class="underline font-semibold">Términos de Tribio</a> y su <a href="{{ route('legal.privacy') }}" target="_blank" rel="noopener noreferrer" class="underline font-semibold">Política de Privacidad y Tratamiento de Datos</a>. El vendedor es el Negocio identificado en esta tienda.</p>
+                <p x-show="checkoutStep === 2" x-cloak class="text-[10px] sm:text-[11px] leading-snug sm:leading-relaxed text-[var(--pay-text-muted)] mb-2 sm:mb-3">Al continuar, consulta los <a href="{{ route('legal.terms') }}" target="_blank" rel="noopener noreferrer" class="underline font-semibold">Términos de Tribio</a> y su <a href="{{ route('legal.privacy') }}" target="_blank" rel="noopener noreferrer" class="underline font-semibold">Política de Privacidad y Tratamiento de Datos</a>. El vendedor es el Negocio identificado en esta tienda.</p>
 
                 <template x-if="checkoutStep === 1">
                     <button @click="checkoutStep = 2; window.TribioTrack?.initiateCheckout()" style="background: var(--pay-accent);" class="w-full py-3 rounded-xl font-bold text-white transition-all shadow-md flex items-center justify-center gap-2 hover:opacity-90">

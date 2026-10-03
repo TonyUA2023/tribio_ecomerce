@@ -59,7 +59,7 @@ class StoreController extends Controller
                         ->with([
                             'children', 
                             'products' => function($q) { 
-                                $q->where(fn($sq) => $sq->where('price', '>', 0)->orWhere('price_usd', '>', 0))->latest()->limit(1); 
+                                $q->where(fn($sq) => $sq->where('price', '>', 0)->orWhere('price_usd', '>', 0))->latest('products.created_at')->limit(1); 
                             }
                         ])
                         ->withCount([
