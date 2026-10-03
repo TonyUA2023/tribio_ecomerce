@@ -269,7 +269,9 @@ Route::prefix('tienda')->name('store.')->group(function () {
 Route::get('/adjuntos/{attachment:token}', [\App\Http\Controllers\AttachmentController::class, 'show'])
     ->name('attachments.show')->middleware('signed');
 
-// API para costos de envío
+// API geográfica (países y departamentos/estados) y costos de envío
+Route::get('/api/geo/countries', [\App\Http\Controllers\GeoController::class, 'countries']);
+Route::get('/api/geo/countries/{country}/states', [\App\Http\Controllers\GeoController::class, 'states'])->where('country', '[A-Za-z]{2}');
 Route::get('/api/shipping-cost/{slug}', [\App\Http\Controllers\StoreController::class, 'getShippingCost']);
 Route::get('/api/pedido-estado/{orderNumber}', [\App\Http\Controllers\StoreController::class, 'orderStatus']);
 Route::get('/api/exchange-rates', function (\App\Services\ExchangeRateService $service) {

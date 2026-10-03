@@ -28,11 +28,23 @@
         <div class="lg:col-span-1">
             <div class="glass-card p-6">
                 <h3 class="text-white font-bold text-sm mb-4">Añadir Tarifa</h3>
-                <form action="{{ route('dashboard.shipping.store') }}" method="POST" class="space-y-4">
+                <form action="{{ route('dashboard.shipping.store') }}" method="POST" class="space-y-4"
+                      x-data="{ country: '{{ old('country_code', 'PE') }}', state: @js(old('state', '')), states: [], loading: false,
+                                async load() {
+                                    this.states = [];
+                                    if (this.country === 'ALL') { this.state = ''; return; }
+                                    this.loading = true;
+                                    try {
+                                        const r = await fetch(`/api/geo/countries/${this.country}/states`);
+                                        this.states = (await r.json()).data || [];
+                                    } catch (e) { this.states = []; }
+                                    if (this.state && !this.states.includes(this.state)) this.state = '';
+                                    this.loading = false;
+                                } }" x-init="load()">
                     @csrf
                     <div>
                         <label class="input-label">País (Código 2 letras)</label>
-                        <select name="country_code" class="input-field" required>
+                        <select name="country_code" class="input-field" required x-model="country" @change="state = ; load()">
                             @foreach($supported as $code => $country)
                                 <option value="{{ $code }}">{{ $country['flag'] }} {{ $country['name'] }} ({{ $code }})</option>
                             @endforeach
@@ -43,8 +55,17 @@
 
                     <div>
                         <label class="input-label">Estado / Departamento (Opcional)</label>
-                        <input type="text" name="state" class="input-field" placeholder="Ej: Lima, California">
-                        <p class="text-[10px] text-white/40 mt-1">Déjalo en blanco para aplicar al país entero.</p>
+                        <template x-if="states.length">
+                            <select name="state" class="input-field" x-model="state">
+                                <option value="">Todo el país</option>
+                                <template x-for="s in states" :key="s"><option :value="s" x-text="s"></option></template>
+                            </select>
+                        </template>
+                        <template x-if="!states.length">
+                            <input type="text" name="state" class="input-field" placeholder="Ej: Lima, California" x-model="state" :disabled="country === 'ALL'">
+                        </template>
+                        <p class="text-[10px] text-white/40 mt-1"><span x-show="loading">Cargando departamentos…</span><span x-show="!loading">Los departamentos vienen de la misma API que usa el checkout. Déjalo en "Todo el país" para aplicar a todo el país.</span></p>
+                        @error('state')<p class="text-[11px] text-red-400 mt-1">{{ $message }}</p>@enderror
                     </div>
 
                     <div>
