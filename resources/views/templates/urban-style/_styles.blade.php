@@ -67,8 +67,10 @@
     @media (max-width: 1023px) {
         .us-nav, .us-search, .us-hide-mobile { display: none !important; }
         .us-only-mobile { display: inline-flex !important; }
-        .us-header-row { grid-template-columns: auto 1fr auto; gap: 8px; }
-        .us-logo { justify-self: start; }
+        /* Sin el menú de escritorio la fila solo tiene dos hijos: botones a la izquierda, logo a la derecha. */
+        .us-header-row { grid-template-columns: 1fr auto; gap: 8px; }
+        .us-tools { order: -1; justify-self: start; }
+        .us-logo { justify-self: end; }
     }
     @media (max-width: 767px) { .us-logo img { height: 44px; max-width: 170px; } .us-logo span { font-size: 21px; } .us-icon-btn { width: 38px; height: 38px; } .us-icon-btn svg { width: 21px; height: 21px; } }
 
