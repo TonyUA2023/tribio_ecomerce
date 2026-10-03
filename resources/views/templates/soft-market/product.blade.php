@@ -320,19 +320,19 @@
                 @else
                 <!-- Quantity and Add to Cart Section (High Conversion CTA) -->
                 <div class="space-y-3 mb-8">
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 sm:gap-3">
                         <!-- Quantity Counter -->
-                        <div class="flex items-center bg-white border-2 border-stone-300/80 rounded-2xl p-1 shadow-xs hover:border-stone-400 transition">
+                        <div class="flex items-center shrink-0 bg-white border-2 border-stone-300/80 rounded-2xl p-1 shadow-xs hover:border-stone-400 transition">
                             <button type="button" 
                                     @click="if(quantity > 1) quantity--" 
-                                    class="w-11 h-12 flex items-center justify-center text-stone-800 hover:bg-stone-100 rounded-xl text-2xl font-bold transition cursor-pointer select-none">−</button>
+                                    class="w-9 sm:w-11 h-12 flex items-center justify-center text-stone-800 hover:bg-stone-100 rounded-xl text-2xl font-bold transition cursor-pointer select-none">−</button>
                             <input type="number" 
                                    x-model.number="quantity" 
                                    min="1" 
-                                   class="w-14 h-12 text-center bg-transparent border-none focus:ring-0 text-lg font-black text-stone-900">
+                                   class="w-10 sm:w-14 h-12 text-center bg-transparent border-none focus:ring-0 text-lg font-black text-stone-900">
                             <button type="button" 
                                     @click="quantity++" 
-                                    class="w-11 h-12 flex items-center justify-center text-stone-800 hover:bg-stone-100 rounded-xl text-2xl font-bold transition cursor-pointer select-none">+</button>
+                                    class="w-9 sm:w-11 h-12 flex items-center justify-center text-stone-800 hover:bg-stone-100 rounded-xl text-2xl font-bold transition cursor-pointer select-none">+</button>
                         </div>
 
                         <!-- Solid High-Contrast Add To Cart Button -->
@@ -340,9 +340,9 @@
                                 id="btnAddToCartMain"
                                 @click="addToCart()" 
                                 :disabled="isOutOfStock"
-                                class="flex-1 bg-[#1A1A1A] hover:bg-stone-800 text-white font-black text-base sm:text-lg rounded-2xl transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 py-4 px-6 cursor-pointer active:scale-98 select-none"
+                                class="flex-1 min-w-0 bg-[#1A1A1A] hover:bg-stone-800 text-white font-black text-sm sm:text-lg leading-tight text-center rounded-2xl transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-2 sm:gap-3 py-3 sm:py-4 px-3 sm:px-6 cursor-pointer active:scale-98 select-none"
                                 :class="isOutOfStock ? '!bg-stone-300 !text-stone-500 !cursor-not-allowed !shadow-none' : ''">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                            <svg class="w-5 h-5 sm:w-6 sm:h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
                             <span x-text="isOutOfStock ? '{{ \App\Helpers\TranslationHelper::trans('out_of_stock', 'Producto Agotado') }}' : '{{ \App\Helpers\TranslationHelper::trans('add_to_cart', 'Añadir al carrito') }}'">{{ \App\Helpers\TranslationHelper::trans('add_to_cart', 'Añadir al carrito') }}</span>
                         </button>
                     </div>
