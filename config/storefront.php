@@ -139,7 +139,7 @@ $textilItems = static function (string $group, array $fields, array $items): arr
     return $out;
 };
 
-return [
+$storefront = [
 
     // Fuentes que una plantilla puede ofrecer en un campo type=font. La lista blanca
     // también protege el <link> que se inyecta en la tienda: nunca se usa texto libre.
@@ -151,6 +151,8 @@ return [
         'poppins'  => ['family' => "'Poppins', sans-serif", 'google' => 'Poppins:wght@400;500;600;700;800;900'],
         'barlow'   => ['family' => "'Barlow Condensed', 'Oswald', sans-serif", 'google' => 'Barlow+Condensed:wght@500;600;700;800'],
         'oswald'   => ['family' => "'Oswald', 'Poppins', sans-serif", 'google' => 'Oswald:wght@500;600;700'],
+        'anton'    => ['family' => "'Anton', 'Impact', 'Oswald', sans-serif", 'google' => 'Anton'],
+        'bebas'    => ['family' => "'Bebas Neue', 'Impact', 'Oswald', sans-serif", 'google' => 'Bebas+Neue'],
     ],
 
     // Plantilla que recibe cada tienda nueva (SubscriptionController).
@@ -1037,3 +1039,123 @@ return [
         ],
     ],
 ];
+
+/*
+|--------------------------------------------------------------------------
+| Street Kicks: Sport Pro (misma lógica de tallas, filtros y ofertas) con otra cara
+|--------------------------------------------------------------------------
+| Se arma a partir de los ajustes de Sport Pro para que ambas plantillas compartan campos
+| y solo cambien los valores por defecto y los bloques propios (cinta, sellos, ciudad).
+*/
+$streetDefaults = [
+    'colors.primary' => '#E4142B', 'colors.secondary' => '#1D5BFF',
+    'typography.heading' => 'anton', 'style.product_image' => 'contain',
+    'utility.items.0.text' => ['es' => '100% originales', 'en' => '100% authentic'],
+    'utility.items.1.text' => ['es' => 'Envíos a todo el país', 'en' => 'Nationwide shipping'],
+    'utility.items.2.text' => ['es' => 'Cambios de talla sin complicaciones', 'en' => 'Easy size exchanges'],
+    'shipping.text' => ['es' => 'Envío en 48 horas para Lima y Callao*', 'en' => '48-hour delivery in Lima and Callao*'],
+    'menu.sale_label' => 'OFERTAS',
+    'hero.items.0.title' => ['es' => 'Pisa fuerte', 'en' => 'Step up'],
+    'hero.items.0.subtitle' => ['es' => 'Zapatillas 100% originales', 'en' => '100% authentic sneakers'],
+    'hero.items.0.cta' => ['es' => 'Comprar ahora', 'en' => 'Shop now'],
+    'hero.items.1.title' => ['es' => 'Nuevos lanzamientos', 'en' => 'New drops'],
+    'hero.items.1.subtitle' => ['es' => 'Lo último de la calle', 'en' => 'Fresh off the street'],
+    'hero.items.2.title' => ['es' => 'Outlet de temporada', 'en' => 'Season outlet'],
+    'hero.items.2.subtitle' => ['es' => 'Hasta agotar stock', 'en' => 'While stocks last'],
+    'hero.items.3.title' => ['es' => 'Corre tu ciudad', 'en' => 'Run your city'],
+    'tiles.title' => ['es' => 'Elige tu estilo', 'en' => 'Pick your style'],
+    'campaigns.items.0.title' => ['es' => 'Urbanas', 'en' => 'Street'],
+    'campaigns.items.0.subtitle' => ['es' => 'Para dominar la calle', 'en' => 'Built to own the street'],
+    'campaigns.items.1.title' => ['es' => 'Running', 'en' => 'Running'],
+    'campaigns.items.1.subtitle' => ['es' => 'Más rápido, más lejos', 'en' => 'Faster, further'],
+    'campaigns.items.2.title' => ['es' => 'Retro', 'en' => 'Retro'],
+    'campaigns.items.2.subtitle' => ['es' => 'Los clásicos vuelven', 'en' => 'The classics are back'],
+    'campaigns.items.3.title' => ['es' => 'Outlet', 'en' => 'Outlet'],
+    'categories.title' => ['es' => 'Por categoría', 'en' => 'By category'],
+    'sections.products_title' => ['es' => 'Lo más pedido', 'en' => 'Most wanted'],
+    'footer.newsletter_title' => ['es' => 'Entérate de los próximos drops', 'en' => 'Get the next drops first'],
+    'footer.about' => ['es' => 'Zapatillas originales con actitud: lanzamientos, clásicos y ofertas para toda la ciudad.', 'en' => 'Original sneakers with attitude: drops, classics and deals for the whole city.'],
+];
+
+$street = $storefront['templates']['sport-pro'];
+$street['name'] = 'Street Kicks';
+$street['tagline'] = 'Zapatillas con actitud: calle, velocidad y color';
+$street['description'] = 'Pensada para tiendas de zapatillas que quieren llamar la atención: cinta de mensajes en movimiento, portada con ciudad y bandera de carreras, sellos de "100% original", tarjetas con efecto y precios gigantes. Misma lógica que Sport Pro (tallas, colores, ofertas), con un diseño mucho más llamativo.';
+$street['ideal_for'] = ['Zapatillas', 'Sneakers', 'Streetwear', 'Calzado original'];
+$street['tags'] = ['llamativa', 'zapatillas', 'urbana', 'ofertas'];
+$street['swatches'] = ['#E4142B', '#1D5BFF', '#0A0A0F', '#FFFFFF'];
+$street['default_accent'] = '#E4142B';
+$street['default_secondary'] = '#1D5BFF';
+
+foreach ($street['settings'] as &$group) {
+    foreach ($group['fields'] as $path => &$field) {
+        if (array_key_exists($path, $streetDefaults)) {
+            $field['default'] = $streetDefaults[$path];
+        }
+    }
+    unset($field);
+
+    if ($group['key'] === 'brand') {
+        $group['description'] = 'Rojo y azul sobre negro: el menú, la cinta y el pie van oscuros; tus colores marcan botones, ofertas y sellos.';
+        $group['fields']['colors.primary']['label'] = 'Color principal';
+        $group['fields']['colors.primary']['help'] = 'Botones, ofertas, etiquetas de descuento y la franja del menú.';
+        $group['fields']['colors.secondary']['label'] = 'Color secundario';
+        $group['fields']['colors.secondary']['help'] = 'Sombras de títulos, sellos y detalles.';
+        $group['fields']['typography.heading']['options'] = [
+            'anton'  => 'Impacto callejero · Anton',
+            'bebas'  => 'Cartel · Bebas Neue',
+            'barlow' => 'Deportiva · Barlow Condensed',
+            'oswald' => 'Fuerte · Oswald',
+        ];
+        $group['fields']['style.skyline'] = ['type' => 'toggle', 'label' => 'Mostrar la ciudad en los banners sin foto', 'default' => true,
+            'help' => 'Un banner sin imagen muestra la silueta de la ciudad con los colores de tu marca.'];
+        $group['fields']['badge.original'] = ['type' => 'toggle', 'label' => 'Sello "Original" en cada zapatilla', 'default' => true];
+        $group['fields']['badge.original_text'] = ['type' => 'text', 'label' => 'Texto del sello', 'max' => 14,
+            'default' => ['es' => 'Original', 'en' => 'Authentic']];
+    }
+    if ($group['key'] === 'topbars') {
+        $group['title'] = 'Cinta en movimiento y envío';
+        $group['description'] = 'La cinta roja que corre arriba de todo (hasta 4 mensajes) y la franja gris bajo el menú.';
+        $group['fields']['utility.enabled']['label'] = 'Mostrar la cinta en movimiento';
+        $group['fields']['utility.items.3.text'] = ['type' => 'text', 'label' => 'Mensaje 4', 'max' => 60, 'optional' => true,
+            'default' => ['es' => 'Compra 100% segura', 'en' => '100% secure checkout']];
+        unset($group['fields']['utility.links']);
+    }
+    if ($group['key'] === 'rail') {
+        // Los sellos van justo debajo de los banners: grupo propio a continuación.
+        $group['_after_stamps'] = true;
+    }
+}
+unset($group);
+
+$stamps = ['key' => 'stamps', 'title' => 'Sellos de confianza', 'icon' => 'star', 'item_label' => 'Sello',
+    'description' => 'La banda negra con bandera de carreras bajo los banners: cuatro razones para comprarte a ti.',
+    'fields' => [
+        'stamps.enabled' => ['type' => 'toggle', 'label' => 'Mostrar los sellos', 'default' => true],
+    ]];
+foreach ([
+    ['100% originales', 'Garantía de autenticidad', '100% authentic', 'Authenticity guaranteed'],
+    ['Envíos a todo el país', 'Rápido y seguro', 'Nationwide shipping', 'Fast and secure'],
+    ['Cambio de talla', 'Hasta 7 días', 'Size exchange', 'Up to 7 days'],
+    ['Pago seguro', 'Yape, Plin y tarjetas', 'Secure payment', 'Yape, Plin and cards'],
+] as $i => [$titleEs, $textEs, $titleEn, $textEn]) {
+    $n = $i + 1;
+    $stamps['fields']["stamps.items.{$i}.title"] = ['type' => 'text', 'label' => "Título {$n}", 'max' => 28, 'optional' => true,
+        'default' => ['es' => $titleEs, 'en' => $titleEn]];
+    $stamps['fields']["stamps.items.{$i}.text"] = ['type' => 'text', 'label' => "Texto {$n}", 'max' => 40, 'optional' => true,
+        'default' => ['es' => $textEs, 'en' => $textEn]];
+}
+
+$settings = [];
+foreach ($street['settings'] as $group) {
+    unset($group['_after_stamps']);
+    if ($group['key'] === 'rail') {
+        // Orden: ... banners → sellos → carrusel ...
+        $settings[] = $stamps;
+    }
+    $settings[] = $group;
+}
+$street['settings'] = $settings;
+$storefront['templates']['street-kicks'] = $street;
+
+return $storefront;

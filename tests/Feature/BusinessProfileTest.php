@@ -109,7 +109,7 @@ class BusinessProfileTest extends TestCase
 
         $this->actingAs($shoeOwner)->get(route('dashboard.plantillas.index'))->assertOk()
             ->assertSee('Recomendada para Tienda de zapatillas')
-            ->assertViewHas('available', fn ($available) => array_key_first($available) === 'sport-pro');
+            ->assertViewHas('available', fn ($available) => array_slice(array_keys($available), 0, 2) === ['street-kicks', 'sport-pro']);
     }
 
     public function test_the_directory_finds_stores_by_their_rubro_name(): void
