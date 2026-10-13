@@ -48,7 +48,7 @@ return [
         'calzado'     => ['label' => 'Tienda de zapatillas', 'icon' => '👟',
             'sizes'           => ['36', '37', '38', '39', '40', '41', '42', '43', '44'],
             'variant_options' => ['Talla' => ['38', '39', '40', '41', '42', '43'], 'Color' => ['Negro', 'Blanco']],
-            'templates'       => ['sport-pro'],
+            'templates'       => ['street-kicks', 'sport-pro'],
         ],
         'tecnologia'  => ['label' => 'Tecnología',           'icon' => '💻'],
         'alimentos'   => ['label' => 'Alimentos y Bebidas',  'icon' => '🍕'],
