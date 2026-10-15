@@ -270,6 +270,12 @@ Route::prefix('tienda')->name('store.')->group(function () {
 Route::get('/adjuntos/{attachment:token}', [\App\Http\Controllers\AttachmentController::class, 'show'])
     ->name('attachments.show')->middleware('signed');
 
+// SEO: sitemap y robots (la plataforma y, en dominios propios, cada tienda)
+Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
+Route::get('/sitemap-pages.xml', [\App\Http\Controllers\SitemapController::class, 'pages'])->name('sitemap.pages');
+Route::get('/robots.txt', [\App\Http\Controllers\SitemapController::class, 'robots'])->name('robots');
+Route::get('/tienda/{slug}/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'store'])->name('store.sitemap');
+
 // API geográfica (países y departamentos/estados) y costos de envío
 Route::get('/api/geo/countries', [\App\Http\Controllers\GeoController::class, 'countries']);
 Route::get('/api/geo/countries/{country}/states', [\App\Http\Controllers\GeoController::class, 'states'])->where('country', '[A-Za-z]{2}');

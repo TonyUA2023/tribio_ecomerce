@@ -17,6 +17,7 @@
             <a href="{{ $card['route'] }}" class="dash-metric"><span class="dash-metric-top"><span>{{ $card['label'] }}</span><x-dashboard-icon :name="$card['icon']"/></span><strong>{{ $card['value'] }}</strong><small>{{ $card['sub'] }}</small></a>
             @endforeach
         </div>
+        @include('dashboard._share-store')
         <section class="dash-section" aria-labelledby="top-products-heading">
             <div class="dash-section-heading"><div><h2 id="top-products-heading">Tus productos más vendidos</h2><p>Un vistazo a tu catálogo</p></div><a href="{{ route('dashboard.productos.index') }}" class="dash-text-link">Ver todos <x-dashboard-icon name="chevron"/></a></div>
             @if($topProducts->isEmpty())
