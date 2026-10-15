@@ -35,7 +35,10 @@ class HandleCustomDomain
 
         if (!$isExcluded) {
             // Buscar la tienda por dominio personalizado
-            $store = Store::where('custom_domain', $host)->active()->first();
+            // "www.mitienda.com" y "mitienda.com" son la misma tienda: el dueño registra uno solo
+            // y el otro no debe terminar en 404.
+            $store = Store::whereIn('custom_domain', array_unique([$host, preg_replace('/^www\./i', '', $host), 'www.' . $host]))
+                ->active()->first();
 
             if (!$store) {
                 abort(404, 'Tienda no encontrada o inactiva.');
@@ -45,7 +48,10 @@ class HandleCustomDomain
 
             // Redirigir el Dashboard, Login, Registro y Admin al dominio principal
             $path = $request->path();
-            if (preg_match('/^(dashboard|login|registro|logout|admin|api)\b/i', $path)) {
+            // Las rutas /api/ públicas de la tienda (costo de envío, países/departamentos, estado de
+            // pedido, tipos de cambio) se usan desde el propio dominio de la tienda: no se redirigen.
+            $isStorefrontApi = (bool) preg_match('#^api/(shipping-cost|geo|pedido-estado|exchange-rates)(/|$)#i', $path);
+            if (!$isStorefrontApi && preg_match('/^(dashboard|login|registro|logout|admin|api)\b/i', $path)) {
                 $mainDomainUrl = rtrim(config('app.url'), '/');
                 return redirect()->to($mainDomainUrl . $request->getRequestUri());
             }

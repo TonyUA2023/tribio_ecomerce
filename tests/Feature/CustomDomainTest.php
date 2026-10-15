@@ -11,6 +11,17 @@ class CustomDomainTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function migrateFreshUsing(): array
+    {
+        if (config('database.default') !== 'sqlite') {
+            return [];
+        }
+
+        // The legacy role migration is MySQL-only (same exclusion as the other feature tests).
+        return ['--path' => array_values(array_filter(glob(database_path('migrations/*.php')),
+            fn ($path) => !str_ends_with($path, '2026_09_11_182936_update_role_column_in_users_table.php'))), '--realpath' => true];
+    }
+
     public function test_custom_domain_resolves_store(): void
     {
         // 1. Crear un usuario y una tienda activa con dominio personalizado
@@ -92,5 +103,24 @@ class CustomDomainTest extends TestCase
         // Probar que el acceso a /dashboard en el dominio propio redirige al dominio principal
         $responseDashboard = $this->get('http://mitienda.test/dashboard');
         $responseDashboard->assertRedirect(rtrim(config('app.url'), '/') . '/dashboard');
+    }
+
+    public function test_www_and_apex_both_open_the_store_and_public_storefront_apis_are_not_redirected(): void
+    {
+        $user = User::factory()->create();
+        Store::create(['user_id' => $user->id, 'name' => 'Tienda', 'slug' => 'tienda-www', 'status' => 'active',
+            'custom_domain' => 'mitienda.test', 'template_name' => 'soft-market']);
+
+        $this->get('http://mitienda.test/')->assertOk();
+        $this->get('http://www.mitienda.test/')->assertOk();
+
+        // Checkout calls these from the store's own domain: they must answer there, not bounce to the main domain.
+        $this->getJson('http://mitienda.test/api/shipping-cost/tienda-www?country=PE')->assertOk()->assertJsonStructure(['cost']);
+        $this->getJson('http://mitienda.test/api/geo/countries')->assertOk();
+
+        // Dashboard and login still live only on the main domain.
+        $this->get('http://mitienda.test/dashboard')->assertRedirect();
+        $this->get('http://mitienda.test/login')->assertRedirect();
+        $this->get('http://otra-web.test/')->assertNotFound();
     }
 }
