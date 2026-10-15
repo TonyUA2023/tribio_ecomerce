@@ -68,6 +68,10 @@ return [
         'templates'       => [],
     ],
 
+    // IP pública del servidor, que se muestra al dueño de una tienda con dominio propio como valor del
+    // registro DNS tipo A. Se define en .env (TRIBIO_SERVER_IP): detrás del proxy, la IP que ve PHP es interna.
+    'custom_domain_ip' => env('TRIBIO_SERVER_IP'),
+
     /*
     |--------------------------------------------------------------------------
     | Planes de suscripción

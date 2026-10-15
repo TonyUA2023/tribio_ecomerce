@@ -295,6 +295,8 @@
                         </div>
                     </div>
 
+                    @include('dashboard.products._fee-simulator')
+
                     @if(!empty($currenciesMap))
                     <div class="border-t border-white/10 pt-4 mt-4">
                         <template x-if="!showCustomPricing">

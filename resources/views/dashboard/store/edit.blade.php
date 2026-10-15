@@ -384,7 +384,7 @@
                             <div>
                                 <span class="text-tribio-purple font-bold">Tipo:</span> A |
                                 <span class="text-tribio-purple font-bold">Nombre:</span> @ |
-                                <span class="text-tribio-purple font-bold">Valor:</span> <code>{{ request()->server('SERVER_ADDR') && !in_array(request()->server('SERVER_ADDR'), ['127.0.0.1', '::1']) ? request()->server('SERVER_ADDR') : 'IP_DE_TU_SERVIDOR' }}</code>
+                                <span class="text-tribio-purple font-bold">Valor:</span> <code>{{ config('tribio.custom_domain_ip') ?: 'IP_DE_TU_SERVIDOR' }}</code>
                             </div>
                             <div class="border-t border-white/5 pt-2 mt-1">
                                 <span class="text-tribio-purple font-bold">Tipo:</span> CNAME |
@@ -392,7 +392,7 @@
                                 <span class="text-tribio-purple font-bold">Valor:</span> <code>{{ parse_url(config('app.url'), PHP_URL_HOST) }}</code>
                             </div>
                         </div>
-                        <p class="text-[10px] text-white/40">Nota: Los cambios en el proveedor de dominio pueden tardar hasta 24-48 horas en propagarse.</p>
+                        <p class="text-[10px] text-white/40">Nota: Los cambios en el proveedor de dominio pueden tardar hasta 24-48 horas en propagarse. El dominio que escribiste arriba es el que se usa; la versión con o sin "www" también abre tu tienda. Tribio activa el certificado HTTPS (candado) cuando el DNS ya apunta aquí.</p>
                     </div>
                     @endif
                 </div>
