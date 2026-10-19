@@ -17,10 +17,11 @@
     $hasPaypalCapable = in_array($store->checkout_mode, ['card', 'mixed']) && $store->payment_gateway === 'paypal' && !empty($store->paypal_client_id) && !empty($store->paypal_client_secret);
     $hasFlowCapable = in_array($store->checkout_mode, ['card', 'mixed']) && $store->payment_gateway === 'flow' && app(\App\Services\FlowService::class)->isConfigured($store);
     $flowCurrencyMatches = \App\Helpers\CurrencyHelper::currentCurrency() === $store->flow_currency;
-    $defaultPayment = $hasMpCapable ? 'card' : (($hasFlowCapable && $flowCurrencyMatches) ? 'flow' : ($hasPaypalCapable ? 'paypal' : (in_array($store->checkout_mode, ['whatsapp', 'mixed']) ? 'whatsapp' : '')));
+    $manualMethods = app(\App\Services\Payments\ManualPayments::class)->enabledFor($store);
+    $defaultPayment = $hasMpCapable ? 'card' : (($hasFlowCapable && $flowCurrencyMatches) ? 'flow' : ($hasPaypalCapable ? 'paypal' : (in_array($store->checkout_mode, ['whatsapp', 'mixed']) ? 'whatsapp' : (array_key_first($manualMethods) ?? ''))));
     // Con varios medios de pago ninguno arranca elegido: así el formulario de tarjeta no ocupa
     // todo el panel y el comprador escoge él mismo (ver `paymentLocked` más abajo).
-    $paymentOptionCount = ($hasMpCapable ? 2 : 0) + (int) $hasFlowCapable + (int) $hasPaypalCapable + (int) in_array($store->checkout_mode, ['whatsapp', 'mixed']);
+    $paymentOptionCount = ($hasMpCapable ? 2 : 0) + (int) $hasFlowCapable + (int) $hasPaypalCapable + (int) in_array($store->checkout_mode, ['whatsapp', 'mixed']) + count($manualMethods);
     $initialPayment = $paymentOptionCount > 1 ? '' : $defaultPayment;
 @endphp
 <meta name="tribio-store-name" content="{{ $store->name }}">
@@ -74,6 +75,9 @@
          freeShippingActive: false,
          hasMercadoPago: {{ $hasMpCapable ? 'true' : 'false' }},
          hasWhatsapp: {{ in_array($store->checkout_mode, ['whatsapp', 'mixed']) ? 'true' : 'false' }},
+         manualMethods: @js($manualMethods),
+         paymentReference: '',
+         copied: '',
          hasFlow: {{ $hasFlowCapable ? 'true' : 'false' }},
          flowCurrencyMatches: {{ $flowCurrencyMatches ? 'true' : 'false' }},
          hasPaypal: {{ $hasPaypalCapable ? 'true' : 'false' }},
@@ -530,6 +534,17 @@
                  return;
              }
              if (!this.validateStep2()) return;
+             if (this.manualMethods[this.paymentMethod]) {
+                 // Pago por confirmación: el pedido queda en confirmación hasta que la tienda reciba el pago.
+                 this.customer.payment_method = this.paymentMethod;
+                 this.customer.payment_done = !!this.manualMethods[this.paymentMethod].confirmable;
+                 this.customer.payment_reference = this.paymentReference;
+                 if (window.TribioCart) {
+                     this.submitting = true;
+                     window.TribioCart.checkout(this.storeSlug, this.customer).catch(e => { this.errors.payment = e.message || 'No se pudo registrar el pedido. Intenta nuevamente.'; }).finally(() => { this.submitting = false; });
+                 }
+                 return;
+             }
              if ((this.paymentMethod === 'card' || this.paymentMethod === 'mercadopago_other') && !this.hasActiveToken) {
                  this.errors.payment = 'La tienda tiene habilitado el pago con Mercado Pago pero aún no ha configurado sus credenciales. Selecciona WhatsApp / Pago Directo.';
                  return;
@@ -875,6 +890,39 @@
                                     <p class="mt-1.5 text-[11px] text-[var(--pay-text-muted)] pl-6">Para clientes internacionales. Se cobra el equivalente en dólares (USD), no en soles.</p>
                                 </label>
                             </template>
+
+                            @foreach($manualMethods as $mKey => $m)
+                                <label :class="paymentMethod === '{{ $mKey }}' ? 'border-[var(--pay-accent)] bg-[var(--pay-surface-muted)] ring-1 ring-[var(--pay-accent)]' : 'border-[var(--pay-border)] bg-white'"
+                                       class="flex flex-col p-3.5 rounded-xl border cursor-pointer transition-all">
+                                    <div class="flex items-center gap-2.5">
+                                        <input type="radio" name="payment_method" value="{{ $mKey }}" x-model="paymentMethod" class="accent-[var(--pay-accent)] w-4 h-4">
+                                        <span class="font-bold text-sm">{{ $m['label'] }}</span>
+                                    </div>
+                                    <p class="mt-1.5 text-[11px] text-[var(--pay-text-muted)] pl-6">
+                                        {{ $m['confirmable'] ? 'Paga y avísanos: la tienda confirma tu pago y prepara el pedido.' : 'Pagas en efectivo cuando recibes tu pedido.' }}
+                                    </p>
+                                </label>
+                                <div x-show="paymentMethod === '{{ $mKey }}'" x-cloak class="p-3.5 rounded-xl border border-[var(--pay-border)] bg-white space-y-2.5 text-sm">
+                                    @if($m['qr_url'])
+                                        <img src="{{ $m['qr_url'] }}" alt="QR de {{ $m['label'] }}" class="mx-auto w-44 max-w-full rounded-lg border border-[var(--pay-border)]" loading="lazy">
+                                    @endif
+                                    @if($m['holder'])<p><span class="text-[var(--pay-text-muted)]">Titular:</span> <strong>{{ $m['holder'] }}</strong></p>@endif
+                                    @if($m['bank'])<p><span class="text-[var(--pay-text-muted)]">Banco:</span> <strong>{{ $m['bank'] }}</strong></p>@endif
+                                    @foreach(['phone' => 'Número', 'account' => 'N.° de cuenta', 'cci' => 'CCI'] as $field => $fieldLabel)
+                                        @if($m[$field])
+                                            <p class="flex items-center justify-between gap-2">
+                                                <span><span class="text-[var(--pay-text-muted)]">{{ $fieldLabel }}:</span> <strong class="select-all">{{ $m[$field] }}</strong></span>
+                                                <button type="button" class="text-xs font-semibold underline" @click="navigator.clipboard?.writeText('{{ $m[$field] }}'); copied = '{{ $mKey.$field }}'; setTimeout(() => copied = '', 1500)" x-text="copied === '{{ $mKey.$field }}' ? 'Copiado' : 'Copiar'"></button>
+                                            </p>
+                                        @endif
+                                    @endforeach
+                                    @if($m['instructions'])<p class="text-xs text-[var(--pay-text-muted)] whitespace-pre-line">{{ $m['instructions'] }}</p>@endif
+                                    @if($m['confirmable'])
+                                        <p class="text-xs text-[var(--pay-text-muted)]">Haz el pago por el total del pedido y luego pulsa <strong>Ya realicé el pago</strong>.</p>
+                                        <input type="text" x-model="paymentReference" maxlength="100" placeholder="N.° de operación (opcional)" class="w-full rounded-lg border border-[var(--pay-border)] px-3 py-2 text-sm">
+                                    @endif
+                                </div>
+                            @endforeach
                             @if($hasFlowCapable)
                                 @include('components.checkout.flow-option')
                             @endif
@@ -957,7 +1005,7 @@
                         <template x-if="customerLoggedIn && paymentMethod !== 'paypal'">
                             <button id="btnSubmitOrder" @click="submitOrder" :disabled="submitting" style="background: var(--pay-accent);" class="flex-1 py-3 rounded-xl font-bold text-white transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-60 hover:opacity-90">
                                 <span x-show="submitting" class="pay-spinner"></span>
-                                <span x-text="submitting ? 'Procesando...' : (paymentMethod === 'card' ? 'Pagar ahora' : (paymentMethod === 'flow' ? 'Continuar a Flow' : (paymentMethod === 'mercadopago_other' ? 'Continuar al pago' : (paymentMethod ? 'Confirmar pedido' : 'Elige un método de pago'))))"></span>
+                                <span x-text="submitting ? 'Procesando...' : (paymentMethod === 'card' ? 'Pagar ahora' : (paymentMethod === 'flow' ? 'Continuar a Flow' : (paymentMethod === 'mercadopago_other' ? 'Continuar al pago' : (manualMethods[paymentMethod] ? (manualMethods[paymentMethod].confirmable ? 'Ya realicé el pago' : 'Confirmar pedido') : (paymentMethod ? 'Confirmar pedido' : 'Elige un método de pago')))))"></span>
                             </button>
                         </template>
                         <template x-if="customerLoggedIn && paymentMethod === 'paypal'">

@@ -112,6 +112,8 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     // Pasarela de pago
     Route::get('/tienda/pasarela-de-pago', [\App\Http\Controllers\Dashboard\PaymentGatewayController::class, 'edit'])->name('gateway.edit');
     Route::post('/tienda/pasarela-de-pago', [\App\Http\Controllers\Dashboard\PaymentGatewayController::class, 'update'])->name('gateway.update');
+    Route::post('/tienda/pagos-por-confirmacion', [\App\Http\Controllers\Dashboard\ManualPaymentsController::class, 'update'])->name('manual-payments.update');
+    Route::post('/tienda/cobertura-de-envio', [\App\Http\Controllers\Dashboard\ManualPaymentsController::class, 'coverage'])->name('delivery-coverage.update');
 
     // Constructor visual
     Route::get('/tienda/constructor', [StoreBuilderController::class, 'index'])->name('store.builder');
@@ -151,6 +153,8 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     Route::patch('/pedidos/{order}/status', [DashboardOrderController::class, 'updateStatus'])->name('pedidos.status');
     Route::patch('/pedidos/{order}/produccion', [DashboardOrderController::class, 'updateProduction'])->name('pedidos.production');
     Route::post('/pedidos/{order}/pagos', [DashboardOrderController::class, 'recordPayment'])->name('pedidos.payments.store');
+    Route::post('/pedidos/{order}/pago/confirmar', [DashboardOrderController::class, 'confirmPayment'])->name('pedidos.payment.confirm');
+    Route::post('/pedidos/{order}/pago/rechazar', [DashboardOrderController::class, 'rejectPayment'])->name('pedidos.payment.reject');
     Route::get('/pedidos/{order}/whatsapp', [DashboardOrderController::class, 'whatsappRedirect'])->name('pedidos.whatsapp');
 
     // Reseñas de productos: ver, ocultar y responder públicamente

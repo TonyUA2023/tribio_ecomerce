@@ -364,7 +364,7 @@
                         <span class="text-xl">🚚</span>
                         <div>
                             <strong class="block text-stone-900 font-bold">Envíos Rápidos</strong>
-                            <span>A todo el Perú</span>
+                            <span>{{ $store->deliveryCoverageLabel() ? 'Solo a ' . $store->deliveryCoverageLabel() : 'A todo el Perú' }}</span>
                         </div>
                     </div>
                     <div class="flex items-center gap-2.5 p-3 rounded-xl bg-white border border-stone-200/60 text-xs text-stone-700">
@@ -490,7 +490,10 @@
                             <span>🚚</span> Envíos a Domicilio
                         </h4>
                         <ul class="text-xs sm:text-sm text-stone-600 space-y-2.5">
-                            <li>• <strong>Envío Estándar:</strong> Entrega segura en 24 a 48 horas a nivel nacional.</li>
+                            <li>• <strong>Cobertura:</strong> {{ $store->deliveryCoverageLabel() ? 'Realizamos envíos solo a ' . $store->deliveryCoverageLabel() . '.' : 'Entrega segura a nivel nacional.' }}</li>
+                            @if($store->exchangePolicyText())
+                            <li>• <strong>Cambios:</strong> {{ $store->exchangePolicyText() }}</li>
+                            @endif
                             <li>• <strong>Envío Express:</strong> Disponible para entregas rápidas el mismo día según la zona.</li>
                             <li>• <strong>Seguimiento:</strong> Rastreo de pedido en tiempo real con Tribio Pass.</li>
                         </ul>
@@ -500,9 +503,19 @@
                             <span>💳</span> Métodos de Pago Seguros
                         </h4>
                         <ul class="text-xs sm:text-sm text-stone-600 space-y-2.5">
-                            <li>• <strong>Tarjetas de Débito y Crédito:</strong> Procesado seguro con Mercado Pago (SSL 256 bits).</li>
-                            <li>• <strong>Billeteras Digitales:</strong> Yape y Plin mediante coordinación directa.</li>
-                            <li>• <strong>Pago Contra Entrega / Efectivo:</strong> Disponible según cobertura de la tienda.</li>
+                            @php $payList = app(\App\Services\Payments\PaymentBadges::class)->forStore($store); @endphp
+                            @if(array_intersect($payList, ['visa','mastercard','mercadopago']))
+                            <li>• <strong>Tarjetas de Débito y Crédito:</strong> Procesado seguro (SSL 256 bits).</li>
+                            @endif
+                            @if(array_intersect($payList, ['yape','plin']))
+                            <li>• <strong>Billeteras Digitales:</strong> {{ collect(['yape' => 'Yape', 'plin' => 'Plin'])->only($payList)->implode(' y ') }} — pagas y la tienda confirma tu pedido.</li>
+                            @endif
+                            @if(in_array('bank', $payList, true))
+                            <li>• <strong>Transferencia / depósito:</strong> La tienda confirma tu pago y prepara el pedido.</li>
+                            @endif
+                            @if(in_array('cash', $payList, true))
+                            <li>• <strong>Pago Contra Entrega / Efectivo:</strong> Pagas al recibir tu pedido.</li>
+                            @endif
                         </ul>
                     </div>
                 </div>

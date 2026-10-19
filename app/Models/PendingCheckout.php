@@ -213,6 +213,9 @@ class PendingCheckout extends Model
                 'status'              => $status,
                 'payment_status'      => $paymentStatus,
                 'payment_method'      => $data['payment_method'],
+                'payment_confirmation' => $data['payment_confirmation'] ?? null,
+                'payment_reference'   => $data['payment_reference'] ?? null,
+                'payment_submitted_at'=> !empty($data['payment_confirmation']) ? now() : null,
                 'source'              => $data['source'] ?? 'store',
                 'paypal_order_id'     => $data['paypal_order_id'] ?? null,
                 // Made-to-order carts open the workshop pipeline (null for stock orders).

@@ -22,6 +22,7 @@ class Store extends Model
         'status', 'plan', 'plan_expires_at', 'is_featured',
         'meta_title', 'meta_description',
         'total_views', 'total_orders', 'total_revenue',
+        'manual_payments', 'delivery_coverage', 'exchange_hours',
         'checkout_mode', 'payment_gateway', 'gateway_public_key', 'gateway_private_key', 'gateway_access_token',
         'mp_access_token', 'mp_public_key', 'contact_email', 'contact_phone',
         'culqi_customer_id', 'culqi_card_id', 'culqi_subscription_id',
@@ -46,6 +47,8 @@ class Store extends Model
         'logo_palette'     => 'array',
         'published_layout' => 'array',
         'distributors'     => 'array',
+        'manual_payments'  => 'array',
+        'delivery_coverage'=> 'array',
         'enabled_countries'=> 'array',
         'country_shipping_costs' => 'array',
         'hero_carousel'    => 'boolean',
@@ -317,5 +320,24 @@ class Store extends Model
     public function sections()
     {
         return $this->hasMany(StoreSection::class)->orderBy('order');
+    }
+
+    /** "Lima" / "Lima y Callao" when the store limits where it delivers; null = no limit. */
+    public function deliveryCoverageLabel(): ?string
+    {
+        $list = array_values(array_filter((array) $this->delivery_coverage));
+        if (!$list) {
+            return null;
+        }
+        return count($list) === 1 ? $list[0] : implode(', ', array_slice($list, 0, -1)) . ' y ' . end($list);
+    }
+
+    /** Buyer-facing exchange window, counted from the day the purchase is received. */
+    public function exchangePolicyText(): ?string
+    {
+        if (!$this->exchange_hours) {
+            return null;
+        }
+        return "Cambios dentro de las {$this->exchange_hours} horas desde el día que recibes tu compra.";
     }
 }

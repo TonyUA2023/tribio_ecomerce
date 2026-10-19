@@ -172,5 +172,7 @@
             </div>
         </div>
     </form>
+
+    @include('dashboard.gateway._manual-payments')
 </div>
 @endsection
