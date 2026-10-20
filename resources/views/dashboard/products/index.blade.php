@@ -130,6 +130,10 @@
                                 </button>
                             </form>
                             @endif
+                            @if($product->is_active && $store->status === 'active')
+                            @php $__pUrl = rtrim($store->url, '/') . '/producto/' . $product->slug; @endphp
+                            <a href="https://wa.me/?text={{ rawurlencode($product->name . ' — S/ ' . number_format($product->price, 2) . "\n" . $__pUrl) }}" target="_blank" rel="noopener" class="btn-ghost py-1 px-3 text-xs" title="Compartir este producto por WhatsApp">Compartir</a>
+                            @endif
                             <a href="{{ route('dashboard.productos.edit', $product) }}" class="btn-ghost py-1 px-3 text-xs">Editar</a>
                             <form method="POST" action="{{ route('dashboard.productos.destroy', $product) }}" onsubmit="return confirm('¿Eliminar este producto?')">
                                 @csrf @method('DELETE')

@@ -41,6 +41,12 @@ import 'sweetalert2/dist/sweetalert2.min.css';
             // confirmed, so it's the first safe moment to clear it here too.
             window.TribioCart?.clear();
             config = { icon: 'success', title: '¡Pago confirmado!', text: `Tu pedido ${order.order_number} fue pagado y ya está en preparación.` };
+        } else if (order.payment_confirmation === 'awaiting') {
+            config = { icon: 'info', title: 'Pedido en confirmación', text: `Recibimos tu pedido ${order.order_number}. La tienda está verificando tu pago y te avisará apenas lo confirme; después seguirá con la preparación y el envío.` };
+        } else if (order.payment_confirmation === 'rejected') {
+            config = { icon: 'error', title: 'No pudimos confirmar tu pago', text: `La tienda no encontró el pago de tu pedido ${order.order_number}. Contáctala para revisarlo.` };
+        } else if (order.payment_method === 'manual_cod') {
+            config = { icon: 'success', title: '¡Pedido registrado!', text: `Tu pedido ${order.order_number} fue registrado. Pagarás cuando lo recibas.` };
         } else if (isGatewayOrder && order.payment_status === 'failed') {
             config = { icon: 'error', title: 'El pago no se completó', text: `Tu pedido ${order.order_number} sigue disponible. Contacta a la tienda para coordinar otra forma de pago.` };
         } else if (isGatewayOrder) {

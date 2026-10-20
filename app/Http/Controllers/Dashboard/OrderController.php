@@ -11,6 +11,7 @@ use App\Models\OrderPayment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -27,7 +28,8 @@ class OrderController extends Controller
         $orders = $store->orders()
             ->withCount('items')
             ->withSum('items', 'quantity')
-            ->when($request->status, fn($q) => $q->where('status', $request->status))
+            ->when($request->status === 'por_confirmar', fn($q) => $q->where('payment_confirmation', 'awaiting'))
+            ->when($request->status && $request->status !== 'por_confirmar', fn($q) => $q->where('status', $request->status))
             ->when($search !== '', fn($q) => $q->where(fn($s) =>
                 $s->where('order_number', 'like', "%{$search}%")
                     ->orWhere('customer_name', 'like', "%{$search}%")
@@ -44,6 +46,7 @@ class OrderController extends Controller
             ->mapWithKeys(fn($s) => [$s => (int) ($counts[$s] ?? 0)])
             ->all();
         $totalCount = (int) $counts->sum();
+        $statusCounts['por_confirmar'] = $store->orders()->where('payment_confirmation', 'awaiting')->count();
 
         return view('dashboard.orders.index', compact('store', 'orders', 'statusCounts', 'totalCount', 'search'));
     }
@@ -121,5 +124,65 @@ class OrderController extends Controller
         return back()->with('success', (float) $order->balance_due > 0
             ? 'Pago registrado. Saldo pendiente: ' . $order->money($order->balance_due) . '.'
             : 'Pago registrado. El pedido quedó pagado por completo.');
+    }
+
+    /** Seller verified the Yape/Plin/transfer payment: credit the ledger and move the order on. */
+    public function confirmPayment(Request $request, Order $order): RedirectResponse
+    {
+        $store = $this->getStore();
+        abort_if($order->store_id !== $store->id, 403);
+        abort_unless($order->payment_confirmation === 'awaiting', 422, 'Este pedido no está esperando confirmación de pago.');
+
+        DB::transaction(function () use ($order, $request) {
+            $due = (float) $order->balance_due > 0 ? (float) $order->balance_due : (float) $order->total;
+            $kind = (float) $order->amount_paid > 0 ? OrderPayment::KIND_BALANCE : OrderPayment::KIND_FULL;
+            $note = \App\Services\Payments\ManualPayments::label($order->payment_method) . ' · confirmado por el vendedor'
+                . ($order->payment_reference ? " · Op. {$order->payment_reference}" : '');
+            $order->recordPayment($due, $kind, 'manual', null, $request->user()->id, $note);
+            $order->refresh();
+            $order->update([
+                'payment_confirmation' => 'confirmed',
+                'payment_confirmed_at' => now(),
+                'payment_confirmed_by' => $request->user()->id,
+                'status' => $order->status === 'pending' ? 'confirmed' : $order->status,
+            ]);
+        });
+
+        $this->notifyBuyer($order->fresh(), true, null);
+
+        return back()->with('success', "Pago confirmado. El pedido #{$order->order_number} pasó a Confirmado.");
+    }
+
+    /** Seller did not receive the money: keep the order open but mark the payment as not found. */
+    public function rejectPayment(Request $request, Order $order): RedirectResponse
+    {
+        $store = $this->getStore();
+        abort_if($order->store_id !== $store->id, 403);
+        abort_unless($order->payment_confirmation === 'awaiting', 422, 'Este pedido no está esperando confirmación de pago.');
+        $data = $request->validate(['note' => 'nullable|string|max:300']);
+
+        $order->update([
+            'payment_confirmation' => 'rejected',
+            'payment_confirmed_at' => now(),
+            'payment_confirmed_by' => $request->user()->id,
+            'payment_status' => 'failed',
+            'internal_notes' => trim(($order->internal_notes ? $order->internal_notes . "\n" : '') . 'Pago no encontrado' . (!empty($data['note']) ? ': ' . $data['note'] : '')),
+        ]);
+
+        $this->notifyBuyer($order->fresh(), false, $data['note'] ?? null);
+
+        return back()->with('success', "Marcaste el pago del pedido #{$order->order_number} como no recibido.");
+    }
+
+    private function notifyBuyer(Order $order, bool $confirmed, ?string $note): void
+    {
+        if (!$order->customer_email) {
+            return;
+        }
+        try {
+            \Illuminate\Support\Facades\Mail::to($order->customer_email)->queue(new \App\Mail\OrderPaymentConfirmed($order, $confirmed, $note));
+        } catch (\Throwable $e) {
+            Log::error('No se pudo encolar el aviso de pago confirmado.', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+        }
     }
 }

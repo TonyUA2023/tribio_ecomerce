@@ -112,6 +112,8 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     // Pasarela de pago
     Route::get('/tienda/pasarela-de-pago', [\App\Http\Controllers\Dashboard\PaymentGatewayController::class, 'edit'])->name('gateway.edit');
     Route::post('/tienda/pasarela-de-pago', [\App\Http\Controllers\Dashboard\PaymentGatewayController::class, 'update'])->name('gateway.update');
+    Route::post('/tienda/pagos-por-confirmacion', [\App\Http\Controllers\Dashboard\ManualPaymentsController::class, 'update'])->name('manual-payments.update');
+    Route::post('/tienda/cobertura-de-envio', [\App\Http\Controllers\Dashboard\ManualPaymentsController::class, 'coverage'])->name('delivery-coverage.update');
 
     // Constructor visual
     Route::get('/tienda/constructor', [StoreBuilderController::class, 'index'])->name('store.builder');
@@ -151,6 +153,8 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     Route::patch('/pedidos/{order}/status', [DashboardOrderController::class, 'updateStatus'])->name('pedidos.status');
     Route::patch('/pedidos/{order}/produccion', [DashboardOrderController::class, 'updateProduction'])->name('pedidos.production');
     Route::post('/pedidos/{order}/pagos', [DashboardOrderController::class, 'recordPayment'])->name('pedidos.payments.store');
+    Route::post('/pedidos/{order}/pago/confirmar', [DashboardOrderController::class, 'confirmPayment'])->name('pedidos.payment.confirm');
+    Route::post('/pedidos/{order}/pago/rechazar', [DashboardOrderController::class, 'rejectPayment'])->name('pedidos.payment.reject');
     Route::get('/pedidos/{order}/whatsapp', [DashboardOrderController::class, 'whatsappRedirect'])->name('pedidos.whatsapp');
 
     // Reseñas de productos: ver, ocultar y responder públicamente
@@ -269,6 +273,12 @@ Route::prefix('tienda')->name('store.')->group(function () {
 // Archivos privados: solo con URL firmada y con fecha de vencimiento (Attachment::signedUrl()).
 Route::get('/adjuntos/{attachment:token}', [\App\Http\Controllers\AttachmentController::class, 'show'])
     ->name('attachments.show')->middleware('signed');
+
+// SEO: sitemap y robots (la plataforma y, en dominios propios, cada tienda)
+Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
+Route::get('/sitemap-pages.xml', [\App\Http\Controllers\SitemapController::class, 'pages'])->name('sitemap.pages');
+Route::get('/robots.txt', [\App\Http\Controllers\SitemapController::class, 'robots'])->name('robots');
+Route::get('/tienda/{slug}/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'store'])->name('store.sitemap');
 
 // API geográfica (países y departamentos/estados) y costos de envío
 Route::get('/api/geo/countries', [\App\Http\Controllers\GeoController::class, 'countries']);

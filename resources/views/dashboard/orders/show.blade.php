@@ -18,7 +18,7 @@
         'cancelled'  => 'Cancelado',
         'refunded'   => 'Reembolsado',
     ];
-    $gatewayLabels = ['mercadopago' => 'Mercado Pago', 'paypal' => 'PayPal', 'flow' => 'Flow', 'manual' => 'Registro manual'];
+    $gatewayLabels = ['mercadopago' => 'Mercado Pago', 'paypal' => 'PayPal', 'flow' => 'Flow', 'manual' => 'Pago manual / por confirmación'];
     $kindLabels = ['full' => 'Pago total', 'deposit' => 'Adelanto', 'balance' => 'Saldo'];
     $itemImage = fn($path) => $path ? (\Illuminate\Support\Str::startsWith($path, ['http://', 'https://']) ? $path : asset('storage/' . $path)) : null;
 @endphp
@@ -32,6 +32,34 @@
     </div>
     <p class="text-white/40 text-xs">Realizado el {{ $order->created_at->locale('es')->translatedFormat('d \d\e F Y, H:i') }}</p>
 </div>
+
+
+{{-- Pago por confirmación: el comprador dice que ya pagó y la tienda debe verificarlo --}}
+@if($order->payment_confirmation === 'awaiting')
+<div class="glass-card p-5 mb-5 border border-amber-400/30" x-data="{ rejecting: false }">
+    <p class="text-amber-300 font-bold">⏳ Pedido en confirmación</p>
+    <p class="text-white/70 text-sm mt-1">
+        El cliente indica que pagó <strong>{{ $order->money($order->total) }}</strong> con <strong>{{ $order->payment_method_label }}</strong>
+        @if($order->payment_reference) (operación <strong>{{ $order->payment_reference }}</strong>)@endif
+        {{ $order->payment_submitted_at ? 'el ' . $order->payment_submitted_at->locale('es')->translatedFormat('d M, H:i') : '' }}.
+        Revisa tu app o banco y confirma cuando el dinero esté en tu cuenta.
+    </p>
+    <div class="flex flex-wrap gap-2 mt-3">
+        <form method="POST" action="{{ route('dashboard.pedidos.payment.confirm', $order) }}" onsubmit="return confirm('¿Ya recibiste el pago?');">
+            @csrf
+            <button type="submit" class="btn-primary text-sm">✓ Confirmar que recibí el pago</button>
+        </form>
+        <button type="button" class="btn-ghost text-sm" @click="rejecting = !rejecting">No recibí el pago</button>
+    </div>
+    <form x-show="rejecting" x-cloak method="POST" action="{{ route('dashboard.pedidos.payment.reject', $order) }}" class="mt-3 space-y-2">
+        @csrf
+        <input type="text" name="note" maxlength="300" class="input-field" placeholder="Motivo (opcional, se envía al cliente)">
+        <button type="submit" class="btn-ghost text-sm">Marcar pago como no recibido</button>
+    </form>
+</div>
+@elseif($order->payment_confirmation === 'rejected')
+<div class="glass-card p-4 mb-5 border border-red-400/30 text-sm text-red-300">Pago marcado como no recibido. Puedes registrar un pago manual más abajo si el cliente lo regulariza.</div>
+@endif
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
     <div class="lg:col-span-2 space-y-5">

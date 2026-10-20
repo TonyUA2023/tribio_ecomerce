@@ -85,7 +85,15 @@
                 <span class="sp-footer-copy">© {{ now()->year }} {{ $store->name }}. {{ $isEn ? 'All rights reserved.' : 'Todos los derechos reservados.' }} · {{ $isEn ? 'Powered by' : 'Tienda creada con' }} Tribio</span>
             </div>
             <div class="sp-pay" aria-label="{{ $isEn ? 'Payment methods' : 'Medios de pago' }}">
-                <span>VISA</span><span style="color: #EB001B">MC</span><span style="color: #2E77BB">AMEX</span><span style="color: #7B2D8E">YAPE</span><span style="color: #00A5A8">PLIN</span>
+                @php $payBadges = app(\App\Services\Payments\PaymentBadges::class)->forStore($store); @endphp
+                @if(in_array('visa', $payBadges, true))<span>VISA</span>@endif
+                @if(in_array('mastercard', $payBadges, true))<span style="color: #EB001B">MC</span>@endif
+                @if(in_array('paypal', $payBadges, true))<span style="color: #003087">PAYPAL</span>@endif
+                @if(in_array('mercadopago', $payBadges, true))<span style="color: #009EE3">MERCADO PAGO</span>@endif
+                @if(in_array('yape', $payBadges, true))<span style="color: #7B2D8E">YAPE</span>@endif
+                @if(in_array('plin', $payBadges, true))<span style="color: #00A5A8">PLIN</span>@endif
+                @if(in_array('bank', $payBadges, true))<span>{{ $isEn ? 'TRANSFER' : 'TRANSFERENCIA' }}</span>@endif
+                @if(in_array('cash', $payBadges, true))<span>{{ $isEn ? 'CASH ON DELIVERY' : 'CONTRA ENTREGA' }}</span>@endif
             </div>
         </div>
     </div>

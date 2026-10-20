@@ -12,6 +12,34 @@
         </div>
     @endif
 
+
+    @php
+        $peStates = app(\App\Services\Geo\GeoCatalog::class)->states('PE');
+        $selectedCoverage = old('departments', $store->delivery_coverage ?? []);
+    @endphp
+    <form method="POST" action="{{ route('dashboard.delivery-coverage.update') }}" class="glass-card p-4 sm:p-6 space-y-3">
+        @csrf
+        <div>
+            <h3 class="text-white font-bold text-sm">Cobertura de envío (Perú)</h3>
+            <p class="text-xs text-white/50 mt-1">Marca los departamentos a los que envías. Si no marcas ninguno, envías a todo el país. Los compradores de otras zonas verán un aviso al pagar.</p>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            @foreach($peStates as $dep)
+                <label class="flex items-center gap-2 text-sm text-white/80"><input type="checkbox" name="departments[]" value="{{ $dep }}" @checked(in_array($dep, $selectedCoverage, true))> {{ $dep }}</label>
+            @endforeach
+        </div>
+        <div class="max-w-xs">
+            <label class="input-label">Plazo para cambios <span class="text-white/40 normal-case font-normal">(desde el día que el cliente recibe su compra)</span></label>
+            <select name="exchange_hours" class="input-field">
+                <option value="">No indicar plazo</option>
+                @foreach([24 => '24 horas', 48 => '48 horas', 72 => '72 horas', 120 => '5 días', 168 => '7 días'] as $h => $hl)
+                    <option value="{{ $h }}" @selected((int) old('exchange_hours', $store->exchange_hours) === $h)>{{ $hl }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="flex justify-end"><button type="submit" class="btn-primary text-sm">Guardar cobertura y cambios</button></div>
+    </form>
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         <!-- Formulario -->

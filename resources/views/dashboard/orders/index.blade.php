@@ -31,6 +31,7 @@
        class="{{ $chipBase }} {{ !$activeStatus ? $chipOn : $chipOff }}">
         Todos <span class="opacity-70">{{ $totalCount }}</span>
     </a>
+    @php $statusLabels = ['por_confirmar' => '⏳ Por confirmar pago'] + $statusLabels; @endphp
     @foreach($statusLabels as $key => $label)
     <a href="{{ route('dashboard.pedidos.index', array_filter(['status' => $key, 'search' => $search])) }}"
        class="{{ $chipBase }} {{ $activeStatus === $key ? $chipOn : $chipOff }}">

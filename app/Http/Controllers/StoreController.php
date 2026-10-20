@@ -424,6 +424,8 @@ class StoreController extends Controller
             'items.*.id'       => 'required|integer|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
             'express_shipping' => 'nullable|boolean',
+            'payment_reference'=> 'nullable|string|max:100',
+            'payment_done'     => 'nullable|boolean',
         ]);
 
         // One normalized destination feeds the quote, the order and every gateway.
@@ -444,6 +446,21 @@ class StoreController extends Controller
             $quote = app(CheckoutPricing::class)->quote($store, $request->items, $country, $state, $request->boolean('express_shipping'));
         } catch (CheckoutPricingException $e) {
             return response()->json(['error' => $e->getMessage()], 422);
+        }
+
+        // Delivery coverage (e.g. Lima only): the store lists the departments it serves.
+        $coverage = array_values(array_filter((array) $store->delivery_coverage));
+        if ($coverage && $country === 'PE' && !in_array($state, $coverage, true)) {
+            return response()->json([
+                'error' => 'Por ahora solo realizamos envíos a: ' . implode(', ', $coverage) . '.',
+            ], 422);
+        }
+
+        // Pago por confirmación: the method must be one this store enabled.
+        $paymentMethodInput = (string) $request->input('payment_method', 'whatsapp');
+        $manual = \App\Services\Payments\ManualPayments::isManualKey($paymentMethodInput);
+        if ($manual && !app(\App\Services\Payments\ManualPayments::class)->isEnabled($store, $paymentMethodInput)) {
+            return response()->json(['error' => 'Ese método de pago no está disponible en esta tienda.'], 422);
         }
         $orderItemsData = $quote->items;
         $subtotal       = $quote->subtotal;
@@ -509,6 +526,8 @@ class StoreController extends Controller
         }
 
         $paymentMethod = $request->input('payment_method', 'whatsapp');
+        $manualAwaiting = $manual && (\App\Services\Payments\ManualPayments::METHODS[$paymentMethod]['confirmable'] ?? false)
+            && $request->boolean('payment_done');
 
         // Nothing in `orders` or product stock exists yet: this is a draft snapshot of
         // the checkout request. It only ever becomes a real Order — and only then does
@@ -537,6 +556,8 @@ class StoreController extends Controller
                 'total'               => $total,
                 'currency'            => $currency,
                 'payment_method'      => $paymentMethod,
+                'payment_confirmation'=> $manualAwaiting ? 'awaiting' : null,
+                'payment_reference'   => $manual ? Str::limit(trim((string) $request->input('payment_reference')), 100, '') ?: null : null,
                 'source'              => 'store',
                 'items'               => $orderItemsData,
             ] + ($quote->hasMadeToOrder ? [
@@ -581,7 +602,7 @@ class StoreController extends Controller
         // exigirla aquí es lo que garantiza que solo una API se use para cobrar, aunque
         // credenciales de otra pasarela hayan quedado guardadas de una selección anterior.
         $mpToken = $store->mp_access_token ?? $store->gateway_access_token;
-        if ($store->payment_gateway === 'mercado_pago' && $paymentMethod !== 'paypal' && ($paymentMethod === 'mercadopago' || $store->checkout_mode === 'card') && $mpToken) {
+        if ($store->payment_gateway === 'mercado_pago' && $paymentMethod !== 'paypal' && !$manual && ($paymentMethod === 'mercadopago' || $store->checkout_mode === 'card') && $mpToken) {
             $mpFormData = $request->input('mp_form_data');
             try {
                 // Resolved from the container (same config) so tests can swap in a mock handler.
@@ -894,7 +915,7 @@ class StoreController extends Controller
         // que pueda quedar a medias como con una pasarela.
         $order = $pending->materialize('pending', 'pending', decrementStock: true);
         $whatsappNumber = preg_replace('/[^0-9]/', '', $store->whatsapp_phone ?? '');
-        $whatsappUrl = $whatsappNumber ? ("https://wa.me/{$whatsappNumber}?text=" . $order->buildWhatsappMessage()) : null;
+        $whatsappUrl = $whatsappNumber && !$manual ? ("https://wa.me/{$whatsappNumber}?text=" . $order->buildWhatsappMessage()) : null;
 
         return response()->json([
             'success'      => true,
@@ -1100,6 +1121,7 @@ class StoreController extends Controller
             'order_number'   => $order->order_number,
             'payment_status' => $order->payment_status,
             'payment_method' => $order->payment_method,
+            'payment_confirmation' => $order->payment_confirmation,
             'tracking'       => $this->browserPurchase($order),
         ], fn ($value) => $value !== null));
     }

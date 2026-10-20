@@ -26,6 +26,7 @@ class Order extends Model
         'status', 'payment_status', 'payment_method', 'paypal_order_id',
         'whatsapp_sent', 'whatsapp_sent_at',
         'source', 'internal_notes', 'is_express_shipping',
+        'payment_confirmation', 'payment_reference', 'payment_submitted_at', 'payment_confirmed_at', 'payment_confirmed_by',
         'production_stage', 'deposit_amount', 'required_by', 'estimated_ready_at',
     ];
 
@@ -52,6 +53,8 @@ class Order extends Model
         'estimated_ready_at' => 'date',
         'whatsapp_sent'    => 'boolean',
         'whatsapp_sent_at' => 'datetime',
+        'payment_submitted_at' => 'datetime',
+        'payment_confirmed_at' => 'datetime',
         'is_express_shipping' => 'boolean',
     ];
 
@@ -236,6 +239,7 @@ class Order extends Model
             'paypal'            => 'PayPal',
             'flow'              => 'Flow',
             'whatsapp'          => 'WhatsApp / Pago directo',
+            'manual_yape', 'manual_plin', 'manual_bank', 'manual_cod' => \App\Services\Payments\ManualPayments::label($this->payment_method),
             null, ''            => 'No especificado',
             default             => ucfirst(str_replace('_', ' ', $this->payment_method)),
         };
