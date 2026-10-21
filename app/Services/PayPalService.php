@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
 /**
  * Wraps PayPal's Orders v2 REST API for storefront checkout. Each store brings its
  * own PayPal app credentials (client id/secret, stored on Store), unlike the
- * platform-level Culqi integration in CulqiService.
+ * platform-level plan billing in MercadoPagoSubscriptions.
  *
  * PayPal does not settle in PEN — every amount here is USD (see
  * Product::resolvePrice('USD') at the call site), confirmed against PayPal's

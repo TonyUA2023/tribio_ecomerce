@@ -33,7 +33,8 @@ Route::get('/privacidad', [PublicController::class, 'privacy'])->name('legal.pri
 Route::get('/reembolsos', [PublicController::class, 'refunds'])->name('legal.refunds');
 Route::post('/plan/checkout', [SubscriptionController::class, 'checkout'])->name('plan.checkout');
 Route::get('/plan/{store}/pagar', [SubscriptionController::class, 'pay'])->middleware('auth')->name('plan.pay');
-Route::post('/plan/{store}/cobrar', [SubscriptionController::class, 'charge'])->middleware('auth')->name('plan.charge');
+Route::post('/plan/{store}/suscribir', [SubscriptionController::class, 'subscribe'])->middleware('auth')->name('plan.subscribe');
+Route::get('/plan/{store}/retorno', [SubscriptionController::class, 'return'])->middleware('auth')->name('plan.return');
 Route::post('/plan/webhook', [SubscriptionController::class, 'webhook'])->name('plan.webhook');
 
 // ────────── TRIBIO PASS (portal unificado comprador + negocio) ──────────
@@ -54,7 +55,7 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->midd
 
 // Legacy standalone store registration — retired 2026-09-21: it created an active
 // store with a free 30-day trial and never checked for an existing Tribio Pass
-// session, bypassing both Culqi billing and identity unification. Every "Crear mi
+// session, bypassing both plan billing and identity unification. Every "Crear mi
 // tienda" link now points straight at the pricing flow (#precios); this redirect
 // is only a safety net for old bookmarks/indexed links.
 Route::get('/registro', fn () => redirect(route('home') . '#precios'))->name('register');
