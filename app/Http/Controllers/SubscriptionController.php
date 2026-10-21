@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Store;
 use App\Models\User;
-use App\Services\CulqiService;
+use App\Services\Billing\MercadoPagoSubscriptions;
 use App\Support\BusinessProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,14 +15,14 @@ use Illuminate\Validation\Rule;
 
 class SubscriptionController extends Controller
 {
-    public function __construct(protected CulqiService $culqi)
+    public function __construct(protected MercadoPagoSubscriptions $billing)
     {
     }
 
     /**
      * Step 1 (pricing modal on the home page): register the account + draft store
      * for the chosen plan, then send the owner to the cart/payment page. No charge
-     * happens here — Culqi only sees a card once the owner confirms on `pay()`.
+     * happens here — Mercado Pago is only contacted once the owner confirms on `pay()`.
      */
     public function checkout(Request $request)
     {
@@ -88,7 +88,7 @@ class SubscriptionController extends Controller
                 'template_name'  => config('storefront.default_template', 'soft-market'),
                 'whatsapp_phone' => $request->whatsapp_phone,
                 'accent_color'   => '#0284c7',
-                'status'         => 'draft', // draft hasta que Culqi confirme el pago
+                'status'         => 'draft', // draft hasta que Mercado Pago confirme la suscripción
                 'plan'           => $planKey,
                 'plan_expires_at'=> null,
             ]);
@@ -100,14 +100,14 @@ class SubscriptionController extends Controller
     }
 
     /**
-     * The "cart": order summary for the chosen plan + embedded Culqi card form.
-     * Nothing is charged until the owner submits the card via charge().
+     * The "cart": order summary for the chosen plan. Nothing is charged until the owner
+     * authorizes the monthly subscription on Mercado Pago's page (see subscribe()).
      */
     public function pay(Store $store)
     {
         abort_unless(Auth::check() && Auth::id() === $store->user_id, 403);
 
-        if ($store->status === 'active') {
+        if ($store->status === 'active' && !$store->hasPlanExpired()) {
             return redirect()->route('dashboard.index')
                 ->with('success', 'Tu tienda ya está activa. ¡Bienvenido de vuelta!');
         }
@@ -115,160 +115,93 @@ class SubscriptionController extends Controller
         $planConfig = config("tribio.plans.{$store->plan}");
         abort_if(!$planConfig, 404);
 
-        if (!$this->culqi->isConfigured()) {
-            return view('public.plan-pay', [
-                'store'      => $store,
-                'plan'       => $planConfig,
-                'culqiReady' => false,
-            ]);
-        }
-
         return view('public.plan-pay', [
-            'store'         => $store,
-            'plan'          => $planConfig,
-            'culqiReady'    => true,
-            'culqiPublicKey'=> $this->culqi->publicKey(),
+            'store'        => $store,
+            'plan'         => $planConfig,
+            'billingReady' => $this->billing->isConfigured(),
         ]);
     }
 
-    /**
-     * Receives the Culqi card token from the cart page and turns it into a live
-     * recurring subscription: customer -> card -> plan (cached) -> subscription.
-     */
-    public function charge(Request $request, Store $store)
+    /** Creates the Mercado Pago subscription and sends the owner to authorize it. */
+    public function subscribe(Store $store)
     {
         abort_unless(Auth::check() && Auth::id() === $store->user_id, 403);
-
-        if ($store->status === 'active') {
-            return response()->json(['success' => true, 'redirect' => route('dashboard.index')]);
-        }
-
-        $request->validate([
-            'culqi_token'  => 'required|string',
-            'address'      => 'required|string|max:100|min:5',
-            'address_city' => 'required|string|max:30|min:2',
-        ]);
 
         $planConfig = config("tribio.plans.{$store->plan}");
         abort_if(!$planConfig, 404);
 
-        $user = $store->user;
-        [$firstName, $lastName] = $this->splitName($user->name);
+        if (!$this->billing->isConfigured()) {
+            return redirect()->route('plan.pay', $store)->withErrors(['billing' => 'Los pagos todavía no están activos. Intenta más tarde.']);
+        }
 
         try {
-            $customer = $this->culqi->createCustomer([
-                'address'      => $request->address,
-                'address_city' => $request->address_city,
-                'country_code' => 'PE',
-                'email'        => $user->email,
-                'first_name'   => $firstName,
-                'last_name'    => $lastName,
-                'phone_number' => preg_replace('/[^0-9]/', '', $user->phone ?? '999999999') ?: '999999999',
-            ]);
-
-            $card = $this->culqi->createCard($customer['id'], $request->culqi_token);
-            $plan = $this->culqi->getOrCreatePlan($store->plan);
-            $subscription = $this->culqi->createSubscription($card['id'], $plan['id']);
-
-            $store->update([
-                'status'                 => 'active',
-                'plan_expires_at'        => now()->addMonth(),
-                'culqi_customer_id'      => $customer['id'],
-                'culqi_card_id'          => $card['id'],
-                'culqi_subscription_id'  => $subscription['id'],
-            ]);
-
-            // Land the owner in *this* store's dashboard next, not whichever other
-            // store (if any) happened to be their current one before this purchase.
-            $user->switchToStore($store);
-
-            Log::info('Culqi: suscripción creada', [
-                'store_id'        => $store->id,
-                'subscription_id' => $subscription['id'],
-                'plan'            => $store->plan,
-            ]);
-
-            return response()->json([
-                'success'  => true,
-                'redirect' => route('dashboard.index'),
-                'message'  => "¡Pago procesado con éxito! Bienvenido al Plan " . ucfirst($planConfig['label']) . ".",
-            ]);
+            $preapproval = $this->billing->create($store, $planConfig, $store->user->email, route('plan.return', $store));
         } catch (\Throwable $e) {
-            Log::error('Culqi: fallo al procesar la suscripción', [
-                'store_id' => $store->id,
-                'message'  => $e->getMessage(),
-            ]);
+            Log::error('Mercado Pago: fallo al crear la suscripción del plan', ['store_id' => $store->id, 'message' => $e->getMessage()]);
 
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage() ?: 'No se pudo procesar el pago. Verifica los datos de tu tarjeta e intenta nuevamente.',
-            ], 422);
+            return redirect()->route('plan.pay', $store)->withErrors(['billing' => $e->getMessage()]);
         }
+
+        $store->update(['billing_preapproval_id' => $preapproval['id']]);
+
+        return redirect()->away($preapproval['init_point']);
     }
 
     /**
-     * Public Culqi webhook (configured in CulqiPanel > Eventos > Webhooks). We never trust
-     * the payload's amounts/state directly — only use it as a signal to re-fetch the
-     * subscription from Culqi's API and sync from that authoritative response, the same
-     * defensive pattern already used for the Mercado Pago storefront webhook.
+     * Where Mercado Pago sends the owner back. The query string is never trusted: the
+     * subscription is re-fetched from Mercado Pago and the store synced from that.
+     */
+    public function return(Store $store)
+    {
+        abort_unless(Auth::check() && Auth::id() === $store->user_id, 403);
+
+        $preapproval = $store->billing_preapproval_id ? $this->billing->get($store->billing_preapproval_id) : null;
+        if ($preapproval) {
+            $this->billing->sync($store, $preapproval);
+        }
+
+        if ($store->fresh()->status === 'active') {
+            Auth::user()->switchToStore($store);
+
+            return redirect()->route('dashboard.index')
+                ->with('success', '¡Suscripción activada! Bienvenido al Plan ' . ucfirst(config("tribio.plans.{$store->plan}.label")) . '.');
+        }
+
+        return redirect()->route('plan.pay', $store)
+            ->withErrors(['billing' => 'Aún no recibimos la autorización de Mercado Pago. Si ya la completaste, espera un minuto y recarga; si no, inténtalo de nuevo.']);
+    }
+
+    /**
+     * Public Mercado Pago webhook (topics `subscription_preapproval` and
+     * `subscription_authorized_payment`). The payload is only a signal: the subscription
+     * is re-fetched from Mercado Pago and the store synced from that response.
      */
     public function webhook(Request $request)
     {
-        $payload = $request->all();
-        Log::info('Culqi Webhook recibido:', $payload);
+        $topic = $request->input('type', $request->input('topic'));
+        $id = $request->input('data.id', $request->input('id'));
+        Log::info('Mercado Pago (planes) webhook recibido', $request->all());
 
-        $type = $payload['type'] ?? null;
-        $data = $payload['data'] ?? [];
-        $subscriptionId = $data['subscription_id'] ?? $data['id'] ?? null;
-
-        if (!$subscriptionId || !str_starts_with((string) $type, 'subscription.')) {
+        if (!$id || !in_array($topic, ['subscription_preapproval', 'subscription_authorized_payment'], true)) {
             return response()->json(['status' => 'ignored'], 200);
         }
 
-        $store = Store::where('culqi_subscription_id', $subscriptionId)->first();
+        $preapprovalId = (string) $id;
+        if ($topic === 'subscription_authorized_payment') {
+            $payment = $this->billing->authorizedPayment($preapprovalId);
+            $preapprovalId = (string) ($payment['preapproval_id'] ?? '');
+        }
+
+        $store = $preapprovalId !== '' ? Store::where('billing_preapproval_id', $preapprovalId)->first() : null;
         if (!$store) {
-            Log::warning('Culqi Webhook: no se encontró tienda para la suscripción.', ['subscription_id' => $subscriptionId]);
+            Log::warning('Mercado Pago (planes) webhook: no se encontró tienda.', ['id' => $id, 'topic' => $topic]);
             return response()->json(['status' => 'ok'], 200);
         }
 
-        $subscription = $this->culqi->getSubscription($subscriptionId);
-        if (!$subscription) {
-            return response()->json(['status' => 'ok'], 200);
+        if ($preapproval = $this->billing->get($preapprovalId)) {
+            $this->billing->sync($store, $preapproval);
         }
-
-        match (true) {
-            $type === 'subscription.charge.succeeded' => $store->update([
-                'status'          => 'active',
-                'plan_expires_at' => now()->addMonth(),
-            ]),
-            $type === 'subscription.cancel.succeeded' || ($subscription['state'] ?? null) === 'canceled' => $store->update([
-                'status' => 'cancelled',
-            ]),
-            default => null,
-        };
 
         return response()->json(['status' => 'ok'], 200);
-    }
-
-    /**
-     * Splits a single "name" field into Culqi's required first/last name shape
-     * (letters and spaces only, at least 2 characters each).
-     */
-    private function splitName(string $fullName): array
-    {
-        $clean = trim(preg_replace('/[^\p{L}\s]/u', '', $fullName));
-        $parts = preg_split('/\s+/', $clean, -1, PREG_SPLIT_NO_EMPTY) ?: [];
-
-        if (count($parts) < 2) {
-            return [$parts[0] ?? 'Cliente', 'Tribio'];
-        }
-
-        $first = array_shift($parts);
-        $last = implode(' ', $parts);
-
-        return [
-            strlen($first) < 2 ? str_pad($first, 2, $first) : $first,
-            strlen($last) < 2 ? str_pad($last, 2, $last) : $last,
-        ];
     }
 }
