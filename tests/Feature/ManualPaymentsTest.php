@@ -74,6 +74,19 @@ class ManualPaymentsTest extends TestCase
             ->assertSee('Nair Salazar Pinedo')->assertSee('191-12345678-0-12')->assertSee('Ya realicé el pago');
     }
 
+    public function test_the_gateway_page_save_button_also_saves_manual_payments(): void
+    {
+        [$owner, $store] = $this->seller(['manual_payments' => null]);
+
+        $this->actingAs($owner)->post(route('dashboard.gateway.update'), [
+            'checkout_mode' => 'whatsapp', 'manual_payments_form' => 1,
+            'yape' => ['enabled' => 1, 'phone' => '901317207'],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertTrue($store->fresh()->manual_payments['yape']['enabled']);
+        $this->get(route('store.show', $store->slug))->assertSee('901317207');
+    }
+
     public function test_a_method_without_anything_to_pay_to_cannot_be_enabled(): void
     {
         [$owner] = $this->seller();

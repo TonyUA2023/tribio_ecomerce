@@ -2,12 +2,16 @@
 @section('title','Pasarela de Pago') @section('page_title','💳 Pasarela de Pago')
 @section('content')
 <div class="w-full max-w-5xl mx-auto space-y-5 sm:space-y-6">
-    <form id="payment-gateway-form" method="POST" action="{{ route('dashboard.gateway.update') }}" class="space-y-5 sm:space-y-6" x-data="{
+    <form id="payment-gateway-form" method="POST" enctype="multipart/form-data" action="{{ route('dashboard.gateway.update') }}" class="space-y-5 sm:space-y-6" x-data="{
         checkoutMode: '{{ old('checkout_mode', $store?->checkout_mode ?? 'whatsapp') }}',
         gateway: '{{ old('payment_gateway', $store?->payment_gateway ?? '') }}',
         showMpToken: false, showPaypalSecret: false, showFlowSecret: false,
     }">
         @csrf
+
+        @if(session('success'))
+            <div class="p-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm">✅ {{ session('success') }}</div>
+        @endif
 
         {{-- Barra de acción: pegada arriba, no tapa el contenido al hacer scroll --}}
         <div class="sticky top-0 z-20 -mx-1 sm:mx-0">
@@ -171,8 +175,7 @@
                 </div>
             </div>
         </div>
+        @include('dashboard.gateway._manual-payments')
     </form>
-
-    @include('dashboard.gateway._manual-payments')
 </div>
 @endsection
