@@ -8,16 +8,14 @@
         'cod'  => ['Pago contra entrega', false, []],
     ];
 @endphp
-<form method="POST" action="{{ route('dashboard.manual-payments.update') }}" enctype="multipart/form-data" class="glass-card p-4 sm:p-6 space-y-4">
-    @csrf
+{{-- Part of the gateway form: the sticky "Guardar Cambios" button saves this too. --}}
+<div class="glass-card p-4 sm:p-6 space-y-4">
+    <input type="hidden" name="manual_payments_form" value="1">
     <div>
         <h2 class="text-white font-bold text-base">Pagos por confirmación</h2>
         <p class="text-xs text-white/50 mt-1">Para negocios que cobran con Yape, Plin o transferencia. El cliente paga, pulsa «Ya realicé el pago» y el pedido queda <strong>en confirmación</strong> hasta que tú lo confirmes desde Pedidos. No necesita Mercado Pago ni tarjeta.</p>
     </div>
-    @if(session('success') && request()->routeIs('dashboard.gateway.edit'))
-        <div class="p-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm">✅ {{ session('success') }}</div>
-    @endif
-    @foreach($cards as $key => [$label, $hasQr, $fields])
+        @foreach($cards as $key => [$label, $hasQr, $fields])
         <div class="rounded-xl border border-white/10 p-3.5 space-y-3" x-data="{ on: {{ old("$key.enabled", $mp[$key]['enabled'] ?? false) ? 'true' : 'false' }} }">
             <label class="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" name="{{ $key }}[enabled]" value="1" x-model="on" class="w-4 h-4">
@@ -50,7 +48,4 @@
             </div>
         </div>
     @endforeach
-    <div class="flex justify-end">
-        <button type="submit" class="btn-primary text-sm">Guardar pagos por confirmación</button>
-    </div>
-</form>
+</div>

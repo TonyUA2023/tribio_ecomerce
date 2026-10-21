@@ -11,12 +11,7 @@ use Illuminate\Support\Facades\Storage;
 /** Owner settings for "pago por confirmación" and for the delivery coverage. */
 class ManualPaymentsController extends Controller
 {
-    public function update(Request $request)
-    {
-        $store = Auth::user()->currentStore();
-        abort_unless($store, 404);
-
-        $request->validate([
+    public const RULES = [
             'yape.enabled' => 'nullable|boolean', 'yape.holder' => 'nullable|string|max:120', 'yape.phone' => 'nullable|string|max:30',
             'yape.instructions' => 'nullable|string|max:500', 'yape.qr' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:3072',
             'plin.enabled' => 'nullable|boolean', 'plin.holder' => 'nullable|string|max:120', 'plin.phone' => 'nullable|string|max:30',
@@ -24,7 +19,22 @@ class ManualPaymentsController extends Controller
             'bank.enabled' => 'nullable|boolean', 'bank.holder' => 'nullable|string|max:120', 'bank.bank' => 'nullable|string|max:80',
             'bank.account' => 'nullable|string|max:40', 'bank.cci' => 'nullable|string|max:40', 'bank.instructions' => 'nullable|string|max:500',
             'cod.enabled' => 'nullable|boolean', 'cod.instructions' => 'nullable|string|max:500',
-        ]);
+    ];
+
+    public function update(Request $request)
+    {
+        $store = Auth::user()->currentStore();
+        abort_unless($store, 404);
+
+        $this->persist($request, $store);
+
+        return back()->with('success', 'Pagos por confirmación guardados.');
+    }
+
+    /** Validates and stores the manual-payment settings; shared with the gateway page's single save button. */
+    public function persist(Request $request, \App\Models\Store $store): void
+    {
+        $request->validate(self::RULES);
 
         $current = is_array($store->manual_payments) ? $store->manual_payments : [];
         $fields = [
@@ -56,14 +66,12 @@ class ManualPaymentsController extends Controller
             }
             // A method needs something to pay to (except cash on delivery).
             if ($cfg['enabled'] && $key !== 'cod' && empty($cfg['phone'] ?? null) && empty($cfg['account'] ?? null) && empty($cfg['qr_path'] ?? null)) {
-                return back()->withErrors(["$key.enabled" => 'Para activar este método agrega un número, una cuenta o un QR.'])->withInput();
+                throw \Illuminate\Validation\ValidationException::withMessages(["$key.enabled" => 'Para activar este método agrega un número, una cuenta o un QR.']);
             }
             $next[$key] = $cfg;
         }
 
         $store->update(['manual_payments' => $next]);
-
-        return back()->with('success', 'Pagos por confirmación guardados.');
     }
 
     public function coverage(Request $request, GeoCatalog $geo)

@@ -87,6 +87,11 @@ class PaymentGatewayController extends Controller
         }
         $store->update($data);
 
+        // One save button for the whole page: the manual-payment card posts with this form.
+        if ($request->boolean('manual_payments_form')) {
+            app(ManualPaymentsController::class)->persist($request, $store);
+        }
+
         return back()->with('success', 'Configuración de pasarela de pago actualizada correctamente.');
     }
 }
