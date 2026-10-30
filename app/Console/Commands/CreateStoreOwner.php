@@ -17,6 +17,9 @@ use Illuminate\Support\Str;
  */
 class CreateStoreOwner extends Command
 {
+    /** @var array<string, mixed> validated --set values */
+    private array $extraSettings = [];
+
     protected $signature = 'tribio:create-owner
         {email : Login email for the owner}
         {store_name : Store/business name, e.g. "NINTAI FASHION"}
@@ -25,7 +28,15 @@ class CreateStoreOwner extends Command
         {--category=moda : Rubro key from config/tribio.php business_categories}
         {--plan=basic : Plan key from config/tribio.php plans}
         {--days=30 : Days until the plan expires}
-        {--password= : Password to set (generated and printed when omitted)}';
+        {--password= : Password to set (generated and printed when omitted)}
+        {--template= : Storefront template key from config/storefront.php (defaults to the platform default)}
+        {--primary= : Brand primary color as #RRGGBB (template setting colors.primary)}
+        {--secondary= : Brand secondary color as #RRGGBB (template setting colors.secondary)}
+        {--font= : Heading font key of the template (typography.heading), e.g. playfair}
+        {--set=* : Any other template setting as path=value, e.g. --set="hero.items.0.title=Jeans" (toggles take 0/1; an empty value clears an optional text)}
+        {--tagline= : Short slogan shown by the storefront}
+        {--description= : Store description (About / SEO)}
+        {--whatsapp= : WhatsApp number with country code, e.g. 51999888777}';
 
     protected $description = 'Create a store_owner account plus an active store for a new business';
 
@@ -58,13 +69,36 @@ class CreateStoreOwner extends Command
             return self::FAILURE;
         }
 
+        $template = $this->option('template') ?: config('storefront.default_template', 'soft-market');
+        if (!config("storefront.templates.{$template}")) {
+            $this->error("Unknown template '{$template}'. Valid: " . implode(', ', array_keys(config('storefront.templates'))));
+            return self::FAILURE;
+        }
+        $extra = [];
+        foreach ((array) $this->option('set') as $pair) {
+            [$path, $value] = array_pad(explode('=', (string) $pair, 2), 2, null);
+            $field = app(\App\Services\Storefront\TemplateRegistry::class)->fields($template)[trim((string) $path)] ?? null;
+            if ($value === null || !$field) {
+                $this->error("--set '{$pair}': unknown setting for {$template} (use path=value).");
+                return self::FAILURE;
+            }
+            $extra[trim($path)] = $field['type'] === 'toggle' ? in_array($value, ['1', 'true', 'si', 'sí'], true) : $value;
+        }
+        $this->extraSettings = $extra;
+        foreach (['primary', 'secondary'] as $colorOption) {
+            if ($this->option($colorOption) && !preg_match('/^#[0-9a-fA-F]{6}$/', (string) $this->option($colorOption))) {
+                $this->error("--{$colorOption} must look like #1F4E8C.");
+                return self::FAILURE;
+            }
+        }
+
         $password = $this->option('password') ?: Str::password(14, symbols: false);
         if (strlen($password) < 8) {
             $this->error('The password needs at least 8 characters.');
             return self::FAILURE;
         }
 
-        $store = DB::transaction(function () use ($email, $storeName, $slug, $plan, $category, $password) {
+        $store = DB::transaction(function () use ($email, $storeName, $slug, $plan, $category, $password, $template) {
             $user = User::create([
                 'name'     => $this->option('name') ?: $storeName,
                 'email'    => $email,
@@ -72,12 +106,22 @@ class CreateStoreOwner extends Command
                 'role'     => User::ROLE_STORE_OWNER,
             ]);
 
-            return Store::create(BusinessProfile::for($category)->creationDefaults() + [
+            // Optional brand fields are left out when not given so the column defaults apply.
+            $brand = array_filter([
+                'tagline'         => $this->option('tagline'),
+                'description'     => $this->option('description'),
+                'whatsapp_phone'  => $this->option('whatsapp') ? preg_replace('/\D/', '', (string) $this->option('whatsapp')) : null,
+                'accent_color'    => $this->option('primary'),
+                'secondary_color' => $this->option('secondary'),
+                'template_settings' => $this->templateSettings($template),
+            ], fn ($value) => $value !== null && $value !== '' && $value !== []);
+
+            return Store::create(BusinessProfile::for($category)->creationDefaults() + $brand + [
                 'user_id'         => $user->id,
                 'name'            => $storeName,
                 'slug'            => $slug,
                 'category'        => $category,
-                'template_name'   => config('storefront.default_template', 'soft-market'),
+                'template_name'   => $template,
                 'status'          => 'active',
                 'plan'            => $plan,
                 'plan_expires_at' => now()->addDays((int) $this->option('days')),
@@ -90,5 +134,22 @@ class CreateStoreOwner extends Command
         $this->warn('Share these once and ask the owner to change the password after logging in.');
 
         return self::SUCCESS;
+    }
+
+    /** Brand colors and heading font saved the same way the Plantillas customizer saves them. */
+    private function templateSettings(string $template): array
+    {
+        $settings = [];
+        foreach (['colors.primary' => 'primary', 'colors.secondary' => 'secondary', 'typography.heading' => 'font'] as $path => $option) {
+            if ($this->option($option)) {
+                data_set($settings, $path, $this->option($option));
+            }
+        }
+
+        foreach ($this->extraSettings as $path => $value) {
+            data_set($settings, $path, $value);
+        }
+
+        return $settings ? [$template => $settings] : [];
     }
 }
