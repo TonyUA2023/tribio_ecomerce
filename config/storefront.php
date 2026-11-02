@@ -418,6 +418,16 @@ $storefront = [
                     ],
                 ],
                 [
+                    'key' => 'product', 'title' => 'Página de producto', 'icon' => 'tag',
+                    'description' => 'Un botón extra para que el cliente te escriba por WhatsApp con el producto, la talla y la cantidad ya elegidos.',
+                    'fields' => [
+                        'product.whatsapp_button' => ['type' => 'toggle', 'label' => 'Mostrar el botón «Comprar por WhatsApp»', 'default' => false,
+                            'help' => 'Necesita el número de WhatsApp de tu tienda (Mi tienda). El pedido se coordina por chat, sin pago en línea.'],
+                        'product.whatsapp_label' => ['type' => 'text', 'label' => 'Texto del botón', 'max' => 32,
+                            'default' => ['es' => 'Comprar por WhatsApp', 'en' => 'Buy on WhatsApp']],
+                    ],
+                ],
+                [
                     'key' => 'popup', 'title' => 'Pop-up promocional', 'icon' => 'tag',
                     'description' => 'Una ventana con tu cupón que aparece una sola vez por visita, a los pocos segundos.',
                     'fields' => [

@@ -191,4 +191,22 @@ class UrbanStyleTemplateTest extends TestCase
             ->assertSee('Ver pop-up promocional')
             ->assertSee('data-tpl-text="hero.items.2.title"', false);
     }
+
+    public function test_the_whatsapp_buy_button_shows_only_when_enabled_and_the_store_has_a_number(): void
+    {
+        $store = $this->urbanStore();
+        $product = Product::create(['store_id' => $store->id, 'name' => 'Jean clásico', 'slug' => 'jean', 'price' => 100, 'stock' => 5, 'is_active' => true]);
+        $url = route('store.product', [$store->slug, $product->slug]);
+
+        $this->get($url)->assertOk()->assertDontSee('Comprar por WhatsApp');
+
+        $store->update(['whatsapp_phone' => '51 900 000 000']);
+        $this->get($url)->assertOk()->assertDontSee('Comprar por WhatsApp');
+
+        $this->save($store, ['product' => ['whatsapp_button' => '1']])->assertSessionHasNoErrors();
+        $this->get($url)->assertOk()->assertSee('Comprar por WhatsApp')->assertSee('https://wa.me/51900000000?text=', false);
+
+        $store->update(['whatsapp_phone' => null]);
+        $this->get($url)->assertOk()->assertDontSee('Comprar por WhatsApp');
+    }
 }
