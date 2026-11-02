@@ -1,6 +1,9 @@
 import './bootstrap';
 import './marketing';
 import './dashboard-images';
+
+// Estudio de flyers (Dashboard → Marketing → Contenido): html-to-image solo se descarga al exportar.
+window.tribioExportFlyer = (...args) => import('./flyer-studio').then(module => module.exportFlyer(...args));
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
 

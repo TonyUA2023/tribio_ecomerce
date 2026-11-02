@@ -21,6 +21,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(TemplateRegistry::class);
+        $this->app->bind(\App\Services\AiMarketing\TextModel::class, \App\Services\AiMarketing\AnthropicTextModel::class);
     }
 
     /**

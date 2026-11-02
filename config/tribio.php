@@ -120,4 +120,23 @@ return [
             'highlight' => false,
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Contenido con IA (Marketing → Contenido)
+    |--------------------------------------------------------------------------
+    | Créditos mensuales por plan (se reinician el día 1) y cuánto cuesta cada acción.
+    | Valores iniciales para validar con clientes reales; el costo real en USD de cada
+    | llamada queda en ai_usage_logs para ajustarlos.
+    */
+    'ai' => [
+        'monthly_credits' => [
+            'basic'        => 30,
+            'professional' => 300,
+            'enterprise'   => 1500,
+        ],
+        'credit_cost' => [
+            'copy' => 1,
+        ],
+    ],
 ];
