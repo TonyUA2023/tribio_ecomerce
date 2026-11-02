@@ -179,6 +179,17 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     Route::get('/marketing/google', [\App\Http\Controllers\Dashboard\GoogleIntegrationController::class, 'edit'])->name('marketing.google.edit');
     Route::put('/marketing/google', [\App\Http\Controllers\Dashboard\GoogleIntegrationController::class, 'update'])->name('marketing.google.update');
     Route::post('/marketing/google/publicar', [\App\Http\Controllers\Dashboard\GoogleIntegrationController::class, 'publishViaTribio'])->name('marketing.google.publish');
+
+    // Marketing → Contenido con IA: kit de marca, copys con IA y flyers con precios reales
+    Route::get('/marketing/contenido', [\App\Http\Controllers\Dashboard\AiContentController::class, 'index'])->name('marketing.content.index');
+    Route::put('/marketing/contenido/marca', [\App\Http\Controllers\Dashboard\AiContentController::class, 'updateBrandKit'])->name('marketing.content.brand');
+    Route::post('/marketing/contenido/textos', [\App\Http\Controllers\Dashboard\AiContentController::class, 'generateCopy'])
+        ->middleware('throttle:10,1')->name('marketing.content.copy');
+    Route::get('/marketing/contenido/flyer', [\App\Http\Controllers\Dashboard\AiContentController::class, 'flyer'])->name('marketing.content.flyer');
+    Route::post('/marketing/contenido/flyer', [\App\Http\Controllers\Dashboard\AiContentController::class, 'storeFlyer'])
+        ->middleware('throttle:20,1')->name('marketing.content.flyer.store');
+    Route::delete('/marketing/contenido/{asset}', [\App\Http\Controllers\Dashboard\AiContentController::class, 'destroyAsset'])
+        ->whereNumber('asset')->name('marketing.content.assets.destroy');
 });
 
 // Catálogo de productos para Meta (Commerce Manager lo lee cada hora) y copias JPG de

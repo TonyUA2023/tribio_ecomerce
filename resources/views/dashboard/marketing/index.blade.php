@@ -17,6 +17,20 @@
     </div>
     @endunless
 
+    {{-- Contenido con IA --}}
+    <div class="glass-card p-5 sm:p-6">
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+            <div class="min-w-0">
+                <h3 class="text-white font-bold text-base">✨ Contenido con IA</h3>
+                <p class="text-xs text-white/50 mt-1">Textos para tus redes escritos con IA y flyers con tus precios reales, tu logo y tus colores.</p>
+            </div>
+            <span class="badge badge-purple">Nuevo</span>
+        </div>
+        <div class="mt-4">
+            <a href="{{ route('dashboard.marketing.content.index') }}" class="btn-primary inline-flex text-xs sm:text-sm">Crear contenido</a>
+        </div>
+    </div>
+
     {{-- Meta --}}
     <div class="glass-card p-5 sm:p-6">
         <div class="flex items-start justify-between gap-3 flex-wrap">
