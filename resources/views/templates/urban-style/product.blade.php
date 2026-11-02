@@ -355,6 +355,23 @@
                             :class="isOutOfStock ? 'hidden' : ''">
                         <span>⚡ {{ \App\Helpers\TranslationHelper::trans('buy_now', 'Comprar Ahora') }}</span>
                     </button>
+
+                    @php $waDigits = preg_replace('/\D/', '', (string) $store->whatsapp_phone); @endphp
+                    @if($waDigits && $storefrontTheme->enabled('product.whatsapp_button'))
+                    <!-- Comprar por WhatsApp: abre el chat con el producto, la variante y la cantidad elegidos -->
+                    <a target="_blank" rel="noopener"
+                       :href="'https://wa.me/{{ $waDigits }}?text=' + encodeURIComponent(
+                            'Hola {{ addslashes($store->name) }}, quiero comprar:\n' +
+                            quantity + 'x {{ addslashes($product->name) }}' +
+                            (currentVariant && currentVariant.title ? ' (' + currentVariant.title + ')' : '') +
+                            ' - ' + currencySymbol + ' ' + Number(currentPrice).toFixed(2) + ' c/u\n' +
+                            {{ Js::from(url()->current()) }})"
+                       :class="isOutOfStock ? 'hidden' : ''"
+                       class="w-full bg-[#25D366] hover:bg-[#1ebe5b] text-white font-extrabold text-sm sm:text-base rounded-2xl transition-all shadow-md py-3.5 px-6 flex items-center justify-center gap-2.5">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1s-.7.9-.9 1.1-.4.2-.7.1a7.5 7.5 0 01-3.6-3.2c-.3-.4 0-.6.2-.8.2-.2.4-.5.6-.7.2-.2.2-.4.1-.6-.1-.3-.9-2.1-1.1-2.5s-.4-.3-.6-.3h-.6c-.2 0-.5.1-.8.4-.3.3-1.1 1.1-1.1 2.6s1.1 3 1.3 3.2c.2.2 2.2 3.4 5.3 4.6 2.6 1 2.6.7 3.1.6.5-.1 1.6-.7 1.8-1.3.2-.6.2-1.1.1-1.2-.1-.1-.2-.2-.4-.3z"/><path d="M12 2a10 10 0 00-8.6 15.1L2 22l4.9-1.3A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .8.8-3-.2-.3A8 8 0 1112 20z"/></svg>
+                        <span>{{ $storefrontTheme->text('product.whatsapp_label') }}</span>
+                    </a>
+                    @endif
                 </div>
                 @endif
 
