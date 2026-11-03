@@ -67,6 +67,21 @@ return [
         'graph_version' => env('META_GRAPH_VERSION', 'v26.0'),
     ],
 
+    // WhatsApp Cloud API broadcasts (ERP Fase 3c). Meta bills per delivered message by
+    // category; these PEN reference rates (Peru, Nov 2026, NOT read from Meta's own rate
+    // card, which only ships as CSV/PDF) are used until the store types its own from its
+    // Meta invoice. Recheck at https://developers.facebook.com/docs/whatsapp/pricing.
+    'whatsapp' => [
+        'rates' => [
+            'marketing'      => (float) env('WHATSAPP_RATE_MARKETING', 0.2339),
+            'utility'        => (float) env('WHATSAPP_RATE_UTILITY', 0.0998),
+            'authentication' => (float) env('WHATSAPP_RATE_AUTHENTICATION', 0.0998),
+            'service'        => (float) env('WHATSAPP_RATE_SERVICE', 0.0998),
+        ],
+        // Broadcast messages handed to Meta per minute: protects the number's quality rating.
+        'broadcast_per_minute' => (int) env('WHATSAPP_BROADCAST_PER_MINUTE', 60),
+    ],
+
     // Google Shopping via Tribio (marketplace): Tribio's own Merchant Center account lists
     // the products of every store that chose "Tribio publica mis productos". Both empty =
     // feature off. See tribio_brain Google-Marketing-Integration.

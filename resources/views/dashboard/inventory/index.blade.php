@@ -2,10 +2,39 @@
 @section('title','Inventario') @section('page_title','📋 Inventario')
 @section('content')
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    @foreach(['total_tracked' => ['📊','Productos con control'],'out_of_stock' => ['🔴','Sin stock'],'low_stock' => ['⚠️','Stock bajo'],'total_value' => ['💰','Valor total']] as $key => [$icon,$label])
-    <div class="stat-card"><p class="text-white/50 text-xs">{{ $label }}</p><p class="text-2xl font-black text-white mt-2">{{ $key === 'total_value' ? 'S/. '.number_format($stats[$key],2) : $stats[$key] }}</p></div>
+    @foreach(['total_tracked' => ['📊','Productos con control'],'out_of_stock' => ['🔴','Sin stock'],'low_stock' => ['⚠️','Stock bajo'],'total_value' => ['💰','Valor del stock (a costo)']] as $key => [$icon,$label])
+    <div class="stat-card"><p class="text-white/50 text-xs">{{ $label }}</p><p class="text-xl sm:text-2xl font-black text-white mt-2 whitespace-nowrap">{{ $key === 'total_value' ? 'S/ '.number_format($stats[$key],2) : $stats[$key] }}</p></div>
     @endforeach
 </div>
+
+<div class="glass-card p-4 sm:p-5 mb-6 flex items-center justify-between gap-3 flex-wrap">
+    <div class="min-w-0">
+        <p class="text-white font-bold text-sm">📈 ¿Cuánto estás ganando?</p>
+        <p class="text-xs text-white/50 mt-0.5">Ventas, costo y ganancia de cada producto, con el costo real de lo que vendiste.</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+        <a href="{{ route('dashboard.inventario.reorder') }}" class="btn-secondary text-xs sm:text-sm">🔁 Reposición</a>
+        <a href="{{ route('dashboard.inventario.conteos.index') }}" class="btn-secondary text-xs sm:text-sm">🧮 Conteo físico</a>
+        <a href="{{ route('dashboard.inventario.profit') }}" class="btn-primary text-xs sm:text-sm">Ver rentabilidad</a>
+    </div>
+</div>
+
+@if($expiring->isNotEmpty())
+<div class="glass-card p-4 sm:p-5 mb-6">
+    <p class="text-white font-bold text-sm">⏰ Por vencer en los próximos {{ \App\Models\StockLot::EXPIRING_DAYS }} días</p>
+    <div class="space-y-2 mt-3">
+        @foreach($expiring as $lot)
+        <a href="{{ route('dashboard.inventario.product', $lot->product_id) }}" class="rounded-xl border border-white/10 bg-white/5 p-3 flex items-center justify-between gap-3 hover:border-tribio-cyan/40 transition">
+            <span class="text-sm text-white truncate">{{ $lot->product?->name }} <span class="text-white/40 text-xs">· {{ $lot->code ?: 'sin código' }}</span></span>
+            <span class="flex items-center gap-2 flex-shrink-0">
+                <span class="text-xs text-white/60">{{ $lot->quantity_remaining }} und.</span>
+                <span class="badge {{ $lot->expiry_state === 'expired' ? 'badge-red' : 'badge-gold' }}">{{ $lot->expiry_state === 'expired' ? 'Vencido' : 'Vence ' . $lot->expires_at->locale('es')->diffForHumans() }}</span>
+            </span>
+        </a>
+        @endforeach
+    </div>
+</div>
+@endif
 <div class="glass-card overflow-hidden">
     <div class="p-4 border-b flex gap-3" style="border-color:rgba(255,255,255,0.08);">
         <form method="GET" class="flex gap-3 flex-wrap">
@@ -37,12 +66,13 @@
                 <td class="py-3 px-4">
                     @if($product->track_stock)
                         <span class="{{ $product->stock === 0 ? 'badge badge-red' : ($product->isLowStock() ? 'badge badge-gold' : 'badge badge-green') }}">{{ $product->stock }} {{ $product->unit }}</span>
+                        @if($product->relationLoaded('units') && $product->stockInUnits())<span class="block text-[11px] text-white/40 mt-0.5">= {{ $product->stockInUnits() }}</span>@endif
                     @else <span class="text-white/30 text-xs">No controlado</span>@endif
                 </td>
                 <td class="py-3 px-4 text-white/60 text-xs">{{ $product->low_stock_alert ?? '—' }}</td>
-                <td class="py-3 px-4 text-white/60 text-xs">{{ $product->cost_price ? 'S/. '.number_format($product->cost_price,2) : '—' }}</td>
+                <td class="py-3 px-4 text-white/60 text-xs">{{ $product->cost_price ? 'S/ '.number_format($product->cost_price,2) : '—' }}</td>
                 <td class="py-3 px-4 text-right">
-                    <a href="{{ route('dashboard.inventario.product', $product) }}" class="btn-ghost py-1 px-3 text-xs">Historial</a>
+                    <a href="{{ route('dashboard.inventario.product', $product) }}" class="btn-ghost py-1 px-3 text-xs">Ver / mover</a>
                 </td>
             </tr>@endforeach</tbody>
         </table>

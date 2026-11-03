@@ -1,0 +1,14 @@
+{
+  "name": "Tribio Caja",
+  "short_name": "Caja",
+  "description": "Punto de venta de Tribio: vende en tu local, también sin internet.",
+  "start_url": "/dashboard/caja",
+  "scope": "/dashboard/caja",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#0e7490",
+  "lang": "es-PE",
+  "icons": [
+    { "src": "/images/logo/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

@@ -183,7 +183,7 @@ class PendingCheckout extends Model
                 // call is the one that finally confirms payment.
                 $order->update(['payment_status' => $paymentStatus, 'status' => $status]);
                 if ($decrementStock) {
-                    $this->decrementStockFor($data['items']);
+                    $this->decrementStockFor($data['items'], $locked->reference);
                 }
                 return $order;
             }
@@ -228,7 +228,7 @@ class PendingCheckout extends Model
             $store->increment('total_orders');
 
             if ($decrementStock) {
-                $this->decrementStockFor($data['items']);
+                $this->decrementStockFor($data['items'], $locked->reference);
             }
 
             $locked->update(['order_id' => $order->id]);
@@ -290,25 +290,19 @@ class PendingCheckout extends Model
         }
     }
 
-    private function decrementStockFor(array $items): void
+    private function decrementStockFor(array $items, string $reference): void
     {
+        $stock = app(\App\Services\Inventory\StockService::class);
         foreach ($items as $item) {
             $product = Product::find($item['product_id']);
             // Made-to-order lines are produced after the sale, never taken from stock.
             if (!$product || !$product->track_stock || array_key_exists('customization', $item)) {
                 continue;
             }
-            // Clamped to available stock: a backorder sale (out_of_stock_message set,
-            // so checkout allows buying at 0 stock — see StoreController::checkout())
-            // must never push products.stock (unsigned) negative. That throws a
-            // QueryException that rolls back this whole transaction — including the
-            // Order just created — after a gateway may have already charged the
-            // customer, which is far worse than just leaving stock floored at 0.
-            if (!empty($item['variant_id'])) {
-                $variant = ProductVariant::find($item['variant_id']);
-                $variant?->decrement('stock', min($item['quantity'], $variant->stock));
-            }
-            $product->decrement('stock', min($item['quantity'], $product->stock));
+            // Locked, clamped to the stock on hand and logged as a 'sale' movement: see
+            // StockService::sell() for why a backorder sale must never go negative here.
+            $variant = !empty($item['variant_id']) ? ProductVariant::find($item['variant_id']) : null;
+            $stock->sell($product, $variant, (int) $item['quantity'], $reference);
         }
     }
 }

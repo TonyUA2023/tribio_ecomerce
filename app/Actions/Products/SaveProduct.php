@@ -182,6 +182,8 @@ class SaveProduct
         }
 
         $this->recordStockMovement($product, $store, $user, $previousStock, isset($data['stock']) || $product->wasRecentlyCreated);
+        // The form writes products.stock directly: keep the lots (cost, expiry) adding up to it.
+        app(\App\Services\Inventory\StockService::class)->reconcile($product);
 
         return $product->refresh();
     }

@@ -110,6 +110,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/inventario/{id}', [InventoryController::class, 'product'])->whereNumber('id');
         Route::post('/inventario/{id}/ajuste', [InventoryController::class, 'adjust'])->whereNumber('id');
 
+        // Caja / venta rápida (ERP Fase 4e; mismos servicios que la caja web)
+        Route::get('/caja', [\App\Http\Controllers\Api\PosController::class, 'overview']);
+        Route::post('/caja/cajas/{register}/abrir', [\App\Http\Controllers\Api\PosController::class, 'open'])->whereNumber('register')->middleware('throttle:20,1');
+        Route::get('/caja/productos', [\App\Http\Controllers\Api\PosController::class, 'products'])->middleware('throttle:300,1');
+        Route::get('/caja/clientes', [\App\Http\Controllers\Api\PosController::class, 'customers'])->middleware('throttle:120,1');
+        Route::get('/caja/turnos/{session}', [\App\Http\Controllers\Api\PosController::class, 'session'])->whereNumber('session');
+        Route::post('/caja/turnos/{session}/ventas', [\App\Http\Controllers\Api\PosController::class, 'sell'])->whereNumber('session')->middleware('throttle:120,1');
+        Route::post('/caja/turnos/{session}/movimientos', [\App\Http\Controllers\Api\PosController::class, 'movement'])->whereNumber('session')->middleware('throttle:30,1');
+        Route::post('/caja/turnos/{session}/cerrar', [\App\Http\Controllers\Api\PosController::class, 'close'])->whereNumber('session')->middleware('throttle:20,1');
+        Route::get('/caja/ventas/{order}', [\App\Http\Controllers\Api\PosController::class, 'receipt'])->whereNumber('order');
+
         // Mensajes (contacto, Libro de Reclamaciones, suscripciones)
         Route::get('/mensajes', [MessageController::class, 'index']);
         Route::get('/mensajes/{id}', [MessageController::class, 'show'])->whereNumber('id');

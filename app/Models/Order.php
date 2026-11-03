@@ -49,8 +49,12 @@ class Order extends Model
         'amount_paid'      => 'decimal:2',
         'balance_due'      => 'decimal:2',
         'deposit_amount'   => 'decimal:2',
+        'returned_total'   => 'decimal:2',
         'required_by'      => 'date',
         'estimated_ready_at' => 'date',
+        'due_date'         => 'date',
+        'cash_tendered'    => 'decimal:2',
+        'change_given'     => 'decimal:2',
         'whatsapp_sent'    => 'boolean',
         'whatsapp_sent_at' => 'datetime',
         'payment_submitted_at' => 'datetime',
@@ -108,7 +112,7 @@ class Order extends Model
         // Money received moves the payment status forward (never back): a deposit or a
         // manual Yape entry makes it 'partial', the balance completing it makes it 'paid'.
         if (in_array($this->payment_status, ['pending', 'partial', 'failed'], true) && $amountPaid > 0) {
-            $changes['payment_status'] = $amountPaid + 0.005 >= (float) $this->total ? 'paid' : 'partial';
+            $changes['payment_status'] = $amountPaid + 0.005 >= $this->netTotal() ? 'paid' : 'partial';
         }
 
         $this->forceFill($changes)->save();
@@ -122,7 +126,13 @@ class Order extends Model
             return 0.0;
         }
 
-        return max(0.0, round((float) $this->total - (float) $this->amount_paid, 2));
+        return max(0.0, round($this->netTotal() - (float) $this->amount_paid, 2));
+    }
+
+    /** The total minus what the customer returned (ERP Fase 4c; 0 before that migration). */
+    public function netTotal(): float
+    {
+        return round((float) $this->total - (float) ($this->getAttributes()['returned_total'] ?? 0), 2);
     }
 
     // ─── Scopes ──────────────────────────────────────────────────
@@ -352,6 +362,12 @@ class Order extends Model
     }
 
     // ─── Relationships ───────────────────────────────────────────
+    /** Set by ContactResolver, never mass-assigned (the column may not exist yet: CrmSchema). */
+    public function contact()
+    {
+        return $this->belongsTo(Contact::class);
+    }
+
     public function store()
     {
         return $this->belongsTo(Store::class);
@@ -365,6 +381,35 @@ class Order extends Model
     public function items()
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /** Returns of a counter sale (ERP Fase 4c). */
+    public function returns()
+    {
+        return $this->hasMany(OrderReturn::class);
+    }
+
+    /** Installments of a credit sale (ERP Fase 4b), oldest first. */
+    public function installments()
+    {
+        return $this->hasMany(OrderInstallment::class)->orderBy('number');
+    }
+
+    /** Who rang up a counter sale, and the manager who approved a price, discount or credit (ERP Fase 4d). */
+    public function staff()
+    {
+        return $this->belongsTo(StoreStaff::class, 'staff_id');
+    }
+
+    public function approver()
+    {
+        return $this->belongsTo(StoreStaff::class, 'approved_staff_id');
+    }
+
+    /** The register shift a counter sale (source = pos) was taken in. */
+    public function registerSession()
+    {
+        return $this->belongsTo(RegisterSession::class);
     }
 
     public function payments()

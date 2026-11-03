@@ -312,6 +312,27 @@ class Store extends Model
         return $this->hasMany(StoreAnalytic::class);
     }
 
+    public function suppliers()
+    {
+        return $this->hasMany(Supplier::class);
+    }
+
+    public function purchaseOrders()
+    {
+        return $this->hasMany(PurchaseOrder::class);
+    }
+
+    public function contacts()
+    {
+        return $this->hasMany(Contact::class);
+    }
+
+    /** WhatsApp Cloud API number (ERP Fase 3a); its secrets live in that table, never here. */
+    public function whatsappConnection()
+    {
+        return $this->hasOne(WhatsappConnection::class);
+    }
+
     public function inventoryMovements()
     {
         return $this->hasMany(InventoryMovement::class);

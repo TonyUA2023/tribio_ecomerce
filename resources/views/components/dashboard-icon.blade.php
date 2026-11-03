@@ -36,6 +36,11 @@
         'back' => 'M19 12H5 M11 18l-6-6 6-6',
         'mail' => 'M3 5h18v14H3z M3 6l9 7 9-7',
         'star' => 'M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 3z',
+        'receipt' => 'M6 2h12v20l-3-2-3 2-3-2-3 2V2z M9 7h6 M9 11h6 M9 15h4',
+        'users' => 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1 M16 3.1a4 4 0 0 1 0 7.8 M22 21v-1a6 6 0 0 0-4-5.6',
+        'coins' => 'M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3z M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6 M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6',
+        'pos' => 'M3 10h18v11H3z M6 3h12v7H6z M9 6h6 M7 14h2 M11 14h2 M15 14h2 M7 17.5h10',
+        'chat' => 'M21 11.5a8.4 8.4 0 0 1-12.3 7.5L3 21l2-5.6A8.4 8.4 0 1 1 21 11.5z M8.5 10.5h7 M8.5 14h4.5',
     ];
 @endphp
 <svg {{ $attributes->merge(['class' => 'dash-icon']) }} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ $paths[$name] ?? $paths['grid'] }}"/></svg>
