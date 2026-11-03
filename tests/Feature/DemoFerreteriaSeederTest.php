@@ -28,6 +28,7 @@ class DemoFerreteriaSeederTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->withoutVite();
         // Mid-afternoon, so "today" has a shift of its own.
         Carbon::setTestNow(Carbon::parse('2026-11-03 21:00:00'));
         $this->seed(DemoFerreteriaSeeder::class);
