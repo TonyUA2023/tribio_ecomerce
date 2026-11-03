@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\AdjustStockRequest;
 use App\Models\InventoryMovement;
 use App\Models\Product;
+use App\Services\Inventory\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -88,36 +89,20 @@ class InventoryController extends Controller
         ]);
     }
 
-    public function adjust(AdjustStockRequest $request, int $id): JsonResponse
+    public function adjust(AdjustStockRequest $request, int $id, StockService $stock): JsonResponse
     {
-        $store = $this->currentStore();
         $product = $this->ownedProduct($id);
-        $qty = (int) $request->quantity;
-        $type = $request->type;
 
-        $before = (int) $product->stock;
-        $after = match ($type) {
-            'in'          => $before + $qty,
-            'out', 'loss' => max(0, $before - $qty),
-            default       => $qty, // adjustment: the owner types the absolute stock
-        };
-
-        $product->update(['stock' => $after]);
-
-        InventoryMovement::create([
-            'product_id'   => $product->id,
-            'store_id'     => $store->id,
-            'type'         => $type,
-            'quantity'     => $type === 'adjustment' ? ($after - $before) : ($type === 'in' ? $qty : -$qty),
-            'stock_before' => $before,
-            'stock_after'  => $after,
-            'reason'       => $request->input('reason') ?: 'Ajuste manual',
-            'user_id'      => $request->user()->id,
+        // adjustment: the owner types the absolute stock (see StockService::adjust()).
+        $movement = $stock->adjust($product, $request->type, (int) $request->quantity, $request->input('reason'), $request->user()->id, [
+            'unit_cost'  => $request->input('unit_cost'),
+            'code'       => $request->input('lot_code'),
+            'expires_at' => $request->input('expires_at'),
         ]);
 
         return response()->json([
-            'message' => "Stock de «{$product->name}» ajustado de {$before} a {$after}.",
-            'product' => ['id' => $product->id, 'stock' => $after],
+            'message' => "Stock de «{$product->name}» ajustado de {$movement->stock_before} a {$movement->stock_after}.",
+            'product' => ['id' => $product->id, 'stock' => (int) $movement->stock_after],
         ]);
     }
 }

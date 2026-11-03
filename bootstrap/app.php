@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\HandleCustomDomain::class);
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'pos.kiosk' => \App\Http\Middleware\PosKioskGuard::class,
         ]);
         $middleware->encryptCookies(except: [
             'user_country',
@@ -36,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'customer/*',
             'tienda/*/checkout/paypal/webhook',
             'checkout/paypal/webhook',
+            'webhooks/whatsapp/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

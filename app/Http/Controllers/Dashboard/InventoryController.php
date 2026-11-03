@@ -4,7 +4,12 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
-use App\Models\InventoryMovement;
+use App\Models\PurchaseOrderItem;
+use App\Models\StockLot;
+use App\Services\Inventory\InventorySchema;
+use App\Services\Inventory\ProfitReport;
+use App\Services\Inventory\StockService;
+use App\Services\Purchasing\PurchasingSchema;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -12,12 +17,12 @@ class InventoryController extends Controller
 {
     private function getStore() { return Auth::user()->currentStore(); }
 
-    public function index(Request $request)
+    public function index(Request $request, StockService $stock, InventorySchema $schema)
     {
         $store = $this->getStore();
 
         $products = $store->products()
-            ->with('category')
+            ->with($schema->unitsReady() ? ['category', 'units'] : ['category'])
             ->when($request->filter === 'low', fn($q) => $q->where('track_stock', true)->whereColumn('stock', '<=', 'low_stock_alert')->where('stock', '>', 0))
             ->when($request->filter === 'out', fn($q) => $q->where('track_stock', true)->where('stock', 0))
             ->when($request->filter === 'tracked', fn($q) => $q->where('track_stock', true))
@@ -29,61 +34,102 @@ class InventoryController extends Controller
             'total_tracked'   => $store->products()->where('track_stock', true)->count(),
             'out_of_stock'    => $store->products()->where('track_stock', true)->where('stock', 0)->count(),
             'low_stock'       => $store->products()->where('track_stock', true)->whereColumn('stock', '<=', 'low_stock_alert')->where('stock', '>', 0)->count(),
-            'total_value'     => $store->products()->where('track_stock', true)->selectRaw('SUM(stock * cost_price) as val')->value('val') ?? 0,
+            // At the cost of each lot once lots exist; before that, stock × cost price.
+            'total_value'     => $stock->stockValue($store->id),
         ];
+        $expiring = $schema->lotsReady()
+            ? StockLot::where('store_id', $store->id)->onHand()->whereNotNull('expires_at')
+                ->where('expires_at', '<=', now()->addDays(StockLot::EXPIRING_DAYS))->with('product:id,name')->consumptionOrder()->limit(10)->get()
+            : collect();
 
-        return view('dashboard.inventory.index', compact('store', 'products', 'stats'));
+        return view('dashboard.inventory.index', compact('store', 'products', 'stats', 'expiring'));
     }
 
-    public function product(Product $product)
+    public function product(Product $product, InventorySchema $schema, PurchasingSchema $purchasing, \App\Services\Crm\CrmSchema $crm)
     {
         $store = $this->getStore();
         abort_if($product->store_id !== $store->id, 403);
 
         $movements = $product->inventoryMovements()
             ->with('user')
-            ->latest()
+            ->latest('id')
             ->paginate(30);
 
-        return view('dashboard.inventory.product', compact('store', 'product', 'movements'));
+        $lotsReady = $schema->lotsReady();
+        $lots = $lotsReady ? $product->lots()->onHand()->consumptionOrder()->get() : collect();
+
+        // Last purchases of this product: who sold it, when and at what landed cost.
+        $purchases = $purchasing->ready()
+            ? PurchaseOrderItem::where('product_id', $product->id)->whereNotNull('landed_unit_cost')
+                ->with('purchaseOrder.supplier:id,name')->latest('id')->limit(5)->get()
+            : collect();
+
+        // Packagings and combo (Fase 1e).
+        $unitsReady = $schema->unitsReady();
+        $isKit = false;
+        $components = collect();
+        $componentOptions = collect();
+        $inCombos = collect();
+        if ($unitsReady) {
+            $product->load(['units', 'components.component:id,name,stock,deleted_at']);
+            $isKit = $product->components->isNotEmpty();
+            $components = $product->components;
+            $componentOptions = $store->products()->where('track_stock', true)->whereDoesntHave('components')
+                ->whereKeyNot($product->id)->orderBy('name')->get(['id', 'name', 'stock']);
+            // Combos this product is part of: it cannot be a combo itself.
+            $inCombos = \App\Models\ProductComponent::where('component_product_id', $product->id)->with('kit:id,name')->get();
+        }
+
+        return view('dashboard.inventory.product', compact('store', 'product', 'movements', 'lotsReady', 'lots', 'purchases',
+            'unitsReady', 'isKit', 'components', 'componentOptions', 'inCombos')
+            + [
+                // Recompra (Fase 2c): pending reminders of this product.
+                'reorderReady'   => $crm->reorderReady(),
+                'reorderPending' => $crm->reorderReady()
+                    ? \App\Models\ContactTask::where('product_id', $product->id)->where('kind', 'reorder')->pending()->count()
+                    : 0,
+            ]);
     }
 
-    public function adjust(Request $request, Product $product)
+    public function profit(Request $request, ProfitReport $report)
+    {
+        $store = $this->getStore();
+        $preset = array_key_exists($request->query('periodo'), ProfitReport::PRESETS) ? $request->query('periodo') : 'mes';
+        [$from, $to] = ProfitReport::range($preset);
+
+        return view('dashboard.inventory.profit', [
+            'store'  => $store,
+            'preset' => $preset,
+            'from'   => $from,
+            'to'     => $to,
+        ] + $report->build($store, $from, $to));
+    }
+
+    public function adjust(Request $request, Product $product, StockService $stock)
     {
         $store = $this->getStore();
         abort_if($product->store_id !== $store->id, 403);
 
         $request->validate([
-            'type'     => 'required|in:in,out,adjustment,loss',
-            'quantity' => 'required|integer|min:1',
-            'reason'   => 'nullable|string|max:255',
+            'type'       => 'required|in:in,out,adjustment,loss',
+            'quantity'   => 'required|integer|min:1',
+            'reason'     => 'nullable|string|max:255',
+            'unit_cost'  => 'nullable|numeric|min:0|max:9999999',
+            'lot_code'   => 'nullable|string|max:40',
+            'expires_at' => 'nullable|date',
+        ], [
+            'unit_cost.numeric' => 'El costo debe ser un número.',
+            'expires_at.date'   => 'La fecha de vencimiento no es válida.',
         ]);
 
-        $type = $request->type;
-        $qty  = (int) $request->quantity;
-
-        $stockBefore = $product->stock;
-        $stockAfter  = match ($type) {
-            'in'         => $stockBefore + $qty,
-            'out', 'loss'=> max(0, $stockBefore - $qty),
-            'adjustment' => $qty, // El usuario ingresa el stock absoluto
-            default      => $stockBefore,
-        };
-
-        $product->update(['stock' => $stockAfter]);
-
-        InventoryMovement::create([
-            'product_id'   => $product->id,
-            'store_id'     => $store->id,
-            'type'         => $type,
-            'quantity'     => $type === 'adjustment' ? ($stockAfter - $stockBefore) : ($type === 'in' ? $qty : -$qty),
-            'stock_before' => $stockBefore,
-            'stock_after'  => $stockAfter,
-            'reason'       => $request->reason ?? 'Ajuste manual',
-            'user_id'      => Auth::id(),
+        // 'adjustment': el usuario ingresa el stock absoluto (ver StockService::adjust()).
+        $movement = $stock->adjust($product, $request->type, (int) $request->quantity, $request->reason, Auth::id(), [
+            'unit_cost'  => $request->input('unit_cost'),
+            'code'       => $request->input('lot_code'),
+            'expires_at' => $request->input('expires_at'),
         ]);
 
-        return back()->with('success', "Stock de '{$product->name}' ajustado de {$stockBefore} a {$stockAfter}.");
+        return back()->with('success', "Stock de '{$product->name}' ajustado de {$movement->stock_before} a {$movement->stock_after}.");
     }
 
     public function export()

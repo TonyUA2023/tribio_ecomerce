@@ -61,7 +61,7 @@
         <a href="{{ route('dashboard.pedidos.show', $order) }}" class="block p-4 hover:bg-white/5 transition">
             <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
-                    <p class="text-white font-bold text-sm">#{{ $order->order_number }}</p>
+                    <p class="text-white font-bold text-sm">#{{ $order->order_number }}@if($order->source === 'pos') <span class="badge badge-blue">Caja</span>@endif</p>
                     <p class="text-white/40 text-xs">{{ $order->created_at->locale('es')->translatedFormat('d M Y · H:i') }}</p>
                 </div>
                 <span class="badge {{ $order->status_badge }} flex-shrink-0">{{ $order->status_label }}</span>
@@ -96,7 +96,7 @@
                 <tr class="border-b hover:bg-white/3 transition-colors cursor-pointer" style="border-color: rgba(255,255,255,0.04);"
                     onclick="window.location='{{ route('dashboard.pedidos.show', $order) }}'">
                     <td class="py-3 px-4">
-                        <p class="text-white font-bold whitespace-nowrap">#{{ $order->order_number }}</p>
+                        <p class="text-white font-bold whitespace-nowrap">#{{ $order->order_number }}@if($order->source === 'pos') <span class="badge badge-blue">Caja</span>@endif</p>
                         <p class="text-white/40 text-xs">{{ $order->created_at->locale('es')->translatedFormat('d M Y · H:i') }}</p>
                     </td>
                     <td class="py-3 px-4">

@@ -22,7 +22,7 @@ class Product extends Model
         'weight', 'dimensions', 'tags', 'meta_title', 'meta_description',
         'views', 'sold_count', 'sort_order',
         'sale_mode', 'lead_time_days', 'customization_schema',
-        'price_tiers', 'min_quantity',
+        'price_tiers', 'min_quantity', 'consumption_days',
         'condition', 'exclude_from_ads',
     ];
 
@@ -334,6 +334,48 @@ class Product extends Model
     public function inventoryMovements()
     {
         return $this->hasMany(InventoryMovement::class);
+    }
+
+    /** Packagings ("Caja" = 100 und) — Fase 1e. Only when the unit tables exist. */
+    public function units()
+    {
+        return $this->hasMany(ProductUnit::class)->orderBy('factor');
+    }
+
+    /** What a combo is made of (empty for normal products) — Fase 1e. */
+    public function components()
+    {
+        return $this->hasMany(ProductComponent::class, 'kit_product_id');
+    }
+
+    /**
+     * "240" → "2 cajas y 40 und" with the largest packaging that fits; null without packagings.
+     * Expects the `units` relation (load it to avoid a query per product).
+     */
+    public function stockInUnits(?int $quantity = null): ?string
+    {
+        $quantity ??= (int) $this->stock;
+        $unit = $this->units->sortByDesc('factor')->first(fn ($u) => $u->factor <= $quantity);
+        if (!$unit) {
+            return null;
+        }
+        $packs = intdiv($quantity, $unit->factor);
+        $rest = $quantity % $unit->factor;
+
+        return $packs . ' ' . mb_strtolower($unit->name) . ($packs === 1 ? '' : (preg_match('/[aeiou]$/u', mb_strtolower($unit->name)) ? 's' : 'es'))
+            . ($rest ? " y {$rest} und" : '');
+    }
+
+    /** Receipts of this product with cost and expiry (Fase 1). Only when the lot tables exist. */
+    public function lots()
+    {
+        return $this->hasMany(StockLot::class);
+    }
+
+    /** Prices on the mayorista / distribuidor lists (ERP Fase 4c). */
+    public function listPrices()
+    {
+        return $this->hasMany(ProductListPrice::class);
     }
 
     public function variants()

@@ -37,6 +37,12 @@ Route::post('/plan/{store}/suscribir', [SubscriptionController::class, 'subscrib
 Route::get('/plan/{store}/retorno', [SubscriptionController::class, 'return'])->middleware('auth')->name('plan.return');
 Route::post('/plan/webhook', [SubscriptionController::class, 'webhook'])->name('plan.webhook');
 
+// WhatsApp Cloud API (ERP Fase 3a): one URL per connected number, signed by its app secret.
+Route::get('/webhooks/whatsapp/{key}', [\App\Http\Controllers\Webhooks\WhatsappWebhookController::class, 'verify'])
+    ->where('key', '[A-Za-z0-9]{40}')->middleware('throttle:60,1')->name('webhooks.whatsapp.verify');
+Route::post('/webhooks/whatsapp/{key}', [\App\Http\Controllers\Webhooks\WhatsappWebhookController::class, 'receive'])
+    ->where('key', '[A-Za-z0-9]{40}')->middleware('throttle:1200,1')->name('webhooks.whatsapp.receive');
+
 // ────────── TRIBIO PASS (portal unificado comprador + negocio) ──────────
 Route::get('/tribio-pass', [\App\Http\Controllers\TribioPassController::class, 'index'])->name('tribio-pass');
 // "Calificar mi compra" desde Mis Compras (sesión web; el móvil usa POST /api/customer/reviews).
@@ -69,7 +75,7 @@ Route::prefix('auth/google')->name('auth.google.')->group(function () {
 // ═══════════════════════════════════════════════════════════════
 //  DASHBOARD - VENDEDOR
 // ═══════════════════════════════════════════════════════════════
-Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')->name('dashboard.')->group(function () {
+Route::middleware(['auth', 'role:store_owner,super_admin', 'pos.kiosk'])->prefix('dashboard')->name('dashboard.')->group(function () {
 
     Route::get('/', [DashboardController::class, 'index'])->name('index');
     Route::post('/tienda/cambiar/{store}', [DashboardController::class, 'switchStore'])->name('store.switch');
@@ -149,6 +155,93 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
     Route::post('/galeria/{item}/hero', [GalleryController::class, 'toggleHero'])->name('galeria.toggle-hero');
 
     // Pedidos
+    // Clientes (ERP Fase 0): contactos armados desde los pedidos
+    Route::get('/clientes', [\App\Http\Controllers\Dashboard\ContactController::class, 'index'])->name('clientes.index');
+    Route::get('/clientes/nuevo', [\App\Http\Controllers\Dashboard\ContactController::class, 'create'])->name('clientes.create');
+    Route::post('/clientes', [\App\Http\Controllers\Dashboard\ContactController::class, 'store'])->name('clientes.store');
+    Route::get('/clientes/seguimientos', [\App\Http\Controllers\Dashboard\ContactTaskController::class, 'index'])->name('clientes.tasks.index');
+    Route::post('/clientes/seguimientos', [\App\Http\Controllers\Dashboard\ContactTaskController::class, 'store'])->name('clientes.tasks.store');
+    Route::post('/clientes/seguimientos/{task}/hecho', [\App\Http\Controllers\Dashboard\ContactTaskController::class, 'complete'])->whereNumber('task')->name('clientes.tasks.complete');
+    Route::delete('/clientes/seguimientos/{task}', [\App\Http\Controllers\Dashboard\ContactTaskController::class, 'destroy'])->whereNumber('task')->name('clientes.tasks.destroy');
+    // Por cobrar: fiado y cobranzas (ERP Fase 4b)
+    Route::get('/cobranzas', [\App\Http\Controllers\Dashboard\ReceivableController::class, 'index'])->name('receivables.index');
+    Route::get('/cobranzas/{contact}', [\App\Http\Controllers\Dashboard\ReceivableController::class, 'show'])->whereNumber('contact')->name('receivables.show');
+    Route::post('/cobranzas/{contact}/cobrar', [\App\Http\Controllers\Dashboard\ReceivableController::class, 'collect'])->whereNumber('contact')->middleware('throttle:30,1')->name('receivables.collect');
+    Route::put('/cobranzas/{contact}/limite', [\App\Http\Controllers\Dashboard\ReceivableController::class, 'limit'])->whereNumber('contact')->middleware('throttle:30,1')->name('receivables.limit');
+    // Proformas, devoluciones y listas de precios (ERP Fase 4c)
+    Route::get('/caja/proformas', [\App\Http\Controllers\Dashboard\QuoteController::class, 'index'])->name('quotes.index');
+    Route::post('/caja/proformas', [\App\Http\Controllers\Dashboard\QuoteController::class, 'store'])->middleware('throttle:60,1')->name('quotes.store');
+    Route::get('/caja/proformas/{quote}', [\App\Http\Controllers\Dashboard\QuoteController::class, 'show'])->whereNumber('quote')->name('quotes.show');
+    Route::post('/caja/proformas/{quote}/anular', [\App\Http\Controllers\Dashboard\QuoteController::class, 'cancel'])->whereNumber('quote')->name('quotes.cancel');
+    Route::get('/caja/devoluciones', [\App\Http\Controllers\Dashboard\ReturnController::class, 'index'])->name('returns.index');
+    Route::get('/caja/devoluciones/{return}', [\App\Http\Controllers\Dashboard\ReturnController::class, 'show'])->whereNumber('return')->name('returns.show');
+    Route::get('/caja/ventas/{order}/devolver', [\App\Http\Controllers\Dashboard\ReturnController::class, 'create'])->whereNumber('order')->name('returns.create');
+    Route::post('/caja/ventas/{order}/devolver', [\App\Http\Controllers\Dashboard\ReturnController::class, 'store'])->whereNumber('order')->middleware('throttle:30,1')->name('returns.store');
+    Route::get('/listas-de-precios', [\App\Http\Controllers\Dashboard\PriceListController::class, 'index'])->name('price-lists.index');
+    Route::put('/listas-de-precios', [\App\Http\Controllers\Dashboard\PriceListController::class, 'update'])->middleware('throttle:30,1')->name('price-lists.update');
+    Route::post('/listas-de-precios/porcentaje', [\App\Http\Controllers\Dashboard\PriceListController::class, 'percent'])->middleware('throttle:10,1')->name('price-lists.percent');
+    // Personal de caja, modo caja y venta sin conexión (ERP Fase 4d)
+    Route::get('/caja/personal', [\App\Http\Controllers\Dashboard\PosStaffController::class, 'index'])->name('pos.staff.index');
+    Route::post('/caja/personal', [\App\Http\Controllers\Dashboard\PosStaffController::class, 'store'])->middleware('throttle:20,1')->name('pos.staff.store');
+    Route::put('/caja/personal/{person}', [\App\Http\Controllers\Dashboard\PosStaffController::class, 'update'])->whereNumber('person')->middleware('throttle:20,1')->name('pos.staff.update');
+    Route::post('/caja/modo-caja', [\App\Http\Controllers\Dashboard\PosStaffController::class, 'enableKiosk'])->name('pos.kiosk.enable');
+    Route::post('/caja/modo-caja/salir', [\App\Http\Controllers\Dashboard\PosStaffController::class, 'disableKiosk'])->middleware('throttle:20,1')->name('pos.kiosk.disable');
+    Route::post('/caja/desbloquear', [\App\Http\Controllers\Dashboard\PosStaffController::class, 'unlock'])->middleware('throttle:30,1')->name('pos.unlock');
+    Route::post('/caja/bloquear', [\App\Http\Controllers\Dashboard\PosStaffController::class, 'lock'])->name('pos.lock');
+    Route::get('/caja/token', [\App\Http\Controllers\Dashboard\PosStaffController::class, 'token'])->middleware('throttle:60,1')->name('pos.token');
+    Route::get('/caja/catalogo', [\App\Http\Controllers\Dashboard\PosStaffController::class, 'catalog'])->middleware('throttle:30,1')->name('pos.catalog');
+    // Caja / POS (ERP Fase 4a)
+    Route::get('/caja', [\App\Http\Controllers\Dashboard\PosController::class, 'index'])->name('pos.index');
+    Route::get('/caja/productos', [\App\Http\Controllers\Dashboard\PosController::class, 'products'])->middleware('throttle:300,1')->name('pos.products');
+    Route::get('/caja/clientes', [\App\Http\Controllers\Dashboard\PosController::class, 'customers'])->middleware('throttle:120,1')->name('pos.customers');
+    Route::get('/caja/ticket/{order}', [\App\Http\Controllers\Dashboard\PosController::class, 'receipt'])->whereNumber('order')->name('pos.receipt');
+    Route::post('/caja/cajas', [\App\Http\Controllers\Dashboard\RegisterSessionController::class, 'storeRegister'])->middleware('throttle:20,1')->name('pos.registers.store');
+    Route::post('/caja/cajas/{register}/abrir', [\App\Http\Controllers\Dashboard\RegisterSessionController::class, 'open'])->whereNumber('register')->middleware('throttle:20,1')->name('pos.registers.open');
+    Route::get('/caja/turnos', [\App\Http\Controllers\Dashboard\RegisterSessionController::class, 'index'])->name('pos.sessions.index');
+    Route::get('/caja/turnos/{session}', [\App\Http\Controllers\Dashboard\RegisterSessionController::class, 'show'])->whereNumber('session')->name('pos.sessions.show');
+    Route::post('/caja/turnos/{session}/ventas', [\App\Http\Controllers\Dashboard\PosController::class, 'sell'])->whereNumber('session')->middleware('throttle:120,1')->name('pos.sell');
+    Route::post('/caja/turnos/{session}/movimientos', [\App\Http\Controllers\Dashboard\RegisterSessionController::class, 'movement'])->whereNumber('session')->middleware('throttle:30,1')->name('pos.sessions.movement');
+    Route::get('/caja/turnos/{session}/cerrar', [\App\Http\Controllers\Dashboard\RegisterSessionController::class, 'closeForm'])->whereNumber('session')->name('pos.sessions.close');
+    Route::post('/caja/turnos/{session}/cerrar', [\App\Http\Controllers\Dashboard\RegisterSessionController::class, 'close'])->whereNumber('session')->middleware('throttle:20,1')->name('pos.sessions.close.store');
+    Route::get('/whatsapp', [\App\Http\Controllers\Dashboard\WhatsappInboxController::class, 'index'])->name('whatsapp.index');
+    Route::get('/whatsapp/conexion', [\App\Http\Controllers\Dashboard\WhatsappConnectionController::class, 'edit'])->name('whatsapp.connection.edit');
+    Route::put('/whatsapp/conexion', [\App\Http\Controllers\Dashboard\WhatsappConnectionController::class, 'update'])->middleware('throttle:10,1')->name('whatsapp.connection.update');
+    Route::post('/whatsapp/conexion/probar', [\App\Http\Controllers\Dashboard\WhatsappConnectionController::class, 'test'])->middleware('throttle:10,1')->name('whatsapp.connection.test');
+    Route::delete('/whatsapp/conexion', [\App\Http\Controllers\Dashboard\WhatsappConnectionController::class, 'destroy'])->name('whatsapp.connection.destroy');
+    Route::get('/whatsapp/plantillas', [\App\Http\Controllers\Dashboard\WhatsappTemplateController::class, 'index'])->name('whatsapp.templates.index');
+    Route::post('/whatsapp/plantillas/sincronizar', [\App\Http\Controllers\Dashboard\WhatsappTemplateController::class, 'sync'])->middleware('throttle:10,1')->name('whatsapp.templates.sync');
+    Route::post('/whatsapp/plantillas', [\App\Http\Controllers\Dashboard\WhatsappTemplateController::class, 'submit'])->middleware('throttle:20,1')->name('whatsapp.templates.submit');
+    Route::delete('/whatsapp/plantillas/{template}', [\App\Http\Controllers\Dashboard\WhatsappTemplateController::class, 'destroy'])->whereNumber('template')->name('whatsapp.templates.destroy');
+    Route::get('/whatsapp/difusiones', [\App\Http\Controllers\Dashboard\WhatsappBroadcastController::class, 'index'])->name('whatsapp.broadcasts.index');
+    Route::get('/whatsapp/difusiones/nueva', [\App\Http\Controllers\Dashboard\WhatsappBroadcastController::class, 'create'])->name('whatsapp.broadcasts.create');
+    Route::post('/whatsapp/difusiones/estimar', [\App\Http\Controllers\Dashboard\WhatsappBroadcastController::class, 'estimate'])->middleware('throttle:60,1')->name('whatsapp.broadcasts.estimate');
+    Route::post('/whatsapp/difusiones', [\App\Http\Controllers\Dashboard\WhatsappBroadcastController::class, 'store'])->middleware('throttle:10,1')->name('whatsapp.broadcasts.store');
+    Route::put('/whatsapp/difusiones/presupuesto', [\App\Http\Controllers\Dashboard\WhatsappBroadcastController::class, 'budget'])->middleware('throttle:20,1')->name('whatsapp.broadcasts.budget');
+    Route::get('/whatsapp/difusiones/{broadcast}', [\App\Http\Controllers\Dashboard\WhatsappBroadcastController::class, 'show'])->whereNumber('broadcast')->name('whatsapp.broadcasts.show');
+    Route::post('/whatsapp/difusiones/{broadcast}/cancelar', [\App\Http\Controllers\Dashboard\WhatsappBroadcastController::class, 'cancel'])->whereNumber('broadcast')->name('whatsapp.broadcasts.cancel');
+    Route::post('/whatsapp/cliente/{contact}', [\App\Http\Controllers\Dashboard\WhatsappInboxController::class, 'start'])->whereNumber('contact')->name('whatsapp.start');
+    Route::get('/whatsapp/archivo/{message}', [\App\Http\Controllers\Dashboard\WhatsappInboxController::class, 'media'])->whereNumber('message')->middleware('throttle:240,1')->name('whatsapp.media');
+    Route::post('/whatsapp/{conversation}/plantilla', [\App\Http\Controllers\Dashboard\WhatsappInboxController::class, 'sendTemplate'])->whereNumber('conversation')->middleware('throttle:30,1')->name('whatsapp.template');
+    Route::get('/whatsapp/{conversation}', [\App\Http\Controllers\Dashboard\WhatsappInboxController::class, 'show'])->whereNumber('conversation')->name('whatsapp.show');
+    Route::post('/whatsapp/{conversation}/responder', [\App\Http\Controllers\Dashboard\WhatsappInboxController::class, 'reply'])->whereNumber('conversation')->middleware('throttle:30,1')->name('whatsapp.reply');
+    Route::get('/whatsapp/{conversation}/nuevos', [\App\Http\Controllers\Dashboard\WhatsappInboxController::class, 'poll'])->whereNumber('conversation')->middleware('throttle:120,1')->name('whatsapp.poll');
+    Route::get('/clientes/oportunidades', [\App\Http\Controllers\Dashboard\DealController::class, 'index'])->name('clientes.deals.index');
+    Route::post('/clientes/oportunidades', [\App\Http\Controllers\Dashboard\DealController::class, 'store'])->name('clientes.deals.store');
+    Route::put('/clientes/oportunidades/{deal}', [\App\Http\Controllers\Dashboard\DealController::class, 'update'])->whereNumber('deal')->name('clientes.deals.update');
+    Route::post('/clientes/oportunidades/{deal}/mover', [\App\Http\Controllers\Dashboard\DealController::class, 'move'])->whereNumber('deal')->name('clientes.deals.move');
+    Route::post('/clientes/oportunidades/{deal}/ganar', [\App\Http\Controllers\Dashboard\DealController::class, 'win'])->whereNumber('deal')->name('clientes.deals.win');
+    Route::post('/clientes/oportunidades/{deal}/perder', [\App\Http\Controllers\Dashboard\DealController::class, 'lose'])->whereNumber('deal')->name('clientes.deals.lose');
+    Route::post('/clientes/oportunidades/{deal}/reabrir', [\App\Http\Controllers\Dashboard\DealController::class, 'reopen'])->whereNumber('deal')->name('clientes.deals.reopen');
+    Route::delete('/clientes/oportunidades/{deal}', [\App\Http\Controllers\Dashboard\DealController::class, 'destroy'])->whereNumber('deal')->name('clientes.deals.destroy');
+    Route::get('/clientes/plantillas', [\App\Http\Controllers\Dashboard\MessageTemplateController::class, 'index'])->name('clientes.templates.index');
+    Route::post('/clientes/plantillas', [\App\Http\Controllers\Dashboard\MessageTemplateController::class, 'store'])->name('clientes.templates.store');
+    Route::put('/clientes/plantillas/{key}', [\App\Http\Controllers\Dashboard\MessageTemplateController::class, 'update'])->where('key', '[a-z_]+|propia-\d+')->name('clientes.templates.update');
+    Route::delete('/clientes/plantillas/{key}', [\App\Http\Controllers\Dashboard\MessageTemplateController::class, 'destroy'])->where('key', '[a-z_]+|propia-\d+')->name('clientes.templates.destroy');
+    Route::get('/clientes/{contact}/whatsapp', [\App\Http\Controllers\Dashboard\ContactWhatsappController::class, 'open'])->whereNumber('contact')->middleware('throttle:60,1')->name('clientes.whatsapp');
+    Route::get('/clientes/{contact}', [\App\Http\Controllers\Dashboard\ContactController::class, 'show'])->whereNumber('contact')->name('clientes.show');
+    Route::put('/clientes/{contact}', [\App\Http\Controllers\Dashboard\ContactController::class, 'update'])->whereNumber('contact')->name('clientes.update');
+    Route::post('/clientes/{contact}/historia', [\App\Http\Controllers\Dashboard\ContactController::class, 'logEvent'])->whereNumber('contact')->name('clientes.events.store');
+
     Route::get('/pedidos', [DashboardOrderController::class, 'index'])->name('pedidos.index');
     Route::get('/pedidos/{order}', [DashboardOrderController::class, 'show'])->name('pedidos.show');
     Route::patch('/pedidos/{order}/status', [DashboardOrderController::class, 'updateStatus'])->name('pedidos.status');
@@ -166,9 +259,38 @@ Route::middleware(['auth', 'role:store_owner,super_admin'])->prefix('dashboard')
 
     // Inventario
     Route::get('/inventario', [InventoryController::class, 'index'])->name('inventario.index');
-    Route::get('/inventario/{product}', [InventoryController::class, 'product'])->name('inventario.product');
-    Route::post('/inventario/{product}/ajuste', [InventoryController::class, 'adjust'])->name('inventario.adjust');
+    // Compras (ERP Fase 1c): proveedores y órdenes de compra; recibir mete el stock con su costo
+    Route::get('/compras', [\App\Http\Controllers\Dashboard\PurchaseOrderController::class, 'index'])->name('compras.index');
+    Route::get('/compras/nueva', [\App\Http\Controllers\Dashboard\PurchaseOrderController::class, 'create'])->name('compras.create');
+    Route::post('/compras', [\App\Http\Controllers\Dashboard\PurchaseOrderController::class, 'store'])->name('compras.store');
+    Route::get('/compras/{order}', [\App\Http\Controllers\Dashboard\PurchaseOrderController::class, 'show'])->whereNumber('order')->name('compras.show');
+    Route::get('/compras/{order}/editar', [\App\Http\Controllers\Dashboard\PurchaseOrderController::class, 'edit'])->whereNumber('order')->name('compras.edit');
+    Route::put('/compras/{order}', [\App\Http\Controllers\Dashboard\PurchaseOrderController::class, 'update'])->whereNumber('order')->name('compras.update');
+    Route::post('/compras/{order}/recibir', [\App\Http\Controllers\Dashboard\PurchaseOrderController::class, 'receive'])->whereNumber('order')->name('compras.receive');
+    Route::post('/compras/{order}/cancelar', [\App\Http\Controllers\Dashboard\PurchaseOrderController::class, 'cancel'])->whereNumber('order')->name('compras.cancel');
+    Route::get('/proveedores', [\App\Http\Controllers\Dashboard\SupplierController::class, 'index'])->name('proveedores.index');
+    Route::post('/proveedores', [\App\Http\Controllers\Dashboard\SupplierController::class, 'store'])->name('proveedores.store');
+    Route::get('/proveedores/{supplier}', [\App\Http\Controllers\Dashboard\SupplierController::class, 'edit'])->whereNumber('supplier')->name('proveedores.edit');
+    Route::put('/proveedores/{supplier}', [\App\Http\Controllers\Dashboard\SupplierController::class, 'update'])->whereNumber('supplier')->name('proveedores.update');
+    Route::delete('/proveedores/{supplier}', [\App\Http\Controllers\Dashboard\SupplierController::class, 'destroy'])->whereNumber('supplier')->name('proveedores.destroy');
+
+    // whereNumber: sin él, /inventario/exportar caía en la ruta del producto (404).
     Route::get('/inventario/exportar', [InventoryController::class, 'export'])->name('inventario.export');
+    Route::get('/inventario/rentabilidad', [InventoryController::class, 'profit'])->name('inventario.profit');
+    Route::get('/inventario/reposicion', [\App\Http\Controllers\Dashboard\ReorderController::class, 'index'])->name('inventario.reorder');
+    Route::post('/inventario/reposicion/compra', [\App\Http\Controllers\Dashboard\ReorderController::class, 'purchase'])->name('inventario.reorder.purchase');
+    Route::get('/inventario/conteos', [\App\Http\Controllers\Dashboard\StockCountController::class, 'index'])->name('inventario.conteos.index');
+    Route::post('/inventario/conteos', [\App\Http\Controllers\Dashboard\StockCountController::class, 'store'])->name('inventario.conteos.store');
+    Route::get('/inventario/conteos/{count}', [\App\Http\Controllers\Dashboard\StockCountController::class, 'show'])->whereNumber('count')->name('inventario.conteos.show');
+    Route::patch('/inventario/conteos/{count}/linea', [\App\Http\Controllers\Dashboard\StockCountController::class, 'record'])->whereNumber('count')->middleware('throttle:240,1')->name('inventario.conteos.record');
+    Route::post('/inventario/conteos/{count}/aplicar', [\App\Http\Controllers\Dashboard\StockCountController::class, 'apply'])->whereNumber('count')->name('inventario.conteos.apply');
+    Route::post('/inventario/conteos/{count}/cancelar', [\App\Http\Controllers\Dashboard\StockCountController::class, 'cancel'])->whereNumber('count')->name('inventario.conteos.cancel');
+    Route::get('/inventario/{product}', [InventoryController::class, 'product'])->whereNumber('product')->name('inventario.product');
+    Route::post('/inventario/{product}/ajuste', [InventoryController::class, 'adjust'])->whereNumber('product')->name('inventario.adjust');
+    Route::post('/inventario/{product}/presentaciones', [\App\Http\Controllers\Dashboard\ProductStructureController::class, 'storeUnit'])->whereNumber('product')->name('inventario.units.store');
+    Route::delete('/inventario/{product}/presentaciones/{unit}', [\App\Http\Controllers\Dashboard\ProductStructureController::class, 'destroyUnit'])->whereNumber(['product', 'unit'])->name('inventario.units.destroy');
+    Route::put('/inventario/{product}/recompra', [\App\Http\Controllers\Dashboard\ProductReorderController::class, 'update'])->whereNumber('product')->name('inventario.reorder-days.update');
+    Route::put('/inventario/{product}/combo', [\App\Http\Controllers\Dashboard\ProductStructureController::class, 'updateKit'])->whereNumber('product')->name('inventario.kit.update');
 
     // Marketing: conexión con Meta (Píxel, Conversions API y catálogo de anuncios)
     Route::get('/marketing', [\App\Http\Controllers\Dashboard\MarketingController::class, 'index'])->name('marketing.index');

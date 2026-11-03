@@ -8,7 +8,12 @@ class InventoryMovement extends Model
 {
     protected $fillable = [
         'product_id', 'store_id', 'type', 'quantity',
-        'stock_before', 'stock_after', 'reason', 'reference', 'user_id',
+        'stock_before', 'stock_after', 'unit_cost', 'total_cost', 'reason', 'reference', 'user_id',
+    ];
+
+    protected $casts = [
+        'unit_cost'  => 'decimal:4',
+        'total_cost' => 'decimal:2',
     ];
 
     public function product()

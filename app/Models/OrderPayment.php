@@ -19,7 +19,7 @@ class OrderPayment extends Model
     public const STATUS_REFUNDED = 'refunded';
 
     protected $fillable = [
-        'order_id', 'kind', 'amount', 'currency', 'gateway', 'gateway_ref',
+        'order_id', 'kind', 'amount', 'currency', 'gateway', 'gateway_ref', 'method', 'register_session_id', 'staff_id',
         'status', 'paid_at', 'recorded_by', 'notes',
     ];
 

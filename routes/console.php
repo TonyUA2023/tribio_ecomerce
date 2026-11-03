@@ -34,5 +34,33 @@ Artisan::command('marketing:google-marketplace', function (\App\Services\Marketi
 })->purpose("Rebuild Tribio's Google Merchant Center marketplace feed and print its URL");
 
 // Requires the `scheduler` program in docker/supervisord.conf (php artisan schedule:work).
+Artisan::command('crm:refresh-stages', function (\App\Services\Crm\CrmSchema $schema, \App\Services\Crm\LifecycleClassifier $stages) {
+    if (!$schema->profileReady()) {
+        $this->info('CRM sin migrar: nada que actualizar.');
+        return;
+    }
+    $count = 0;
+    \App\Models\Contact::query()->chunkById(500, function ($contacts) use ($stages, &$count) {
+        foreach ($contacts as $contact) {
+            $before = $contact->lifecycle_stage;
+            $stages->apply($contact);
+            $count += (int) ($before !== $contact->lifecycle_stage);
+        }
+    });
+    $this->info("Clientes que cambiaron de etapa: {$count}");
+})->purpose('Recompute customer lifecycle stages that change with time (en riesgo, inactivo)');
+
+Artisan::command('whatsapp:broadcasts', function (\App\Services\Whatsapp\WhatsappSchema $schema, \App\Services\Whatsapp\BroadcastService $broadcasts) {
+    if (!$schema->broadcastsReady()) {
+        return;
+    }
+    $count = $broadcasts->dispatchDue();
+    if ($count) {
+        $this->info("Difusiones de WhatsApp iniciadas: {$count}");
+    }
+})->purpose('Start the WhatsApp broadcasts whose scheduled time arrived (ERP Fase 3c)');
+
 Schedule::command('attachments:prune')->dailyAt('04:00')->withoutOverlapping();
+Schedule::command('crm:refresh-stages')->dailyAt('03:30')->withoutOverlapping();
 Schedule::command('marketing:prune-events')->dailyAt('04:15')->withoutOverlapping();
+Schedule::command('whatsapp:broadcasts')->everyMinute()->withoutOverlapping();
