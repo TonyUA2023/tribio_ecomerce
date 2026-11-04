@@ -92,6 +92,7 @@
                     ['dashboard.mensajes.index', 'mail', 'Mensajes', null],
                     ['dashboard.inventario.index', 'inventory', 'Inventario', null],
                     ['dashboard.compras.index', 'receipt', 'Compras', null],
+                    ['dashboard.ganancias.index', 'trend', 'Ganancias y pérdidas', null],
                     ['dashboard.shipping.index', 'truck', 'Zonas de envío', null],
                     ['dashboard.gateway.edit', 'wallet', 'Pasarela de pago', null],
                     ['dashboard.marketing.index', 'megaphone', 'Marketing', 'Crecimiento'],

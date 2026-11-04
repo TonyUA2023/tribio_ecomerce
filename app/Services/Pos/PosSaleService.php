@@ -9,6 +9,7 @@ use App\Models\ProductUnit;
 use App\Models\ProductVariant;
 use App\Models\Quote;
 use App\Models\RegisterSession;
+use App\Models\Store;
 use App\Services\Crm\ContactResolver;
 use App\Services\Crm\ContactService;
 use App\Services\Inventory\InventorySchema;
@@ -51,6 +52,7 @@ class PosSaleService
         private ReceivableService $receivables,
         private ContactService $timeline,
         private PriceListService $priceLists,
+        private SalesDocuments $documents,
     ) {
     }
 
@@ -82,8 +84,13 @@ class PosSaleService
         [$payments, $tendered, $change] = $this->payments($data['payments'] ?? [], $total, $credit);
         $plan = $this->creditPlan($data, $contact, round($total - array_sum($payments), 2));
 
+        // Comprobante (nota de venta, boleta o factura): what it needs is checked before anything is written.
+        $document = $this->documents->ready() ? $this->documents->normalize($data['document_type'] ?? null) : SalesDocuments::NOTA;
+        $this->documents->assertIssuable(Store::findOrFail($session->store_id), $document, $contact?->document_number ?? ($data['customer_document'] ?? null),
+            $contact?->name ?? ($data['customer_name'] ?? null), $total);
+
         try {
-            $order = DB::transaction(function () use ($session, $data, $lines, $subtotal, $discount, $total, $payments, $tendered, $change, $contact, $plan, $userId, $actor) {
+            $order = DB::transaction(function () use ($session, $data, $lines, $subtotal, $discount, $total, $payments, $tendered, $change, $contact, $plan, $userId, $actor, $document) {
                 $order = new Order();
                 $order->forceFill([
                     'store_id'                 => $session->store_id,
@@ -96,6 +103,7 @@ class PosSaleService
                     'customer_document_number' => $contact?->document_number ?? (trim((string) ($data['customer_document'] ?? '')) ?: null),
                     'customer_country'         => 'PE',
                     'customer_notes'           => filled($data['notes'] ?? null) ? mb_substr(trim($data['notes']), 0, 255) : null,
+                    'customer_address'         => filled($data['customer_address'] ?? null) ? mb_substr(trim($data['customer_address']), 0, 255) : null,
                     'subtotal'                 => $subtotal,
                     'discount'                 => $discount,
                     'shipping_cost'            => 0,
@@ -112,6 +120,10 @@ class PosSaleService
                     'contact_id'               => $contact?->id,
                 ] + ($plan ? ['due_date' => end($plan)['due_date']] : []) + ($actor ? $actor->columns() : [])
                   + (!empty($data['offline_at']) ? $this->offlineTimestamps($data['offline_at']) : []))->save();
+
+                if ($this->documents->ready()) {
+                    $this->documents->issue($order, $document);
+                }
 
                 $order->items()->createMany(array_map(fn ($line) => $line['item'], $lines));
                 if ($plan) {

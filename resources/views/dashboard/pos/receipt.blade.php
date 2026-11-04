@@ -2,6 +2,9 @@
     $money = fn ($value) => number_format((float) $value, 2);
     $store = $order->store;
     $at = $order->created_at->copy()->setTimezone('America/Lima');
+    $fiscal = in_array($order->document_type, ['boleta', 'factura'], true);
+    $isInvoice = $order->document_type === 'factura';
+    $igv = \App\Services\Pos\SalesDocuments::breakdown((float) $order->total);
 @endphp
 <!doctype html>
 <html lang="es">
@@ -9,7 +12,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex">
-    <title>Nota de venta {{ $order->order_number }}</title>
+    <title>{{ $order->document_label }} {{ $order->document_code ?? $order->order_number }}</title>
     <style>
         :root { color-scheme: light; }
         * { box-sizing: border-box; }
@@ -36,17 +39,21 @@
 <body>
     <main class="ticket">
         <div class="center">
-            <h1>{{ $store->name }}</h1>
+            <h1>{{ $fiscal && $store->legal_name ? $store->legal_name : $store->name }}</h1>
+            @if($fiscal && $store->legal_name && $store->legal_name !== $store->name)<div class="muted">{{ $store->name }}</div>@endif
+            @if($fiscal && $store->ruc)<div><strong>RUC {{ $store->ruc }}</strong></div>@endif
             @if($store->address)<div class="muted">{{ $store->address }}{{ $store->city ? ', ' . $store->city : '' }}</div>@endif
             @if($store->phone || $store->whatsapp_phone)<div class="muted">Tel. {{ $store->phone ?: $store->whatsapp_phone }}</div>@endif
             <hr>
-            <strong>NOTA DE VENTA</strong><br>{{ $order->order_number }}
+            <strong>{{ mb_strtoupper($order->document_label) }}</strong><br>{{ $order->document_code ?? $order->order_number }}
+            @if($order->document_code)<div class="muted" style="font-size: 10px">Pedido {{ $order->order_number }}</div>@endif
         </div>
         <hr>
         <div>Fecha: {{ $at->format('d/m/Y H:i') }}</div>
         @if($order->registerSession)<div>Caja: {{ $order->registerSession->register->name }}</div>@endif
-        <div>Cliente: {{ $order->customer_name }}</div>
+        <div>{{ $isInvoice ? 'Razón social' : 'Cliente' }}: {{ $order->customer_name }}</div>
         @if($order->customer_document_number)<div>{{ $order->customer_document_type ?: 'Doc.' }}: {{ $order->customer_document_number }}</div>@endif
+        @if($isInvoice && $order->customer_address)<div>Dirección: {{ $order->customer_address }}</div>@endif
         <hr>
         <table>
             @foreach($order->items as $item)
@@ -69,6 +76,10 @@
                 <tr><td>Subtotal</td><td class="r">{{ $money($order->subtotal) }}</td></tr>
                 <tr><td>Descuento</td><td class="r">−{{ $money($order->discount) }}</td></tr>
             @endif
+            @if($fiscal)
+                <tr><td>Op. gravada</td><td class="r">{{ $money($igv['taxable']) }}</td></tr>
+                <tr><td>IGV (18%)</td><td class="r">{{ $money($igv['igv']) }}</td></tr>
+            @endif
             <tr class="total"><td>TOTAL S/</td><td class="r">{{ $money($order->total) }}</td></tr>
             @foreach($order->payments->where('status', 'paid') as $payment)
                 <tr><td>{{ $methods[$payment->method] ?? 'Pago' }}</td><td class="r">{{ $money($payment->method === 'cash' && $order->cash_tendered ? $order->cash_tendered : $payment->amount) }}</td></tr>
@@ -87,7 +98,7 @@
         @endif
         <hr>
         <div class="center">¡Gracias por tu compra!</div>
-        <div class="center muted" style="font-size: 10px; margin-top: 4px">Documento interno. No es comprobante de pago electrónico.</div>
+        @unless($fiscal)<div class="center muted" style="font-size: 10px; margin-top: 4px">Documento interno. No es comprobante de pago electrónico.</div>@endunless
     </main>
     <div class="actions">
         <button type="button" onclick="window.print()">Imprimir</button>

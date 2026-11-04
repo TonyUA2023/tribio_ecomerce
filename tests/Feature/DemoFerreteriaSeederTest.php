@@ -9,6 +9,8 @@ use App\Models\Store;
 use App\Models\StockLot;
 use App\Models\User;
 use App\Services\Inventory\ProfitReport;
+use App\Services\Pos\SalesDocuments;
+use App\Services\Reports\ProfitAndLoss;
 use Database\Seeders\DemoFerreteriaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -93,14 +95,14 @@ class DemoFerreteriaSeederTest extends TestCase
     public function test_the_weekly_report_adds_up_and_matches_the_apps_profitability_report(): void
     {
         $store = $this->store();
-        $from = Carbon::now()->subDays(6)->startOfDay();
-        $report = app(DemoFerreteriaSeeder::class)->weeklyReport($store, $from, Carbon::now()->endOfDay());
+        [$from, $to] = ProfitAndLoss::range('7_dias');
+        $report = app(DemoFerreteriaSeeder::class)->weeklyReport($store, $from, $to);
 
         $this->assertCount(7, $report['days']);
         foreach ($report['days'] as $date => $day) {
             $this->assertGreaterThan(0, $day['sales'], $date);
             $this->assertEqualsWithDelta($day['income'] - $day['cost'], $day['gross'], 0.005, $date);
-            $this->assertEqualsWithDelta($day['gross'] - $day['expenses'], $day['net'], 0.005, $date);
+            $this->assertEqualsWithDelta($day['gross'] - $day['expenses'] - $day['losses'], $day['net'], 0.005, $date);
             $this->assertEqualsWithDelta($day['purchases'] + $day['expenses'], $day['outflow'], 0.005, $date);
         }
 
@@ -110,12 +112,41 @@ class DemoFerreteriaSeederTest extends TestCase
         $this->assertLessThan($totals['gross'], $totals['net']);
 
         // Same figure the dashboard's Rentabilidad page computes for the same period.
-        $profit = app(ProfitReport::class)->build($store, $from, Carbon::now()->endOfDay());
+        $profit = app(ProfitReport::class)->build($store, $from->copy()->setTimezone(config('app.timezone')), $to->copy()->setTimezone(config('app.timezone')));
         $this->assertEqualsWithDelta($profit['totals']['revenue'], $totals['income'], 0.05);
         $this->assertEqualsWithDelta($profit['totals']['cost'], $totals['cost'], 0.05);
         $this->assertEqualsWithDelta($profit['totals']['profit'], $totals['gross'], 0.05);
         $this->assertFalse($profit['estimated']);
         $this->assertFalse($profit['missing']);
+    }
+
+    public function test_shifts_follow_lima_business_hours(): void
+    {
+        foreach (RegisterSession::where('store_id', $this->store()->id)->get() as $session) {
+            $open = $session->opened_at->copy()->setTimezone('America/Lima');
+            $close = $session->closed_at->copy()->setTimezone('America/Lima');
+            $this->assertSame(8, $open->hour, 'opens at 8:00 Lima');
+            $this->assertLessThanOrEqual(19, $close->hour);
+            $this->assertSame($open->toDateString(), $close->toDateString());
+        }
+    }
+
+    public function test_sales_carry_boletas_facturas_and_notas_with_valid_data(): void
+    {
+        $store = $this->store();
+        $this->assertTrue(SalesDocuments::validRuc((string) $store->ruc));
+        $orders = Order::where('store_id', $store->id)->get();
+
+        $this->assertEqualsCanonicalizing(['nota_venta', 'boleta', 'factura'], $orders->pluck('document_type')->unique()->values()->all());
+        $this->assertSame($orders->count(), $orders->pluck('document_code')->unique()->count(), 'every number is unique');
+        foreach ($orders->where('document_type', 'factura') as $factura) {
+            $this->assertTrue(SalesDocuments::validRuc((string) $factura->customer_document_number), $factura->document_code);
+            $this->assertNotEmpty($factura->customer_address);
+            $this->assertStringStartsWith('F001-', $factura->document_code);
+        }
+        foreach ($orders->where('document_type', 'boleta')->where('total', '>', SalesDocuments::BOLETA_ID_LIMIT) as $boleta) {
+            $this->assertNotEmpty($boleta->customer_document_number, 'a boleta above S/ 700 names its buyer: ' . $boleta->document_code);
+        }
     }
 
     public function test_the_dashboard_screens_render_with_the_demo_data(): void
@@ -127,6 +158,8 @@ class DemoFerreteriaSeederTest extends TestCase
         $this->actingAs($user)->get(route('dashboard.pos.sessions.show', $session->id))->assertOk();
         $this->actingAs($user)->get(route('dashboard.inventario.profit'))->assertOk();
         $this->actingAs($user)->get(route('dashboard.index'))->assertOk();
+        $this->actingAs($user)->get(route('dashboard.ganancias.index'))->assertOk()->assertSee('Resultado por día')->assertSee('Comprobantes emitidos');
+        $this->actingAs($user)->get(route('dashboard.pos.documents.edit'))->assertOk()->assertSee('DEMOFERRETERIA S.A.C.');
     }
 
     public function test_running_the_seeder_again_changes_nothing(): void

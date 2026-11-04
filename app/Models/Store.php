@@ -24,7 +24,7 @@ class Store extends Model
         'total_views', 'total_orders', 'total_revenue',
         'manual_payments', 'delivery_coverage', 'exchange_hours',
         'checkout_mode', 'payment_gateway', 'gateway_public_key', 'gateway_private_key', 'gateway_access_token',
-        'mp_access_token', 'mp_public_key', 'contact_email', 'contact_phone',
+        'mp_access_token', 'mp_public_key', 'contact_email', 'contact_phone', 'ruc', 'legal_name',
         'culqi_customer_id', 'culqi_card_id', 'culqi_subscription_id', 'billing_preapproval_id',
         'paypal_client_id', 'paypal_client_secret', 'paypal_mode', 'paypal_webhook_id',
         'is_express_shipping_enabled', 'express_shipping_cost',

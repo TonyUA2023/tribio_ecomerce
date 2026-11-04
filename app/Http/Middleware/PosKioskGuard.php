@@ -18,7 +18,7 @@ class PosKioskGuard
     private const ALLOWED = ['dashboard.pos.*', 'dashboard.quotes.*', 'dashboard.returns.*', 'dashboard.receivables.*'];
 
     /** Owner-only even inside those groups. */
-    private const OWNER_ONLY = ['dashboard.pos.staff.*', 'dashboard.pos.registers.store'];
+    private const OWNER_ONLY = ['dashboard.pos.staff.*', 'dashboard.pos.registers.store', 'dashboard.pos.documents.*'];
 
     /** Reachable while the register is locked. */
     private const WHEN_LOCKED = ['dashboard.pos.index', 'dashboard.pos.unlock', 'dashboard.pos.kiosk.disable', 'dashboard.pos.token'];

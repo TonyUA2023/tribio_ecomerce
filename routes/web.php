@@ -198,6 +198,8 @@ Route::middleware(['auth', 'role:store_owner,super_admin', 'pos.kiosk'])->prefix
     Route::post('/caja/cajas', [\App\Http\Controllers\Dashboard\RegisterSessionController::class, 'storeRegister'])->middleware('throttle:20,1')->name('pos.registers.store');
     Route::post('/caja/cajas/{register}/abrir', [\App\Http\Controllers\Dashboard\RegisterSessionController::class, 'open'])->whereNumber('register')->middleware('throttle:20,1')->name('pos.registers.open');
     Route::get('/caja/turnos', [\App\Http\Controllers\Dashboard\RegisterSessionController::class, 'index'])->name('pos.sessions.index');
+    Route::get('/caja/comprobantes', [\App\Http\Controllers\Dashboard\SalesDocumentsController::class, 'edit'])->name('pos.documents.edit');
+    Route::post('/caja/comprobantes', [\App\Http\Controllers\Dashboard\SalesDocumentsController::class, 'update'])->middleware('throttle:20,1')->name('pos.documents.update');
     Route::get('/caja/turnos/{session}', [\App\Http\Controllers\Dashboard\RegisterSessionController::class, 'show'])->whereNumber('session')->name('pos.sessions.show');
     Route::post('/caja/turnos/{session}/ventas', [\App\Http\Controllers\Dashboard\PosController::class, 'sell'])->whereNumber('session')->middleware('throttle:120,1')->name('pos.sell');
     Route::post('/caja/turnos/{session}/movimientos', [\App\Http\Controllers\Dashboard\RegisterSessionController::class, 'movement'])->whereNumber('session')->middleware('throttle:30,1')->name('pos.sessions.movement');
@@ -277,6 +279,7 @@ Route::middleware(['auth', 'role:store_owner,super_admin', 'pos.kiosk'])->prefix
     // whereNumber: sin él, /inventario/exportar caía en la ruta del producto (404).
     Route::get('/inventario/exportar', [InventoryController::class, 'export'])->name('inventario.export');
     Route::get('/inventario/rentabilidad', [InventoryController::class, 'profit'])->name('inventario.profit');
+    Route::get('/ganancias', [\App\Http\Controllers\Dashboard\ProfitLossController::class, 'index'])->name('ganancias.index');
     Route::get('/inventario/reposicion', [\App\Http\Controllers\Dashboard\ReorderController::class, 'index'])->name('inventario.reorder');
     Route::post('/inventario/reposicion/compra', [\App\Http\Controllers\Dashboard\ReorderController::class, 'purchase'])->name('inventario.reorder.purchase');
     Route::get('/inventario/conteos', [\App\Http\Controllers\Dashboard\StockCountController::class, 'index'])->name('inventario.conteos.index');

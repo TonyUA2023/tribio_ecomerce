@@ -25,6 +25,7 @@
         kiosk: @js($kiosk),
         offline: @js($offline),
         storeName: @js($store->name),
+        documents: @js($documents),
      })"
      @keydown.window.f2.prevent="$refs.search.focus()" @keydown.window.f9.prevent="openPayment()">
 
@@ -178,7 +179,19 @@
                     </div>
 
                     <div class="space-y-2" x-show="lines.length">
-                        <div class="relative">
+                        @if($documents)
+                        <div class="pos-doc" role="group" aria-label="Comprobante">
+                            <span class="pos-doc-label">Comprobante</span>
+                            <div class="pos-doc-options">
+                                @foreach($documents['short'] as $type => $short)
+                                    <button type="button" class="pos-doc-option" :class="documentType === '{{ $type }}' && 'is-active'" :aria-pressed="documentType === '{{ $type }}'"
+                                            title="{{ $documents['types'][$type] }}" @click="setDocument('{{ $type }}')">{{ $short }}</button>
+                                @endforeach
+                            </div>
+                            <p class="pos-doc-hint" x-show="documentHint()" x-text="documentHint()"></p>
+                        </div>
+                        @endif
+                        <div class="relative" x-ref="customerBlock">
                             <label class="input-label" for="pos-customer">Cliente</label>
                             <template x-if="customer">
                                 <div class="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
@@ -198,9 +211,10 @@
                                     </div>
                                     <button type="button" class="text-[11px] text-tribio-cyan underline mt-1" @click="newCustomer = !newCustomer">¿Cliente nuevo? Anota sus datos</button>
                                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2" x-show="newCustomer" x-cloak>
-                                        <input class="input-field !py-1 !text-xs" x-model="walkIn.name" maxlength="120" placeholder="Nombre" aria-label="Nombre del cliente">
+                                        <input class="input-field !py-1 !text-xs" x-model="walkIn.name" maxlength="120" :placeholder="documentType === 'factura' ? 'Razón social' : 'Nombre'" aria-label="Nombre o razón social del cliente">
                                         <input class="input-field !py-1 !text-xs" x-model="walkIn.phone" maxlength="20" inputmode="tel" placeholder="Celular" aria-label="Celular del cliente">
-                                        <input class="input-field !py-1 !text-xs" x-model="walkIn.document" maxlength="11" inputmode="numeric" placeholder="DNI o RUC" aria-label="DNI o RUC del cliente">
+                                        <input class="input-field !py-1 !text-xs" x-model="walkIn.document" maxlength="11" inputmode="numeric" :placeholder="documentType === 'factura' ? 'RUC' : 'DNI o RUC'" aria-label="DNI o RUC del cliente">
+                                        <input class="input-field !py-1 !text-xs sm:col-span-3" x-show="documentType === 'factura'" x-model="walkIn.address" maxlength="255" placeholder="Dirección del cliente (opcional)" aria-label="Dirección del cliente">
                                     </div>
                                 </div>
                             </template>
@@ -312,7 +326,7 @@
             <template x-if="done">
                 <div class="pos-result" role="status">
                     <p class="text-4xl" aria-hidden="true">✅</p>
-                    <p class="text-white font-bold" x-text="'Venta ' + done.order_number"></p>
+                    <p class="text-white font-bold" x-text="done.document_number ? done.document_label + ' ' + done.document_number : 'Venta ' + done.order_number"></p>
                     <p class="text-2xl font-black text-white" x-text="money(done.total)"></p>
                     <p class="text-lg text-emerald-300" x-show="done.change > 0" x-text="'Vuelto: ' + money(done.change)"></p>
                     <p class="text-sm text-amber-300" x-show="done.owed > 0" x-text="'Queda debiendo ' + money(done.owed) + ' (fiado)'"></p>
@@ -336,12 +350,20 @@
         const token = document.querySelector('meta[name="csrf-token"]').content;
         const newId = () => crypto.randomUUID ? crypto.randomUUID()
             : '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+        // The comprobante chosen last stays chosen on this device (a ferretería that sells with boleta all day).
+        const loadDocument = (documents) => {
+            try {
+                const saved = localStorage.getItem('tribio.pos.document');
+                if (documents && saved && documents.types[saved]) return saved;
+            } catch (e) { /* private mode */ }
+            return 'nota_venta';
+        };
         const blankPay = () => Object.fromEntries(Object.keys(config.methods).map(m => [m, '']));
         return {
             ...config,
             query: '', products: [], loading: false, searchError: '',
-            lines: [], discount: 0, customer: null, customerQuery: '', customers: [], newCustomer: false, walkIn: { name: '', phone: '', document: '' },
-            paying: false, pay: blankPay(), saving: false, credit: false, terms: { installments: 1, every_days: 30, first_due: config.firstDue.default }, error: '', done: null, uuid: newId(), showCash: false, cartOpen: false,
+            lines: [], discount: 0, customer: null, customerQuery: '', customers: [], newCustomer: false, walkIn: { name: '', phone: '', document: '', address: '' },
+            paying: false, pay: blankPay(), saving: false, credit: false, terms: { installments: 1, every_days: 30, first_due: config.firstDue.default }, error: '', done: null, uuid: newId(), showCash: false, cartOpen: false, documentType: loadDocument(config.documents),
             priceList: 'menor', validDays: 7, quoteId: null, quoteNumber: null, savedQuote: null,
             approval: '', approverPin: '', online: navigator.onLine, pending: [], showPending: false,
             init() {
@@ -370,6 +392,22 @@
                 el.style.setProperty('--pos-h', Math.max(480, window.innerHeight - top - bottom) + 'px');
             },
             money(value) { return 'S/ ' + Number(value || 0).toFixed(2); },
+            setDocument(type) {
+                this.documentType = type;
+                try { localStorage.setItem('tribio.pos.document', type); } catch (e) { /* private mode */ }
+                // A factura is addressed to a company: open the data form right away.
+                if (type === 'factura' && !this.customer) {
+                    this.newCustomer = true;
+                    this.$nextTick(() => this.$refs.customerBlock?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+                }
+            },
+            documentHint() {
+                if (!this.documents) return '';
+                if (this.documentType !== 'nota_venta' && !this.documents.hasRuc) return 'Primero registra el RUC de tu negocio en Caja → Comprobantes.';
+                if (this.documentType === 'factura') return 'Pide el RUC y la razón social del cliente.';
+                if (this.documentType === 'boleta' && this.total() > this.documents.idLimit) return 'Más de S/ ' + this.documents.idLimit + ': anota el DNI del cliente.';
+                return '';
+            },
             initials(name) {
                 // Letters only ("Bisagra 3" (par)" → BP); a single word gives its first two letters.
                 const words = String(name || '').match(/\p{L}+/gu) || [];
@@ -496,7 +534,7 @@
                 this.quoteId = quote.id; this.quoteNumber = quote.number; this.priceList = quote.priceList; this.discount = quote.discount;
                 this.lines = quote.lines.map(l => ({ key: 'q' + Math.random(), product: l.product, variantId: l.variantId, unitId: l.unitId, quantity: l.quantity, price: l.price }));
                 if (quote.customer) this.customer = quote.customer;
-                else if (quote.walkIn && quote.walkIn.name) { this.walkIn = quote.walkIn; this.newCustomer = true; }
+                else if (quote.walkIn && quote.walkIn.name) { this.walkIn = { address: '', ...quote.walkIn }; this.newCustomer = true; }
                 if (quote.missing.length) this.error = 'Ya no se venden: ' + quote.missing.join(', ') + '.';
             },
             body() {
@@ -507,6 +545,7 @@
                     customer_name: this.customer ? null : (this.walkIn.name || null),
                     customer_phone: this.customer ? null : (this.walkIn.phone || null),
                     customer_document: this.customer ? null : (this.walkIn.document || null),
+                    customer_address: this.customer ? null : (this.walkIn.address || null),
                     ...(this.extras ? { price_list: this.priceList } : {}),
                 };
             },
@@ -577,6 +616,7 @@
                     ...this.body(),
                     uuid: this.uuid,
                     quote_id: this.quoteId,
+                    ...(this.documents ? { document_type: this.documentType } : {}),
                     payments: Object.entries(this.pay).filter(([, v]) => Number(v) > 0).map(([method, amount]) => ({ method, amount: Number(amount) })),
                     credit: this.onCredit() ? { ...this.terms } : null,
                     approver_pin: this.approverPin || null,
@@ -614,7 +654,7 @@
             },
             reset() {
                 Object.assign(this, { lines: [], discount: 0, customer: null, customerQuery: '', customers: [], newCustomer: false,
-                    walkIn: { name: '', phone: '', document: '' }, paying: false, pay: blankPay(), error: '', done: null, uuid: newId(),
+                    walkIn: { name: '', phone: '', document: '', address: '' }, paying: false, pay: blankPay(), error: '', done: null, uuid: newId(),
                     credit: false, terms: { installments: 1, every_days: 30, first_due: this.firstDue.default },
                     priceList: 'menor', quoteId: null, quoteNumber: null, savedQuote: null, approval: '', approverPin: '', cartOpen: false });
                 this.$nextTick(() => this.$refs.search?.focus());

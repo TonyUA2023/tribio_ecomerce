@@ -175,6 +175,20 @@ class Order extends Model
         return $candidate;
     }
 
+    /** "B001-00000012", or null for sales made before comprobantes existed. */
+    public function getDocumentCodeAttribute(): ?string
+    {
+        $attributes = $this->getAttributes();
+
+        return \App\Services\Pos\SalesDocuments::code($attributes['document_series'] ?? null, isset($attributes['document_number']) ? (int) $attributes['document_number'] : null);
+    }
+
+    /** "Boleta de venta", "Factura" or "Nota de venta" (the default). */
+    public function getDocumentLabelAttribute(): string
+    {
+        return \App\Services\Pos\SalesDocuments::TYPES[$this->getAttributes()['document_type'] ?? '']['label'] ?? 'Nota de venta';
+    }
+
     public function getStatusLabelAttribute(): string
     {
         return match ($this->status) {

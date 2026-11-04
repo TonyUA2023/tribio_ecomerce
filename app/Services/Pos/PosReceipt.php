@@ -24,6 +24,9 @@ class PosReceipt
         return [
             'id'            => $order->id,
             'order_number'  => $order->order_number,
+            'document_type'   => $order->document_type ?? SalesDocuments::NOTA,
+            'document_label'  => $order->document_label,
+            'document_number' => $order->document_code,
             'store'         => $order->store?->name,
             'created_at'    => $order->created_at?->toIso8601String(),
             'customer_name' => $order->customer_name,
@@ -57,7 +60,7 @@ class PosReceipt
         $lines = $order->items->map(fn ($item) => ($item->unit_name ? "{$item->unit_quantity} {$item->unit_name}" : $item->quantity) . " × {$item->product_name}"
             . ($item->variant_title ? " ({$item->variant_title})" : '') . ' — S/ ' . number_format((float) $item->subtotal, 2));
 
-        return "¡Gracias por tu compra en {$order->store->name}! 🧾\nNota de venta {$order->order_number}\n" . $lines->implode("\n")
+        return "¡Gracias por tu compra en {$order->store->name}! 🧾\n{$order->document_label} " . ($order->document_code ?? $order->order_number) . "\n" . $lines->implode("\n")
             . ((float) $order->discount > 0 ? "\nDescuento: −S/ " . number_format((float) $order->discount, 2) : '')
             . "\nTotal: S/ " . number_format((float) $order->total, 2)
             . ((float) $order->balance_due > 0 && $this->schema->creditReady() && $order->due_date

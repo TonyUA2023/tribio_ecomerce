@@ -16,6 +16,9 @@
         @if(($staffReady ?? false) && !($kiosk ?? false))
             <x-pos-shortcut :href="route('dashboard.pos.staff.index')" icon="users" title="Personal y modo caja" hint="Cajeros con PIN y bloqueo del equipo"/>
         @endif
+        @if(app(\App\Services\Pos\SalesDocuments::class)->ready() && !($kiosk ?? false))
+            <x-pos-shortcut :href="route('dashboard.pos.documents.edit')" icon="receipt" title="Comprobantes" hint="RUC, boleta, factura y nota de venta"/>
+        @endif
     </nav>
     @if($kiosk ?? false)
         <div class="glass-card p-3 flex items-center justify-between gap-3 flex-wrap" role="status">

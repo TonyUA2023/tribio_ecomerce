@@ -185,6 +185,48 @@
 .dashboard-workspace .pos-chip:hover { background: #edf5ff; border-color: #a9c9ed; }
 .dashboard-workspace .pos-chip .dash-icon { width: 15px; height: 15px; color: var(--dash-blue); }
 .dashboard-workspace .pos-chip-strong { border-color: #c4d3e3; font-weight: 700; }
+.dashboard-workspace .pos-chip.is-active { background: #eaf3fd; border-color: #a9c9ed; color: #185fa8; }
+
+/* Ganancias y pérdidas */
+.pl-app .pl-range { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: var(--dash-muted); }
+.pl-app .pl-range input[type=date] { min-height: 36px; padding: 0 8px; background: white; border: 1px solid var(--dash-line); border-radius: 8px; color: var(--dash-ink); font-size: 12px; }
+.pl-app .pl-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.pl-app .pl-kpi { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; background: white; border: 1px solid var(--dash-line); border-radius: 12px; }
+.pl-app .pl-kpi small { font-size: 11px; font-weight: 600; color: var(--dash-muted); }
+.pl-app .pl-kpi strong { font-size: 22px; font-weight: 800; letter-spacing: -.5px; }
+.pl-app .pl-kpi span { font-size: 11px; color: var(--dash-muted); }
+.pl-app .pl-kpi.is-profit strong, .pl-app .pl-net.is-profit { color: #1f6b43; }
+.pl-app .pl-kpi.is-loss strong, .pl-app .pl-net.is-loss { color: #b03b34; }
+.pl-app .pl-kpi.is-main { border-width: 2px; border-color: #a9c9ed; background: #f7fbff; }
+.pl-app .pl-kpi.is-main.is-loss { border-color: #f0b8b4; background: #fff8f7; }
+.pl-app .pl-columns { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+.pl-app .pl-title { padding: 14px 16px; font-size: 14px; font-weight: 800; border-bottom: 1px solid var(--dash-line); }
+.pl-app .pl-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.pl-app .pl-table th, .pl-app .pl-table td { padding: 10px 12px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--dash-line); }
+.pl-app .pl-table thead th { font-size: 11px; font-weight: 600; color: var(--dash-muted); background: #f8fafd; }
+.pl-app .pl-table tbody th { font-weight: 600; text-transform: capitalize; }
+.pl-app .pl-table .r { text-align: right; font-variant-numeric: tabular-nums; }
+.pl-app .pl-table td small { margin-left: 6px; color: var(--dash-muted); font-size: 10px; }
+.pl-app .pl-table tr.is-empty { color: #8393a7; }
+.pl-app .pl-table tfoot th, .pl-app .pl-table tfoot td { background: #f4f8fc; border-bottom: 0; font-weight: 800; }
+.pl-app .pl-net { font-weight: 700; }
+.pl-app .pl-bar { display: block; height: 4px; margin-top: 4px; background: #eef2f7; border-radius: 99px; overflow: hidden; }
+.pl-app .pl-bar i { display: block; height: 100%; background: currentColor; border-radius: 99px; }
+.pl-app .pl-side { display: flex; flex-direction: column; gap: 16px; }
+.pl-app .pl-list { display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; }
+.pl-app .pl-list > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.pl-app .pl-list dt { min-width: 0; color: var(--dash-muted); overflow-wrap: anywhere; }
+.pl-app .pl-list dd { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pl-app .pl-list .is-total { padding-top: 8px; border-top: 1px solid var(--dash-line); }
+.pl-app .pl-list .is-total dt { color: var(--dash-ink); font-weight: 700; }
+.pl-app .pl-note { margin-top: 10px; font-size: 11px; color: var(--dash-muted); }
+@media (min-width: 1100px) {
+    .pl-app .pl-columns { grid-template-columns: minmax(0, 1fr) 300px; }
+}
+@media (max-width: 639px) {
+    .pl-app .pl-range { margin-left: 0; width: 100%; }
+    .pl-app .pl-kpi strong { font-size: 19px; }
+}
 
 /* Caja: pantalla de venta. De 1024 px en adelante son dos paneles que llenan la pantalla
    (productos | venta) y cada uno hace scroll por su cuenta; debajo, la venta es una hoja
@@ -256,6 +298,13 @@
 .pos-app :is(.text-amber-300, .text-amber-200, .text-amber-100) { color: #8b610e !important; }
 .pos-app :is(.text-red-300, .text-red-400) { color: #b03b34 !important; }
 .pos-app .text-sky-300 { color: #1b69b7 !important; }
+.pos-app .pos-doc { display: flex; flex-direction: column; gap: 6px; }
+.pos-app .pos-doc-label { font-size: 12px; font-weight: 600; color: var(--dash-muted); }
+.pos-app .pos-doc-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 3px; background: #eef2f7; border-radius: 10px; }
+.pos-app .pos-doc-option { min-height: 36px; padding: 0 6px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #536476; white-space: nowrap; transition: background-color .15s, color .15s; }
+.pos-app .pos-doc-option:hover { color: var(--dash-ink); }
+.pos-app .pos-doc-option.is-active { background: white; color: #185fa8; font-weight: 700; box-shadow: 0 1px 3px #20354d26; }
+.pos-app .pos-doc-hint { font-size: 11px; color: #8b610e; }
 .pos-app .pos-scrim, .pos-app .pos-cartbar { display: none; }
 @media (min-width: 1024px) {
     .dashboard-workspace .dash-content:has(.pos-app) { padding-bottom: 16px; }

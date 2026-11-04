@@ -68,6 +68,13 @@ class PosController extends Controller
                 'session'    => $session->id,
             ],
             'extras'    => $this->schema->extrasReady(),
+            'documents' => ($docs = app(\App\Services\Pos\SalesDocuments::class))->ready() ? [
+                'types'    => \App\Services\Pos\SalesDocuments::labels(),
+                'short'    => array_map(fn ($meta) => $meta['short'], \App\Services\Pos\SalesDocuments::TYPES),
+                'hasRuc'   => \App\Services\Pos\SalesDocuments::validRuc((string) $store->ruc),
+                'idLimit'  => \App\Services\Pos\SalesDocuments::BOLETA_ID_LIMIT,
+                'settings' => route('dashboard.pos.documents.edit'),
+            ] : null,
             'priceLists' => \App\Services\Pos\PriceListService::LISTS,
             'quote'     => $this->schema->extrasReady() && $request->integer('proforma')
                 ? (($found = \App\Models\Quote::where('store_id', $store->id)->where('status', 'open')->find($request->integer('proforma'))) ? $quotes->forRegister($found, $catalog) : null)
@@ -106,6 +113,9 @@ class PosController extends Controller
         return response()->json([
             'order_id'     => $order->id,
             'order_number' => $order->order_number,
+            'document_type'   => $order->document_type ?? \App\Services\Pos\SalesDocuments::NOTA,
+            'document_label'  => $order->document_label,
+            'document_number' => $order->document_code,
             'total'        => (float) $order->total,
             'change'       => (float) ($order->change_given ?? 0),
             'owed'         => (float) $order->balance_due,

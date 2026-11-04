@@ -70,7 +70,8 @@
         @forelse($orders as $order)
             <div class="flex items-center justify-between gap-3 p-3 flex-wrap">
                 <div class="min-w-0">
-                    <a href="{{ route('dashboard.pedidos.show', $order->id) }}" class="text-sm text-white font-semibold hover:underline">{{ $order->order_number }}</a>
+                    <a href="{{ route('dashboard.pedidos.show', $order->id) }}" class="text-sm text-white font-semibold hover:underline">{{ $order->document_code ?? $order->order_number }}</a>
+                    @if($order->document_code)<span class="text-[11px] text-white/50">{{ $order->document_label }}</span>@endif
                     <p class="text-[11px] text-white/50">{{ $lima($order->created_at)->isoFormat('H:mm') }}{{ $order->relationLoaded('staff') && $order->staff ? ' · ' . $order->staff->name : '' }}{{ $order->relationLoaded('approver') && $order->approver ? ' (autorizó ' . $order->approver->name . ')' : '' }} · {{ $order->customer_name }} · {{ $order->payments->where('status', 'paid')->map(fn ($p) => $methods[$p->method] ?? 'Pago')->unique()->implode(' + ') ?: 'Sin cobro' }}</p>
                 </div>
                 <div class="flex items-center gap-3">

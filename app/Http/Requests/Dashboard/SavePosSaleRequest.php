@@ -29,6 +29,8 @@ class SavePosSaleRequest extends FormRequest
             'customer_name'       => ['nullable', 'string', 'max:120'],
             'customer_phone'      => ['nullable', 'string', 'max:20'],
             'customer_document'   => ['nullable', 'regex:/^(\d{8}|\d{11})$/'],
+            'customer_address'    => ['nullable', 'string', 'max:255'],
+            'document_type'       => ['nullable', Rule::in(array_keys(\App\Services\Pos\SalesDocuments::TYPES))],
             'payments'            => ['nullable', 'array', 'max:5'],
             'payments.*.method'   => ['required', Rule::in(array_keys(PosSaleService::METHODS))],
             'payments.*.amount'   => ['required', 'numeric', 'min:0', 'max:1000000'],
@@ -51,6 +53,7 @@ class SavePosSaleRequest extends FormRequest
             'items.*.quantity.min'     => 'La cantidad debe ser al menos 1.',
             'customer_document.regex'  => 'El DNI tiene 8 dígitos y el RUC 11.',
             'payments.*.method.in'     => 'Elige cómo te pagan.',
+            'document_type.in'         => 'Elige nota de venta, boleta o factura.',
         ];
     }
 }

@@ -3,19 +3,18 @@
 namespace Database\Seeders;
 
 use App\Models\Category;
-use App\Models\InventoryMovement;
-use App\Models\Order;
-use App\Models\OrderPayment;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\Register;
-use App\Models\RegisterMovement;
 use App\Models\RegisterSession;
 use App\Models\Store;
 use App\Models\Supplier;
 use App\Models\User;
+use App\Services\Inventory\StockService;
 use App\Services\Pos\PosSaleService;
 use App\Services\Pos\RegisterService;
+use App\Services\Pos\SalesDocuments;
+use App\Services\Reports\ProfitAndLoss;
 use App\Services\Purchasing\PurchaseOrderService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
@@ -35,13 +34,10 @@ use Illuminate\Support\Str;
  * by hand. Set DEMO_FERRETERIA_PASSWORD to use another one, and DEMO_FERRETERIA_RESET=1 to
  * wipe the demo store and load it again (the week is always the last 7 days up to today).
  *
- * Money vocabulary used by the report this seeder prints:
- *   ingresos       = sales collected
- *   costo de ventas= landed cost of the lots the sold units came from
- *   ganancia bruta = ingresos − costo de ventas
- *   gastos         = cash taken out of the drawers (lunch, freight, utilities, day labour…)
- *   ganancia neta  = ganancia bruta − gastos
- *   egresos        = stock purchases received + gastos
+ * Sales go out as nota de venta, boleta de venta or factura (customers with a RUC get facturas),
+ * numbered in their own series. The report this seeder prints is the one the dashboard shows in
+ * Ganancias y pérdidas (App\Services\Reports\ProfitAndLoss): ingresos − costo de ventas = ganancia
+ * bruta; − gastos de caja − pérdidas de inventario = ganancia neta; egresos = compras + gastos.
  */
 class DemoFerreteriaSeeder extends Seeder
 {
@@ -131,9 +127,10 @@ class DemoFerreteriaSeeder extends Seeder
 
     /** Customers who buy with a name (works/contractors) — fictional contacts for the demo. */
     private const WORKS_CUSTOMERS = [
-        ['Constructora Andina SAC', '900000101', '20000000045'],
-        ['Inversiones Pacífico EIRL', '900000102', '20000000053'],
-        ['Edificaciones Norte SAC', '900000103', '20000000061'],
+        // Companies carry the first 10 digits of their RUC; the check digit is added when they buy.
+        ['Constructora Andina SAC', '900000101', '2060000001'],
+        ['Inversiones Pacífico EIRL', '900000102', '2060000002'],
+        ['Edificaciones Norte SAC', '900000103', '2060000003'],
         ['Maestro Julio Vásquez', '900000104', '40000001'],
         ['Contratista Rosa Chávez', '900000105', '40000002'],
         ['Maestro Carlos Díaz', '900000106', '40000003'],
@@ -144,6 +141,13 @@ class DemoFerreteriaSeeder extends Seeder
         ['Pedro Salazar', '900000202', '41000002'],
         ['Marcos Huamán', '900000203', null],
         ['Elena Rojas', '900000204', null],
+    ];
+
+    /** Stock written off during the week, by days ago: [sku, units, reason]. They show up as pérdidas de inventario. */
+    private const WEEK_LOSSES = [
+        4 => [['CO-001', 2, 'Bolsas de cemento endurecidas por humedad']],
+        2 => [['EL-004', 4, 'Focos LED rotos en el traslado']],
+        1 => [['HE-003', 6, 'Discos de corte fisurados']],
     ];
 
     private PurchaseOrderService $purchases;
@@ -174,14 +178,16 @@ class DemoFerreteriaSeeder extends Seeder
             $suppliers = $this->suppliers($store);
             $products = $this->products($store, $categories);
 
-            $this->openingStock($store, $owner, $suppliers, $products, $realNow);
+            $this->openingStock($store, $owner, $suppliers, $products, $realNow->copy()->setTimezone(ProfitAndLoss::TZ));
             $this->tradeWeek($store, $owner, $suppliers, $products, $realNow);
         } finally {
             $this->travel(null);
         }
 
-        $from = $realNow->copy()->subDays(6)->startOfDay();
-        $report = $this->weeklyReport($store, $from, $realNow->copy()->endOfDay());
+        // The week the data actually covers, in Lima days (what the dashboard reports).
+        $from = Carbon::parse(RegisterSession::where('store_id', $store->id)->min('opened_at'), config('app.timezone'))->setTimezone(ProfitAndLoss::TZ)->startOfDay();
+        $to = Carbon::parse(RegisterSession::where('store_id', $store->id)->max('closed_at'), config('app.timezone'))->setTimezone(ProfitAndLoss::TZ)->endOfDay();
+        $report = $this->weeklyReport($store, $from, $to);
         $this->printReport($report);
         $this->say('');
         $this->say('Tienda:      DEMOFERRETERIA (/' . self::SLUG . ')');
@@ -201,7 +207,8 @@ class DemoFerreteriaSeeder extends Seeder
             'phone'    => '+51900000001',
         ]);
 
-        $store = Store::create([
+        $documents = app(SalesDocuments::class)->ready();
+        $store = Store::create(($documents ? ['ruc' => SalesDocuments::rucFrom('2060000099'), 'legal_name' => 'DEMOFERRETERIA S.A.C.'] : []) + [
             'user_id'         => $owner->id,
             'name'            => 'DEMOFERRETERIA',
             'slug'            => self::SLUG,
@@ -341,7 +348,7 @@ class DemoFerreteriaSeeder extends Seeder
 
     private function tradeWeek(Store $store, User $owner, array $suppliers, array $products, Carbon $realNow): void
     {
-        $today = $realNow->copy()->startOfDay();
+        $today = $realNow->copy()->setTimezone(ProfitAndLoss::TZ)->startOfDay(); // business days are Lima days
         $cajas = [
             Register::create(['store_id' => $store->id, 'name' => 'Caja 1 · Mostrador']),
             Register::create(['store_id' => $store->id, 'name' => 'Caja 2 · Materiales']),
@@ -368,6 +375,11 @@ class DemoFerreteriaSeeder extends Seeder
             $sessions = [];
             foreach ($active as $idx) {
                 $sessions[$idx] = $this->registers->open($cajas[$idx], $idx === 0 ? 200.00 : 150.00, $owner->id);
+            }
+
+            foreach (self::WEEK_LOSSES[$ago] ?? [] as [$sku, $units, $reason]) {
+                $this->travel($open->copy()->addMinutes(5));
+                app(StockService::class)->adjust($products[$sku]['model'], 'loss', $units, $reason, $owner->id);
             }
 
             $events = $this->timeline($ago, $dow, $open, $end, $active);
@@ -470,6 +482,8 @@ class DemoFerreteriaSeeder extends Seeder
             $customer = $pool[mt_rand(0, count($pool) - 1)];
         }
 
+        $document = $customer && strlen($customer[2] ?? '') === 10 ? SalesDocuments::rucFrom($customer[2]) : ($customer[2] ?? null);
+
         $data = [
             'uuid'     => (string) Str::uuid(),
             'items'    => $items,
@@ -477,10 +491,36 @@ class DemoFerreteriaSeeder extends Seeder
             'payments' => $this->payment($total, $works),
         ];
         if ($customer) {
-            $data += ['customer_name' => $customer[0], 'customer_phone' => $customer[1], 'customer_document' => $customer[2]];
+            $data += ['customer_name' => $customer[0], 'customer_phone' => $customer[1], 'customer_document' => $document];
+        }
+        if ($this->documentsReady()) {
+            $type = $this->documentFor($document, $total);
+            $data['document_type'] = $type;
+            if ($type === SalesDocuments::FACTURA) {
+                $data['customer_address'] = 'Jr. Los Andes ' . mt_rand(100, 900) . ', Chiclayo';
+            }
         }
 
         $this->sales->sell($sessions[$event['register']], $data, $owner->id);
+    }
+
+    private function documentsReady(): bool
+    {
+        return app(SalesDocuments::class)->ready();
+    }
+
+    /** Companies (RUC) get facturas; the rest mostly boletas, and a nota de venta when a boleta would need a DNI nobody gave. */
+    private function documentFor(?string $document, float $total): string
+    {
+        $roll = mt_rand(1, 100);
+        if ($document !== null && strlen($document) === 11) {
+            return $roll <= 75 ? SalesDocuments::FACTURA : ($roll <= 90 ? SalesDocuments::BOLETA : SalesDocuments::NOTA);
+        }
+        if ($document !== null) {
+            return $roll <= 65 ? SalesDocuments::BOLETA : SalesDocuments::NOTA;
+        }
+
+        return $total <= SalesDocuments::BOLETA_ID_LIMIT && $roll <= 55 ? SalesDocuments::BOLETA : SalesDocuments::NOTA;
     }
 
     /** @return list<array{product_id: int, quantity: int}> */
@@ -542,75 +582,28 @@ class DemoFerreteriaSeeder extends Seeder
     // ─── Report ─────────────────────────────────────────────────
 
     /**
-     * The week as the owner reads it: per day and in total, plus the shift of every register.
+     * The week as the owner reads it: per day and in total (the same figures as Ganancias y
+     * pérdidas in the dashboard), the comprobantes issued, and the shift of every register.
      *
-     * @return array{days: array<string, array>, totals: array, shifts: list<array>}
+     * @return array{days: array<string, array>, totals: array, documents: array, shifts: list<array>}
      */
     public function weeklyReport(Store $store, Carbon $from, Carbon $to): array
     {
-        $days = [];
-        for ($d = $from->copy()->startOfDay(); $d->lte($to); $d->addDay()) {
-            $days[$d->toDateString()] = ['sales' => 0, 'income' => 0.0, 'cost' => 0.0, 'gross' => 0.0, 'expenses' => 0.0,
-                'net' => 0.0, 'purchases' => 0.0, 'outflow' => 0.0, 'methods' => []];
-        }
+        $report = app(ProfitAndLoss::class)->build($store, $from, $to);
+        $lima = fn ($at) => $at?->copy()->setTimezone(ProfitAndLoss::TZ);
 
-        $orders = Order::where('store_id', $store->id)->where('status', '!=', 'cancelled')->whereBetween('created_at', [$from, $to])->get(['total', 'created_at']);
-        foreach ($orders as $order) {
-            $days[$order->created_at->toDateString()]['sales']++;
-            $days[$order->created_at->toDateString()]['income'] += (float) $order->total;
-        }
-
-        $costs = InventoryMovement::where('store_id', $store->id)->where('type', 'sale')->whereBetween('created_at', [$from, $to])->get(['total_cost', 'created_at']);
-        foreach ($costs as $movement) {
-            $days[$movement->created_at->toDateString()]['cost'] += (float) $movement->total_cost;
-        }
-
-        $payments = OrderPayment::whereIn('register_session_id', RegisterSession::where('store_id', $store->id)->select('id'))
-            ->where('status', OrderPayment::STATUS_PAID)->whereBetween('paid_at', [$from, $to])->get(['method', 'amount', 'paid_at']);
-        foreach ($payments as $payment) {
-            $row = &$days[$payment->paid_at->toDateString()]['methods'];
-            $row[$payment->method] = ($row[$payment->method] ?? 0.0) + (float) $payment->amount;
-            unset($row);
-        }
-
-        $outs = RegisterMovement::where('type', 'out')->whereIn('register_session_id', RegisterSession::where('store_id', $store->id)->select('id'))
-            ->whereBetween('created_at', [$from, $to])->get(['amount', 'created_at']);
-        foreach ($outs as $out) {
-            $days[$out->created_at->toDateString()]['expenses'] += (float) $out->amount;
-        }
-
-        $received = PurchaseOrder::where('store_id', $store->id)->where('status', 'received')->whereBetween('received_at', [$from, $to])->get(['total', 'received_at']);
-        foreach ($received as $purchase) {
-            $days[$purchase->received_at->toDateString()]['purchases'] += (float) $purchase->total;
-        }
-
-        $totals = ['sales' => 0, 'income' => 0.0, 'cost' => 0.0, 'gross' => 0.0, 'expenses' => 0.0, 'net' => 0.0, 'purchases' => 0.0, 'outflow' => 0.0];
-        foreach ($days as $date => &$day) {
-            $day['income'] = round($day['income'], 2);
-            $day['cost'] = round($day['cost'], 2);
-            $day['gross'] = round($day['income'] - $day['cost'], 2);
-            $day['expenses'] = round($day['expenses'], 2);
-            $day['net'] = round($day['gross'] - $day['expenses'], 2);
-            $day['purchases'] = round($day['purchases'], 2);
-            $day['outflow'] = round($day['purchases'] + $day['expenses'], 2);
-            foreach ($totals as $key => $_) {
-                $totals[$key] += $day[$key];
-            }
-        }
-        unset($day);
-        $totals = array_map(fn ($value) => is_float($value) ? round($value, 2) : $value, $totals);
-
-        $shifts = RegisterSession::where('store_id', $store->id)->whereBetween('opened_at', [$from, $to])->with('register:id,name')
+        $shifts = RegisterSession::where('store_id', $store->id)
+            ->whereBetween('opened_at', [$from->copy()->setTimezone(config('app.timezone')), $to->copy()->setTimezone(config('app.timezone'))])->with('register:id,name')
             ->withCount(['orders' => fn ($q) => $q->where('status', '!=', 'cancelled')])
             ->withSum(['orders' => fn ($q) => $q->where('status', '!=', 'cancelled')], 'total')
             ->orderBy('opened_at')->orderBy('register_id')->get()
             ->map(fn (RegisterSession $s) => [
-                'date' => $s->opened_at->toDateString(), 'register' => $s->register->name, 'opened' => $s->opened_at->format('H:i'),
-                'closed' => $s->closed_at?->format('H:i'), 'sales' => $s->orders_count, 'sold' => round((float) $s->orders_sum_total, 2),
+                'date' => $lima($s->opened_at)->toDateString(), 'register' => $s->register->name, 'opened' => $lima($s->opened_at)->format('H:i'),
+                'closed' => $lima($s->closed_at)?->format('H:i'), 'sales' => $s->orders_count, 'sold' => round((float) $s->orders_sum_total, 2),
                 'float' => (float) $s->opening_float, 'expected' => (float) $s->expected_cash, 'counted' => (float) $s->counted_cash, 'difference' => (float) $s->difference,
             ])->all();
 
-        return compact('days', 'totals', 'shifts');
+        return ['days' => $report['days'], 'totals' => $report['totals'], 'documents' => $report['documents'], 'shifts' => $shifts];
     }
 
     private function printReport(array $report): void
@@ -624,11 +617,17 @@ class DemoFerreteriaSeeder extends Seeder
         $this->say('RESUMEN POR DÍA');
         $rows = [];
         foreach ($report['days'] as $date => $d) {
-            $rows[] = [$date, $d['sales'], $money($d['income']), $money($d['cost']), $money($d['gross']), $money($d['expenses']), $money($d['net']), $money($d['purchases']), $money($d['outflow'])];
+            $rows[] = [$date, $d['sales'], $money($d['income']), $money($d['cost']), $money($d['gross']), $money($d['expenses']), $money($d['losses']), $money($d['net']), $money($d['purchases']), $money($d['outflow'])];
         }
         $t = $report['totals'];
-        $rows[] = ['TOTAL', $t['sales'], $money($t['income']), $money($t['cost']), $money($t['gross']), $money($t['expenses']), $money($t['net']), $money($t['purchases']), $money($t['outflow'])];
-        $this->command->table(['Día', 'Ventas', 'Ingresos', 'Costo', 'G. bruta', 'Gastos', 'G. neta', 'Compras', 'Egresos'], $rows);
+        $rows[] = ['TOTAL', $t['sales'], $money($t['income']), $money($t['cost']), $money($t['gross']), $money($t['expenses']), $money($t['losses']), $money($t['net']), $money($t['purchases']), $money($t['outflow'])];
+        $this->command->table(['Día', 'Ventas', 'Ingresos', 'Costo', 'G. bruta', 'Gastos', 'Pérdidas', 'G. neta', 'Compras', 'Egresos'], $rows);
+
+        if ($report['documents']) {
+            $this->say('COMPROBANTES EMITIDOS');
+            $labels = ['nota_venta' => 'Nota de venta', 'boleta' => 'Boleta de venta', 'factura' => 'Factura'];
+            $this->command->table(['Comprobante', 'Cantidad', 'Total'], array_map(fn ($type, $d) => [$labels[$type] ?? $type, $d['count'], $money($d['total'])], array_keys($report['documents']), $report['documents']));
+        }
 
         $this->say('REPORTE DE CAJAS');
         $this->command->table(['Día', 'Caja', 'Abre', 'Cierra', 'Ventas', 'Vendido', 'Fondo', 'Esperado', 'Contado', 'Dif.'],
@@ -655,8 +654,10 @@ class DemoFerreteriaSeeder extends Seeder
         return array_key_last($weights);
     }
 
+    /** Moves the clock. Dates are built in Lima time (business hours) but timestamps are stored in the app's timezone. */
     private function travel(?Carbon $to): void
     {
+        $to = $to?->copy()->setTimezone(config('app.timezone'));
         Carbon::setTestNow($to);
         CarbonImmutable::setTestNow($to);
     }
