@@ -2,6 +2,7 @@
 
 namespace App\Services\Pos;
 
+use App\Models\InventoryMovement;
 use App\Models\Order;
 use App\Models\OrderPayment;
 use App\Models\Register;
@@ -105,6 +106,37 @@ class RegisterService
             'cash_in'       => $in,
             'cash_out'      => $out,
             'expected_cash' => round((float) $session->opening_float + (float) ($methods['cash'] ?? 0) + $in - $out, 2),
+        ];
+    }
+
+    /**
+     * What the shift earned: its sales (discounts taken off) minus the cost of the lots they came from.
+     * `partial` when some sold units have no cost on record, so the real profit is a bit lower.
+     *
+     * @return array{income: float, cost: float, gross: float, margin: ?float, partial: bool}
+     */
+    public function profit(RegisterSession $session): array
+    {
+        $orders = Order::where('register_session_id', $session->id)->where('status', '!=', 'cancelled')->get(['order_number', 'subtotal', 'discount']);
+        $income = round((float) $orders->sum(fn ($order) => (float) $order->subtotal - (float) $order->discount), 2);
+
+        $cost = 0.0;
+        $unknown = false;
+        $costed = 0;
+        foreach ($orders->pluck('order_number')->chunk(400) as $numbers) {
+            $movements = InventoryMovement::where('store_id', $session->store_id)->where('type', 'sale')->whereIn('reference', $numbers->all())->get(['total_cost']);
+            $cost += (float) $movements->sum('total_cost');
+            $unknown = $unknown || $movements->contains(fn ($movement) => $movement->total_cost === null);
+            $costed += $movements->count();
+        }
+        $cost = round($cost, 2);
+
+        return [
+            'income'  => $income,
+            'cost'    => $cost,
+            'gross'   => round($income - $cost, 2),
+            'margin'  => $income > 0 ? round(($income - $cost) * 100 / $income, 1) : null,
+            'partial' => $unknown || ($orders->isNotEmpty() && $costed === 0),
         ];
     }
 

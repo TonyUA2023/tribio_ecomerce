@@ -8,7 +8,7 @@
 @endpush
 @section('content')
 @php $money = fn ($value) => 'S/ ' . number_format((float) $value, 2); @endphp
-<div class="pos-app w-full max-w-7xl mx-auto space-y-3"
+<div class="pos-app"
      x-data="posRegister({
         productsUrl: @js(route('dashboard.pos.products')),
         customersUrl: @js(route('dashboard.pos.customers')),
@@ -32,22 +32,34 @@
     <div class="pos-toolbar">
         <div class="pos-toolbar-info">
             <strong class="pos-register">{{ $register->name }}</strong>
+            <span class="pos-pill"><i aria-hidden="true"></i>Abierta · {{ $session->opened_at->locale('es')->diffForHumans(null, true) }}</span>
             <span class="pos-status">
                 @if($kiosk)<span class="pos-kiosk">👤 {{ $kiosk['name'] }}{{ $kiosk['manager'] ? ' (encargado)' : '' }}</span> ·@endif
-                Abierta {{ $session->opened_at->locale('es')->diffForHumans() }} ·
                 <span x-text="sales + (sales === 1 ? ' venta' : ' ventas') + ' · ' + money(salesTotal)"></span>
             </span>
         </div>
         <div class="pos-toolbar-actions">
-            <button type="button" class="pos-chip" @click="showCash = !showCash"><x-dashboard-icon name="coins"/>Ingreso / retiro de efectivo</button>
-            @if($registers->count() > 1)<a href="{{ route('dashboard.pos.index', ['cajas' => 1]) }}" class="pos-chip"><x-dashboard-icon name="pos"/>Cambiar de caja</a>@endif
-            @if($creditEnabled)<a href="{{ route('dashboard.receivables.index') }}" class="pos-chip"><x-dashboard-icon name="wallet"/>Por cobrar</a>@endif
-            @if($extras)
-                <a href="{{ route('dashboard.quotes.index') }}" class="pos-chip"><x-dashboard-icon name="receipt"/>Proformas</a>
-                <a href="{{ route('dashboard.returns.index') }}" class="pos-chip"><x-dashboard-icon name="refresh"/>Devoluciones</a>
-            @endif
             <a href="{{ route('dashboard.pos.sessions.show', $session->id) }}" class="pos-chip"><x-dashboard-icon name="inventory"/>Ventas del turno</a>
-            @if($kiosk)<form method="POST" action="{{ route('dashboard.pos.lock') }}">@csrf<button type="submit" class="pos-chip">🔒 Bloquear</button></form>@endif
+            <div class="pos-menu" @click.outside="showMenu = false" @keydown.escape.window="showMenu = false">
+                <button type="button" class="pos-chip" @click="showMenu = !showMenu" :aria-expanded="showMenu" aria-haspopup="menu">Más<x-dashboard-icon name="chevron" class="pos-menu-caret"/></button>
+                <div class="pos-menu-list" x-show="showMenu" x-cloak role="menu">
+                    <button type="button" role="menuitem" @click="showCash = !showCash; showMenu = false"><x-dashboard-icon name="coins"/>Ingreso / retiro de efectivo</button>
+                    @if($registers->count() > 1)<a href="{{ route('dashboard.pos.index', ['cajas' => 1]) }}" role="menuitem"><x-dashboard-icon name="pos"/>Cambiar de caja</a>@endif
+                    @if($creditEnabled)<a href="{{ route('dashboard.receivables.index') }}" role="menuitem"><x-dashboard-icon name="wallet"/>Por cobrar</a>@endif
+                    @if($extras)
+                        <a href="{{ route('dashboard.quotes.index') }}" role="menuitem"><x-dashboard-icon name="receipt"/>Proformas</a>
+                        <a href="{{ route('dashboard.returns.index') }}" role="menuitem"><x-dashboard-icon name="refresh"/>Devoluciones</a>
+                    @endif
+                    @unless($kiosk)
+                        <span class="pos-menu-sep" role="separator"></span>
+                        <a href="{{ route('dashboard.ganancias.index', ['periodo' => 'hoy']) }}" role="menuitem"><x-dashboard-icon name="trend"/>Ganancias de hoy</a>
+                    @endunless
+                    @if($kiosk)
+                        <span class="pos-menu-sep" role="separator"></span>
+                        <form method="POST" action="{{ route('dashboard.pos.lock') }}">@csrf<button type="submit" role="menuitem">🔒 Bloquear caja</button></form>
+                    @endif
+                </div>
+            </div>
             <a href="{{ route('dashboard.pos.sessions.close', $session->id) }}" class="pos-chip pos-chip-strong">Cerrar caja</a>
         </div>
     </div>
@@ -86,7 +98,7 @@
         </div>
         <div>
             <label class="input-label" for="cash-reason">Motivo</label>
-            <input id="cash-reason" name="reason" maxlength="160" class="input-field" placeholder="Pago de delivery" required>
+            <input id="cash-reason" name="reason" maxlength="160" class="input-field" placeholder="Pago de delivery" autocomplete="off" required>
         </div>
         <x-pos-approval id="movement" class="sm:col-span-3" />
         <button type="submit" class="btn-secondary">Anotar</button>
@@ -95,27 +107,55 @@
     <div class="pos-layout" x-ref="layout">
         {{-- Products --}}
         <section class="pos-panel pos-products" aria-label="Productos">
-            <div class="pos-search">
-                <label for="pos-search" class="sr-only">Buscar producto o escanear código</label>
-                <x-dashboard-icon name="search" class="pos-search-icon"/>
-                <input id="pos-search" x-ref="search" x-model="query" @input.debounce.250ms="search()" @keydown.enter.prevent="scan()" autofocus autocomplete="off"
-                       class="input-field !text-base" placeholder="Busca o escanea un código (F2)">
+            <div class="pos-search-row">
+                <div class="pos-search">
+                    <label for="pos-search" class="sr-only">Buscar producto o escanear código</label>
+                    <x-dashboard-icon name="search" class="pos-search-icon"/>
+                    {{-- type=search + a non-credential name: with a PIN field on the page Chrome would offer the saved e-mail here --}}
+                    <input id="pos-search" name="pos_buscar" type="search" x-ref="search" x-model="query" @input.debounce.250ms="search()" @keydown.enter.prevent="scan()" autofocus
+                           autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" data-lpignore="true" data-1p-ignore="true" data-form-type="other"
+                           class="input-field" placeholder="Busca o escanea un código (F2)">
+                </div>
+                <div class="pos-view" role="group" aria-label="Vista de productos">
+                    <button type="button" :class="view === 'list' && 'is-active'" :aria-pressed="view === 'list'" @click="setView('list')" title="Lista" aria-label="Ver en lista"><x-dashboard-icon name="list"/></button>
+                    <button type="button" :class="view === 'grid' && 'is-active'" :aria-pressed="view === 'grid'" @click="setView('grid')" title="Cuadrícula" aria-label="Ver en cuadrícula"><x-dashboard-icon name="grid"/></button>
+                </div>
             </div>
             <p class="pos-error" x-show="searchError" x-text="searchError" role="alert"></p>
             <div class="pos-products-scroll">
-                <div class="pos-grid">
-                    <template x-for="product in products" :key="product.id">
-                        <button type="button" class="pos-tile" @click="add(product)">
-                            <template x-if="product.image"><img :src="product.image" alt="" class="pos-tile-img"></template>
-                            <template x-if="!product.image"><span class="pos-tile-badge" :style="badgeStyle(product)" x-text="initials(product.name)" aria-hidden="true"></span></template>
-                            <span class="pos-tile-name" x-text="product.name"></span>
-                            <span class="pos-tile-foot">
-                                <span class="pos-tile-price" x-text="money(product.price)"></span>
-                                <span class="pos-stock" :class="stockClass(product)" x-text="stockLabel(product)"></span>
-                            </span>
-                        </button>
-                    </template>
-                </div>
+                <template x-if="view === 'list'">
+                    <div class="pos-list">
+                        <template x-for="product in products" :key="product.id">
+                            <button type="button" class="pos-item" @click="add(product)">
+                                <span class="pos-item-badge" :style="product.image ? '' : badgeStyle(product)">
+                                    <template x-if="product.image"><img :src="product.image" alt=""></template>
+                                    <template x-if="!product.image"><span x-text="initials(product.name)" aria-hidden="true"></span></template>
+                                </span>
+                                <span class="pos-item-main">
+                                    <span class="pos-item-name" x-text="product.name"></span>
+                                    <span class="pos-item-meta"><span x-show="product.sku" x-text="product.sku"></span><span class="pos-stock" :class="stockClass(product)" x-text="stockLabel(product)"></span></span>
+                                </span>
+                                <span class="pos-item-price" x-text="money(product.price)"></span>
+                                <span class="pos-item-add" aria-hidden="true">+</span>
+                            </button>
+                        </template>
+                    </div>
+                </template>
+                <template x-if="view === 'grid'">
+                    <div class="pos-grid">
+                        <template x-for="product in products" :key="product.id">
+                            <button type="button" class="pos-tile" @click="add(product)">
+                                <template x-if="product.image"><img :src="product.image" alt="" class="pos-tile-img"></template>
+                                <template x-if="!product.image"><span class="pos-tile-badge" :style="badgeStyle(product)" x-text="initials(product.name)" aria-hidden="true"></span></template>
+                                <span class="pos-tile-name" x-text="product.name"></span>
+                                <span class="pos-tile-foot">
+                                    <span class="pos-tile-price" x-text="money(product.price)"></span>
+                                    <span class="pos-stock" :class="stockClass(product)" x-text="stockLabel(product)"></span>
+                                </span>
+                            </button>
+                        </template>
+                    </div>
+                </template>
                 <p class="pos-empty" x-show="!loading && products.length === 0">No encontramos productos con ese nombre o código.</p>
             </div>
         </section>
@@ -191,6 +231,12 @@
                             <p class="pos-doc-hint" x-show="documentHint()" x-text="documentHint()"></p>
                         </div>
                         @endif
+                        <div class="pos-details">
+                            <button type="button" class="pos-details-toggle" @click="toggleDetails()" :aria-expanded="showDetails" aria-controls="pos-details-body">
+                                <span>Cliente y descuento</span><span class="pos-details-summary" x-text="detailsSummary()"></span>
+                                <x-dashboard-icon name="chevron" class="pos-details-caret"/>
+                            </button>
+                            <div id="pos-details-body" class="pos-details-body" x-show="showDetails" x-cloak>
                         <div class="relative" x-ref="customerBlock">
                             <label class="input-label" for="pos-customer">Cliente</label>
                             <template x-if="customer">
@@ -201,7 +247,7 @@
                             </template>
                             <template x-if="!customer">
                                 <div>
-                                    <input id="pos-customer" class="input-field" x-model="customerQuery" @input.debounce.300ms="findCustomers()" placeholder="Cliente varios · busca por nombre, celular o DNI" autocomplete="off">
+                                    <input id="pos-customer" class="input-field" x-model="customerQuery" name="pos_cliente" @input.debounce.300ms="findCustomers()" placeholder="Cliente varios · busca por nombre, celular o DNI" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other">
                                     <div class="absolute z-20 left-0 right-0 mt-1 rounded-xl border border-white/10 bg-slate-900 shadow-lg" x-show="customers.length" @click.outside="customers = []">
                                         <template x-for="c in customers" :key="c.id">
                                             <button type="button" class="block w-full text-left px-3 py-2 hover:bg-white/10" @click="pickCustomer(c)">
@@ -231,6 +277,8 @@
                             <label for="pos-discount" class="text-xs text-white/60">Descuento (S/)</label>
                             <input id="pos-discount" type="number" step="0.10" min="0" class="input-field !py-1 !w-28 text-right" x-model.number="discount">
                         </div>
+                            </div>{{-- /pos-details-body --}}
+                        </div>{{-- /pos-details --}}
                     </div>
 
                     {{-- Manager approval (modo caja) --}}
@@ -238,7 +286,7 @@
                         <p id="approval-text" class="text-xs text-amber-100" x-text="approval"></p>
                         <div class="flex items-center gap-2">
                             <label for="approval-pin" class="sr-only">PIN de un encargado</label>
-                            <input id="approval-pin" x-ref="approvalPin" type="password" inputmode="numeric" autocomplete="off" maxlength="6" class="input-field !py-1 flex-1" placeholder="PIN del encargado"
+                            <input id="approval-pin" name="pos_pin_encargado" x-ref="approvalPin" type="password" inputmode="numeric" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" maxlength="6" class="input-field !py-1 flex-1" placeholder="PIN del encargado"
                                    x-model="approverPin" @keydown.enter.prevent="submit()">
                             <button type="button" class="btn-primary !py-1 text-xs" @click="submit()">Autorizar</button>
                             <button type="button" class="btn-ghost !py-1 text-xs" @click="approval = ''; approverPin = ''">Cancelar</button>
@@ -358,22 +406,28 @@
             } catch (e) { /* private mode */ }
             return 'nota_venta';
         };
+        // Products as a clean list or as tiles; the choice stays on this device.
+        const loadView = () => {
+            try { return localStorage.getItem('tribio.pos.view') === 'grid' ? 'grid' : 'list'; } catch (e) { return 'list'; }
+        };
         const blankPay = () => Object.fromEntries(Object.keys(config.methods).map(m => [m, '']));
         return {
             ...config,
             query: '', products: [], loading: false, searchError: '',
             lines: [], discount: 0, customer: null, customerQuery: '', customers: [], newCustomer: false, walkIn: { name: '', phone: '', document: '', address: '' },
-            paying: false, pay: blankPay(), saving: false, credit: false, terms: { installments: 1, every_days: 30, first_due: config.firstDue.default }, error: '', done: null, uuid: newId(), showCash: false, cartOpen: false, documentType: loadDocument(config.documents),
+            paying: false, pay: blankPay(), saving: false, credit: false, terms: { installments: 1, every_days: 30, first_due: config.firstDue.default }, error: '', done: null, uuid: newId(), showCash: false, cartOpen: false, showMenu: false, showDetails: false, view: loadView(), documentType: loadDocument(config.documents),
             priceList: 'menor', validDays: 7, quoteId: null, quoteNumber: null, savedQuote: null,
             approval: '', approverPin: '', online: navigator.onLine, pending: [], showPending: false,
             init() {
                 this.search();
                 this.setupOffline();
-                if (this.quote) this.loadQuote(this.quote);
+                if (this.quote) { this.loadQuote(this.quote); this.showDetails = true; }
                 this.$watch('done', value => value && this.$nextTick(() => this.$refs.next?.focus()));
                 // Below lg the ticket is a sheet: open it to show the result, close it when the sale is emptied.
                 this.$watch('done', value => { if (value) this.cartOpen = true; });
                 this.$watch('savedQuote', value => { if (value) this.cartOpen = true; });
+                // Credit and proformas need the customer: open the details so nothing is hidden when it matters.
+                this.$watch('credit', value => { if (value) this.showDetails = true; });
                 // The amounts live below the lines: bring them into view when charging starts.
                 this.$watch('paying', value => value && this.$nextTick(() => this.$refs.payBlock?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })));
                 this.$watch('lines.length', count => { if (!count && !this.done && !this.savedQuote) this.cartOpen = false; });
@@ -392,12 +446,28 @@
                 el.style.setProperty('--pos-h', Math.max(480, window.innerHeight - top - bottom) + 'px');
             },
             money(value) { return 'S/ ' + Number(value || 0).toFixed(2); },
+            setView(view) {
+                this.view = view;
+                try { localStorage.setItem('tribio.pos.view', view); } catch (e) { /* private mode */ }
+            },
+            toggleDetails() {
+                this.showDetails = !this.showDetails;
+                if (this.showDetails) this.$nextTick(() => this.$refs.customerBlock?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+            },
+            // What is hidden inside "Cliente y descuento", in one line.
+            detailsSummary() {
+                const parts = [this.customer ? this.customer.name : (this.walkIn.name.trim() || 'Cliente varios')];
+                if (Number(this.discount) > 0) parts.push('− ' + this.money(this.discount));
+                if (this.extras && this.priceList !== 'menor') parts.push(this.priceLists[this.priceList] || this.priceList);
+                return parts.join(' · ');
+            },
             setDocument(type) {
                 this.documentType = type;
                 try { localStorage.setItem('tribio.pos.document', type); } catch (e) { /* private mode */ }
                 // A factura is addressed to a company: open the data form right away.
                 if (type === 'factura' && !this.customer) {
                     this.newCustomer = true;
+                    this.showDetails = true;
                     this.$nextTick(() => this.$refs.customerBlock?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
                 }
             },
@@ -656,7 +726,7 @@
                 Object.assign(this, { lines: [], discount: 0, customer: null, customerQuery: '', customers: [], newCustomer: false,
                     walkIn: { name: '', phone: '', document: '', address: '' }, paying: false, pay: blankPay(), error: '', done: null, uuid: newId(),
                     credit: false, terms: { installments: 1, every_days: 30, first_due: this.firstDue.default },
-                    priceList: 'menor', quoteId: null, quoteNumber: null, savedQuote: null, approval: '', approverPin: '', cartOpen: false });
+                    priceList: 'menor', quoteId: null, quoteNumber: null, savedQuote: null, approval: '', approverPin: '', cartOpen: false, showMenu: false, showDetails: false });
                 this.$nextTick(() => this.$refs.search?.focus());
             },
         };

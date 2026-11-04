@@ -37,6 +37,17 @@
         </div>
     </div>
 
+    @if($profit)
+        <div class="stat-card flex items-center justify-between gap-4 flex-wrap">
+            <div>
+                <p class="text-white/50 text-xs">Ganancia del turno</p>
+                <p class="text-xl font-black mt-1 whitespace-nowrap {{ $profit['gross'] >= 0 ? 'text-emerald-300' : 'text-red-300' }}">{{ $money($profit['gross']) }}@if($profit['margin'] !== null) <span class="text-xs font-semibold text-white/50">· margen {{ number_format($profit['margin'], 1) }} %</span>@endif</p>
+                <p class="text-[11px] text-white/40">Vendido {{ $money($profit['income']) }} − costo {{ $money($profit['cost']) }}@if($profit['partial']) · hay productos sin costo registrado: la ganancia real es algo menor @endif</p>
+            </div>
+            <a href="{{ route('dashboard.ganancias.index', ['periodo' => 'hoy']) }}" class="pos-chip"><x-dashboard-icon name="trend"/>Ver ganancias</a>
+        </div>
+    @endif
+
     <div class="glass-card p-4 sm:p-5">
         @if($byStaff->isNotEmpty())
             <h3 class="text-white font-bold text-sm mb-2">Por persona</h3>

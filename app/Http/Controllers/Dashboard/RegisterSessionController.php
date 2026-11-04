@@ -58,7 +58,8 @@ class RegisterSessionController extends Controller
             return redirect()->route('dashboard.pos.sessions.show', $session->id);
         }
 
-        return view('dashboard.pos.close', ['session' => $session->load('register', 'movements.user:id,name'), 'summary' => $registers->summary($session), 'methods' => PosSaleService::METHODS]);
+        return view('dashboard.pos.close', ['session' => $session->load('register', 'movements.user:id,name'), 'summary' => $registers->summary($session), 'methods' => PosSaleService::METHODS,
+            'profit' => $this->profitFor($request, $registers, $session)]);
     }
 
     public function close(CloseRegisterRequest $request, RegisterService $registers, int $session): RedirectResponse
@@ -94,6 +95,7 @@ class RegisterSessionController extends Controller
         return view('dashboard.pos.session', [
             'session' => $session,
             'summary' => $session->isOpen() ? $registers->summary($session) : $session->totals,
+            'profit'  => $this->profitFor($request, $registers, $session),
             'orders'  => $session->orders()->with($this->schema->staffReady() ? ['payments', 'staff:id,name', 'approver:id,name'] : ['payments'])->latest('id')->paginate(50),
             // Who sold how much in the shift (ERP Fase 4d), when the staff works with PIN.
             'byStaff' => $this->schema->staffReady()
@@ -102,6 +104,12 @@ class RegisterSessionController extends Controller
                 : collect(),
             'methods' => PosSaleService::METHODS,
         ]);
+    }
+
+    /** The owner sees what a shift earned; a cashier in "modo caja" never sees costs. */
+    private function profitFor(Request $request, RegisterService $registers, RegisterSession $session): ?array
+    {
+        return $this->access->active($request->user()->currentStore()) ? null : $registers->profit($session);
     }
 
     private function owned(Request $request, int $id): RegisterSession
