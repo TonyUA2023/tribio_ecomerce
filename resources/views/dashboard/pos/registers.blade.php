@@ -4,18 +4,19 @@
 @section('content')
 @php $money = fn ($value) => 'S/ ' . number_format((float) $value, 2); @endphp
 <div class="w-full max-w-4xl mx-auto space-y-5">
-    <div class="flex items-center justify-between gap-3 flex-wrap">
-        <p class="text-sm text-white/60 max-w-2xl">Vende en tu local: abre la caja con el sencillo que tienes, cobra en efectivo, Yape, Plin o tarjeta, y al final del día cuenta el efectivo para cuadrar.</p>
-        <div class="flex items-center gap-3 text-xs flex-wrap">
-            @if(app(\App\Services\Pos\PosSchema::class)->extrasReady())
-                <a href="{{ route('dashboard.quotes.index') }}" class="text-tribio-cyan underline">Proformas</a>
-                <a href="{{ route('dashboard.returns.index') }}" class="text-tribio-cyan underline">Devoluciones</a>
-                <a href="{{ route('dashboard.price-lists.index') }}" class="text-tribio-cyan underline">Listas de precios</a>
-            @endif
-            <a href="{{ route('dashboard.pos.sessions.index') }}" class="text-tribio-cyan underline">Historial de turnos</a>
-            @if(($staffReady ?? false) && !($kiosk ?? false))<a href="{{ route('dashboard.pos.staff.index') }}" class="text-tribio-cyan underline">Personal y modo caja</a>@endif
-        </div>
-    </div>
+    <p class="text-sm text-white/60 max-w-2xl">Vende en tu local: abre la caja con el sencillo que tienes, cobra en efectivo, Yape, Plin o tarjeta, y al final del día cuenta el efectivo para cuadrar.</p>
+
+    <nav class="pos-shortcuts" aria-label="Accesos de la caja">
+        @if(app(\App\Services\Pos\PosSchema::class)->extrasReady())
+            <x-pos-shortcut :href="route('dashboard.quotes.index')" icon="receipt" title="Proformas" hint="Cotiza y cobra después con los mismos precios"/>
+            <x-pos-shortcut :href="route('dashboard.returns.index')" icon="refresh" title="Devoluciones" hint="Vuelve el producto al stock y devuelve el dinero"/>
+            <x-pos-shortcut :href="route('dashboard.price-lists.index')" icon="tag" title="Listas de precios" hint="Mayorista y distribuidor"/>
+        @endif
+        <x-pos-shortcut :href="route('dashboard.pos.sessions.index')" icon="clock" title="Historial de turnos" hint="Aperturas, cierres y si el efectivo cuadró"/>
+        @if(($staffReady ?? false) && !($kiosk ?? false))
+            <x-pos-shortcut :href="route('dashboard.pos.staff.index')" icon="users" title="Personal y modo caja" hint="Cajeros con PIN y bloqueo del equipo"/>
+        @endif
+    </nav>
     @if($kiosk ?? false)
         <div class="glass-card p-3 flex items-center justify-between gap-3 flex-wrap" role="status">
             <p class="text-xs text-white/70">🔒 Modo caja{{ ($staffMember ?? null) ? ' · ' . $staffMember->name . ' (' . (\App\Services\Pos\StaffService::ROLES[$staffMember->role] ?? '') . ')' : '' }}</p>

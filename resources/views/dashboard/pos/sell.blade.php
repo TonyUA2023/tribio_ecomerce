@@ -34,15 +34,15 @@
             Abierta {{ $session->opened_at->locale('es')->diffForHumans() }} ·
             <span x-text="sales + (sales === 1 ? ' venta' : ' ventas') + ' · ' + money(salesTotal)"></span>
         </p>
-        <div class="flex items-center gap-3 flex-wrap text-xs">
-            <button type="button" class="text-tribio-cyan underline" @click="showCash = !showCash">Ingreso / retiro de efectivo</button>
-            @if($registers->count() > 1)<a href="{{ route('dashboard.pos.index', ['cajas' => 1]) }}" class="text-tribio-cyan underline">Cambiar de caja</a>@endif
-            @if($creditEnabled)<a href="{{ route('dashboard.receivables.index') }}" class="text-tribio-cyan underline">Por cobrar</a>@endif
+        <div class="flex items-center gap-2 flex-wrap text-xs">
+            <button type="button" class="pos-chip" @click="showCash = !showCash"><x-dashboard-icon name="coins"/>Ingreso / retiro de efectivo</button>
+            @if($registers->count() > 1)<a href="{{ route('dashboard.pos.index', ['cajas' => 1]) }}" class="pos-chip"><x-dashboard-icon name="pos"/>Cambiar de caja</a>@endif
+            @if($creditEnabled)<a href="{{ route('dashboard.receivables.index') }}" class="pos-chip"><x-dashboard-icon name="wallet"/>Por cobrar</a>@endif
             @if($extras)
-                <a href="{{ route('dashboard.quotes.index') }}" class="text-tribio-cyan underline">Proformas</a>
-                <a href="{{ route('dashboard.returns.index') }}" class="text-tribio-cyan underline">Devoluciones</a>
+                <a href="{{ route('dashboard.quotes.index') }}" class="pos-chip"><x-dashboard-icon name="receipt"/>Proformas</a>
+                <a href="{{ route('dashboard.returns.index') }}" class="pos-chip"><x-dashboard-icon name="refresh"/>Devoluciones</a>
             @endif
-            <a href="{{ route('dashboard.pos.sessions.show', $session->id) }}" class="text-tribio-cyan underline">Ventas del turno</a>
+            <a href="{{ route('dashboard.pos.sessions.show', $session->id) }}" class="pos-chip"><x-dashboard-icon name="inventory"/>Ventas del turno</a>
             <a href="{{ route('dashboard.pos.sessions.close', $session->id) }}" class="btn-secondary !py-1 text-xs">Cerrar caja</a>
             @if($kiosk)<form method="POST" action="{{ route('dashboard.pos.lock') }}">@csrf<button type="submit" class="btn-ghost !py-1 text-xs">🔒 Bloquear</button></form>@endif
         </div>

@@ -171,6 +171,19 @@
 .dashboard-workspace :is(.text-purple-300, .text-purple-400) { color: #6d4cac !important; }
 .dashboard-workspace :is(.text-sky-400, .text-tribio-cyan) { color: #1b69b7 !important; }
 .dashboard-workspace :is(.text-amber-300, .text-yellow-400) { color: #8b610e !important; }
+/* Caja: accesos rápidos (tarjetas) y botones de la barra de la venta (chips). */
+.dashboard-workspace .pos-shortcuts { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+.dashboard-workspace .pos-shortcut { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 14px; background: white; border: 1px solid var(--dash-line); border-radius: 12px; color: var(--dash-ink); text-decoration: none; transition: border-color .15s, background-color .15s; }
+.dashboard-workspace .pos-shortcut:hover { border-color: #a9c9ed; background: #f7fbff; }
+.dashboard-workspace .pos-shortcut-icon { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; border-radius: 10px; background: #eaf3fd; color: var(--dash-blue); }
+.dashboard-workspace .pos-shortcut-text { min-width: 0; flex: 1; }
+.dashboard-workspace .pos-shortcut-text strong { display: block; font-size: 13px; font-weight: 700; }
+.dashboard-workspace .pos-shortcut-text small { display: block; margin-top: 2px; font-size: 11px; line-height: 1.35; color: var(--dash-muted); }
+.dashboard-workspace .pos-shortcut-go { width: 16px; height: 16px; color: #9fb0c3; transition: transform .15s, color .15s; }
+.dashboard-workspace .pos-shortcut:hover .pos-shortcut-go { color: var(--dash-blue); transform: translateX(2px); }
+.dashboard-workspace .pos-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; background: white; border: 1px solid var(--dash-line); border-radius: 8px; color: var(--dash-ink); font-size: 12px; font-weight: 600; text-decoration: none; transition: border-color .15s, background-color .15s; }
+.dashboard-workspace .pos-chip:hover { background: #edf5ff; border-color: #a9c9ed; }
+.dashboard-workspace .pos-chip .dash-icon { width: 15px; height: 15px; color: var(--dash-blue); }
 .dashboard-workspace .overflow-x-auto { position: relative; max-width: 100%; overscroll-behavior-x: contain; }
 .dashboard-workspace .btn-ghost.text-red-400 { color: #bb3830 !important; }
 .dashboard-workspace .group:focus-within > .absolute.inset-0 { opacity: 1; }
