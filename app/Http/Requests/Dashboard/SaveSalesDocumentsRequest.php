@@ -30,6 +30,10 @@ class SaveSalesDocumentsRequest extends FormRequest
                 }
             }],
             'legal_name'        => ['nullable', 'string', 'max:160'],
+            'name'              => ['sometimes', 'required', 'string', 'max:120'],
+            'phone'             => ['nullable', 'string', 'max:30'],
+            'address'           => ['nullable', 'string', 'max:255'],
+            'city'              => ['nullable', 'string', 'max:80'],
             'series'            => ['required', 'array'],
             'series.nota_venta' => ['required', 'regex:/^[A-Z0-9]{4}$/'],
             'series.boleta'     => ['required', 'regex:/^B[A-Z0-9]{3}$/'],
@@ -40,6 +44,7 @@ class SaveSalesDocumentsRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'name.required'           => 'El negocio necesita un nombre.',
             'series.nota_venta.regex' => 'La serie de la nota de venta tiene 4 letras o números (ej. NV01).',
             'series.boleta.regex'     => 'La serie de la boleta tiene 4 caracteres y empieza con B (ej. B001).',
             'series.factura.regex'    => 'La serie de la factura tiene 4 caracteres y empieza con F (ej. F001).',

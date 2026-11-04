@@ -8,13 +8,13 @@ class PublicController extends Controller
 {
     public function home()
     {
-        $featuredStores = Store::active()->featured()
+        $featuredStores = Store::online()->featured()
             ->withCount('activeProducts')
             ->with(['user'])
             ->limit(6)
             ->get();
 
-        $totalStores   = Store::active()->count();
+        $totalStores   = Store::online()->count();
         $totalProducts = \App\Models\Product::where('is_active', true)->count();
         $googleReady   = filled(config('services.google.client_id'));
 

@@ -24,7 +24,7 @@ class SitemapController extends Controller
 
         // Stores on their own domain are listed on that domain, not here: a sitemap may only
         // reference URLs of the host that serves it.
-        $stores = Store::active()->where(fn ($q) => $q->whereNull('custom_domain')->orWhere('custom_domain', ''))
+        $stores = Store::online()->where(fn ($q) => $q->whereNull('custom_domain')->orWhere('custom_domain', ''))
             ->orderBy('id')->get(['slug', 'updated_at']);
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?><sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';

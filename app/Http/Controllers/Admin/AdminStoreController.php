@@ -45,6 +45,16 @@ class AdminStoreController extends Controller
         return back()->with('success', "Tienda {$store->name} actualizada a: {$request->status}");
     }
 
+    /** What the business contracted: POS system, online store or both. */
+    public function updateMode(Request $request, Store $store)
+    {
+        abort_unless(Store::modesReady(), 404);
+        $data = $request->validate(['mode' => ['required', \Illuminate\Validation\Rule::in(array_keys(Store::MODES))]]);
+        $store->update(['mode' => $data['mode']]);
+
+        return back()->with('success', "«{$store->name}»: " . Store::MODES[$data['mode']] . '.');
+    }
+
     public function toggleFeatured(Store $store)
     {
         $store->update(['is_featured' => !$store->is_featured]);

@@ -38,7 +38,7 @@ class HandleCustomDomain
             // "www.mitienda.com" y "mitienda.com" son la misma tienda: el dueño registra uno solo
             // y el otro no debe terminar en 404.
             $store = Store::whereIn('custom_domain', array_unique([$host, preg_replace('/^www\./i', '', $host), 'www.' . $host]))
-                ->active()->first();
+                ->online()->first();
 
             if (!$store) {
                 abort(404, 'Tienda no encontrada o inactiva.');

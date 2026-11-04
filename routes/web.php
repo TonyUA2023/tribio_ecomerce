@@ -75,7 +75,7 @@ Route::prefix('auth/google')->name('auth.google.')->group(function () {
 // ═══════════════════════════════════════════════════════════════
 //  DASHBOARD - VENDEDOR
 // ═══════════════════════════════════════════════════════════════
-Route::middleware(['auth', 'role:store_owner,super_admin', 'pos.kiosk'])->prefix('dashboard')->name('dashboard.')->group(function () {
+Route::middleware(['auth', 'role:store_owner,super_admin', 'pos.kiosk', 'store.modules'])->prefix('dashboard')->name('dashboard.')->group(function () {
 
     Route::get('/', [DashboardController::class, 'index'])->name('index');
     Route::post('/tienda/cambiar/{store}', [DashboardController::class, 'switchStore'])->name('store.switch');
@@ -135,6 +135,8 @@ Route::middleware(['auth', 'role:store_owner,super_admin', 'pos.kiosk'])->prefix
 
     // Productos CRUD
     Route::get('/productos/simulador-comisiones', \App\Http\Controllers\Dashboard\FeeSimulatorController::class)->name('productos.fee-simulator');
+    Route::get('/productos/rapido', [\App\Http\Controllers\Dashboard\QuickProductController::class, 'create'])->name('productos.rapido');
+    Route::post('/productos/rapido', [\App\Http\Controllers\Dashboard\QuickProductController::class, 'store'])->middleware('throttle:30,1')->name('productos.rapido.store');
     Route::resource('productos', ProductController::class)->parameters(['productos' => 'product']);
     Route::post('/productos/{product}/toggle-home-video', [ProductController::class, 'toggleHomeVideo'])->name('productos.toggle-home-video');
 
@@ -280,6 +282,7 @@ Route::middleware(['auth', 'role:store_owner,super_admin', 'pos.kiosk'])->prefix
     Route::get('/inventario/exportar', [InventoryController::class, 'export'])->name('inventario.export');
     Route::get('/inventario/rentabilidad', [InventoryController::class, 'profit'])->name('inventario.profit');
     Route::get('/ganancias', [\App\Http\Controllers\Dashboard\ProfitLossController::class, 'index'])->name('ganancias.index');
+    Route::get('/ventas', [\App\Http\Controllers\Dashboard\SalesController::class, 'index'])->name('ventas.index');
     Route::get('/inventario/reposicion', [\App\Http\Controllers\Dashboard\ReorderController::class, 'index'])->name('inventario.reorder');
     Route::post('/inventario/reposicion/compra', [\App\Http\Controllers\Dashboard\ReorderController::class, 'purchase'])->name('inventario.reorder.purchase');
     Route::get('/inventario/conteos', [\App\Http\Controllers\Dashboard\StockCountController::class, 'index'])->name('inventario.conteos.index');
@@ -338,6 +341,7 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('admin')->name('admin.')
     Route::get('/tiendas/{store}', [AdminStoreController::class, 'show'])->name('tiendas.show');
     Route::patch('/tiendas/{store}/status', [AdminStoreController::class, 'updateStatus'])->name('tiendas.status');
     Route::patch('/tiendas/{store}/featured', [AdminStoreController::class, 'toggleFeatured'])->name('tiendas.featured');
+    Route::patch('/tiendas/{store}/mode', [AdminStoreController::class, 'updateMode'])->name('tiendas.mode');
     Route::delete('/tiendas/{store}', [AdminStoreController::class, 'destroy'])->name('tiendas.destroy');
 
     // Usuarios
@@ -382,7 +386,7 @@ Route::domain('{custom_domain}')
     });
 
 // ────────── TIENDAS PÚBLICAS ESTÁNDAR ──────────
-Route::prefix('tienda')->name('store.')->group(function () {
+Route::prefix('tienda')->name('store.')->middleware('storefront')->group(function () {
     Route::get('/{slug}', [StoreController::class, 'show'])->name('show');
     Route::get('/{slug}/catalogo', [StoreController::class, 'catalog'])->name('catalog');
     Route::get('/{slug}/producto/{product}', [StoreController::class, 'product'])->name('product');
@@ -415,7 +419,7 @@ Route::get('/adjuntos/{attachment:token}', [\App\Http\Controllers\AttachmentCont
 Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
 Route::get('/sitemap-pages.xml', [\App\Http\Controllers\SitemapController::class, 'pages'])->name('sitemap.pages');
 Route::get('/robots.txt', [\App\Http\Controllers\SitemapController::class, 'robots'])->name('robots');
-Route::get('/tienda/{slug}/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'store'])->name('store.sitemap');
+Route::get('/tienda/{slug}/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'store'])->middleware('storefront')->name('store.sitemap');
 
 // API geográfica (países y departamentos/estados) y costos de envío
 Route::get('/api/geo/countries', [\App\Http\Controllers\GeoController::class, 'countries']);

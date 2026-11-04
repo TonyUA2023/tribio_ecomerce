@@ -4,7 +4,10 @@
 @section('content')
 <div class="flex items-center justify-between mb-6">
     <h2 class="text-white font-bold text-lg">{{ $products->total() }} productos</h2>
-    <a href="{{ route('dashboard.productos.create') }}" class="btn-primary">+ Nuevo producto</a>
+    <div class="flex items-center gap-2 flex-wrap">
+        <a href="{{ route('dashboard.productos.rapido') }}" class="btn-primary">⚡ Alta rápida</a>
+        <a href="{{ route('dashboard.productos.create') }}" class="btn-secondary">+ Producto completo</a>
+    </div>
 </div>
 
 {{-- Widget de Videos Destacados en el Home (Máximo 3) --}}

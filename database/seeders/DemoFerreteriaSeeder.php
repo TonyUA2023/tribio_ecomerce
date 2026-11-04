@@ -22,7 +22,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
- * DEMOFERRETERIA — a hardware-store demo account with a full week of operation.
+ * DEMOFERRETERIA — a hardware-store demo account with a full week of operation. It is a POS-only
+ * account (no online store): the dashboard shows the POS system's own menu and home.
  *
  * Everything goes through the same services the app uses (purchase orders → stock lots with
  * their landed cost, POS sales, register shifts opened/closed with a count), so the reports
@@ -208,7 +209,8 @@ class DemoFerreteriaSeeder extends Seeder
         ]);
 
         $documents = app(SalesDocuments::class)->ready();
-        $store = Store::create(($documents ? ['ruc' => SalesDocuments::rucFrom('2060000099'), 'legal_name' => 'DEMOFERRETERIA S.A.C.'] : []) + [
+        $store = Store::create(($documents ? ['ruc' => SalesDocuments::rucFrom('2060000099'), 'legal_name' => 'DEMOFERRETERIA S.A.C.'] : [])
+            + (Store::modesReady() ? ['mode' => Store::MODE_POS] : []) + [
             'user_id'         => $owner->id,
             'name'            => 'DEMOFERRETERIA',
             'slug'            => self::SLUG,

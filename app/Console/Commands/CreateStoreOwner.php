@@ -27,6 +27,7 @@ class CreateStoreOwner extends Command
         {--slug= : Store slug (defaults to the slugified store name)}
         {--category=moda : Rubro key from config/tribio.php business_categories}
         {--plan=basic : Plan key from config/tribio.php plans}
+        {--mode=both : Account type: both (POS + online store), pos (POS system only, no public store) or online (online store only)}
         {--days=30 : Days until the plan expires}
         {--password= : Password to set (generated and printed when omitted)}
         {--template= : Storefront template key from config/storefront.php (defaults to the platform default)}
@@ -61,6 +62,15 @@ class CreateStoreOwner extends Command
         }
         if (!config("tribio.plans.{$plan}")) {
             $this->error("Unknown plan '{$plan}'.");
+            return self::FAILURE;
+        }
+        $mode = $this->option('mode');
+        if (!isset(Store::MODES[$mode])) {
+            $this->error("Unknown mode '{$mode}'. Valid: " . implode(', ', array_keys(Store::MODES)));
+            return self::FAILURE;
+        }
+        if ($mode !== Store::MODE_BOTH && !Store::modesReady()) {
+            $this->error('Run the migrations first (stores.mode does not exist yet).');
             return self::FAILURE;
         }
         $category = $this->option('category');
@@ -98,7 +108,7 @@ class CreateStoreOwner extends Command
             return self::FAILURE;
         }
 
-        $store = DB::transaction(function () use ($email, $storeName, $slug, $plan, $category, $password, $template) {
+        $store = DB::transaction(function () use ($email, $storeName, $slug, $plan, $category, $password, $template, $mode) {
             $user = User::create([
                 'name'     => $this->option('name') ?: $storeName,
                 'email'    => $email,
@@ -116,7 +126,7 @@ class CreateStoreOwner extends Command
                 'template_settings' => $this->templateSettings($template),
             ], fn ($value) => $value !== null && $value !== '' && $value !== []);
 
-            return Store::create(BusinessProfile::for($category)->creationDefaults() + $brand + [
+            return Store::create(BusinessProfile::for($category)->creationDefaults() + $brand + (Store::modesReady() ? ['mode' => $mode] : []) + [
                 'user_id'         => $user->id,
                 'name'            => $storeName,
                 'slug'            => $slug,
@@ -128,7 +138,7 @@ class CreateStoreOwner extends Command
             ]);
         });
 
-        $this->info("Created {$storeName} (store #{$store->id}, slug '{$slug}').");
+        $this->info("Created {$storeName} (store #{$store->id}, slug '{$slug}', " . Store::MODES[$mode] . ').');
         $this->line("Usuario:    {$email}");
         $this->line("Contraseña: {$password}");
         $this->warn('Share these once and ask the owner to change the password after logging in.');

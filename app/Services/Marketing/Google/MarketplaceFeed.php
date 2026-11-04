@@ -62,7 +62,7 @@ class MarketplaceFeed
     /** Active stores whose Google connection is on and published through Tribio. */
     public function stores()
     {
-        return Store::active()
+        return Store::online()
             ->whereHas('googleIntegration', fn ($q) => $q->where('is_active', true)
                 ->where('shopping_mode', StoreMarketingIntegration::SHOPPING_VIA_TRIBIO))
             ->with('googleIntegration');

@@ -20,12 +20,12 @@ class StorefrontStoreResolver
         // Si el slug tiene formato de dominio, buscar por dominio propio
         if (str_contains($slug, '.')) {
             return Store::where('custom_domain', $slug)
-                ->active()
+                ->online()
                 ->firstOrFail();
         }
 
         return Store::where('slug', $slug)
-            ->active()
+            ->online()
             ->firstOrFail();
     }
 }

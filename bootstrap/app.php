@@ -17,6 +17,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'pos.kiosk' => \App\Http\Middleware\PosKioskGuard::class,
+            'store.modules' => \App\Http\Middleware\StoreModuleGuard::class,
+            'storefront' => \App\Http\Middleware\StorefrontEnabled::class,
         ]);
         $middleware->encryptCookies(except: [
             'user_country',

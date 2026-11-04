@@ -15,6 +15,20 @@
                 <div><p class="text-white/40">Categoría</p><p class="text-white">{{ \App\Support\BusinessProfile::forStore($store)->icon() }} {{ \App\Support\BusinessProfile::forStore($store)->label() }}</p></div>
             </div>
         </div>
+        @if(\App\Models\Store::modesReady())
+        <div class="glass-card p-6">
+            <h3 class="text-white font-bold mb-1">Tipo de cuenta</h3>
+            <p class="text-white/50 text-xs mb-4">Qué contrató este negocio. «Solo sistema POS» no tiene página pública: su tienda deja de existir en internet, del directorio y del sitemap, y el panel muestra solo ventas, inventario y reportes.</p>
+            <form method="POST" action="{{ route('admin.tiendas.mode', $store) }}" class="flex flex-col sm:flex-row gap-3">
+                @csrf @method('PATCH')
+                <label for="store-mode" class="sr-only">Tipo de cuenta</label>
+                <select id="store-mode" name="mode" class="input-field flex-1">
+                    @foreach(\App\Models\Store::MODES as $key => $label)<option value="{{ $key }}" @selected($store->mode() === $key)>{{ $label }}</option>@endforeach
+                </select>
+                <button type="submit" class="btn-primary">Guardar</button>
+            </form>
+        </div>
+        @endif
         <div class="glass-card p-6">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-white font-bold">Pedidos recientes</h3>

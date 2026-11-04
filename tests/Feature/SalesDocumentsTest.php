@@ -210,6 +210,22 @@ class SalesDocumentsTest extends TestCase
         $this->sell($user, $session, $product)->assertJsonPath('document_number', 'NV01-00000001');
     }
 
+    public function test_the_owner_edits_the_business_basics_from_the_same_page(): void
+    {
+        [$user, $store] = $this->owner('ferre', self::STORE_RUC);
+        $series = ['nota_venta' => 'NV01', 'boleta' => 'B001', 'factura' => 'F001'];
+
+        $this->actingAs($user)->get(route('dashboard.pos.documents.edit'))->assertOk()->assertSee('Nombre del negocio')->assertSee('Av. Grau 123');
+        $this->actingAs($user)->post(route('dashboard.pos.documents.update'), ['ruc' => self::STORE_RUC, 'series' => $series, 'name' => 'Ferretería Sur', 'phone' => '987 654 321', 'address' => 'Jr. Lima 45', 'city' => 'Piura'])
+            ->assertRedirect(route('dashboard.pos.documents.edit'));
+        $this->assertSame(['Ferretería Sur', '987 654 321', 'Jr. Lima 45', 'Piura'], [$store->fresh()->name, $store->fresh()->phone, $store->fresh()->address, $store->fresh()->city]);
+
+        // Leaving the basics out of the form erases nothing; an empty name is refused.
+        $this->actingAs($user)->post(route('dashboard.pos.documents.update'), ['ruc' => self::STORE_RUC, 'series' => $series])->assertRedirect();
+        $this->assertSame('Ferretería Sur', $store->fresh()->name);
+        $this->actingAs($user)->post(route('dashboard.pos.documents.update'), ['ruc' => self::STORE_RUC, 'series' => $series, 'name' => ''])->assertSessionHasErrors('name');
+    }
+
     public function test_cashiers_in_kiosk_mode_cannot_open_the_settings(): void
     {
         [$user, $store] = $this->owner();

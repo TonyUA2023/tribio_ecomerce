@@ -24,7 +24,7 @@ class Store extends Model
         'total_views', 'total_orders', 'total_revenue',
         'manual_payments', 'delivery_coverage', 'exchange_hours',
         'checkout_mode', 'payment_gateway', 'gateway_public_key', 'gateway_private_key', 'gateway_access_token',
-        'mp_access_token', 'mp_public_key', 'contact_email', 'contact_phone', 'ruc', 'legal_name',
+        'mp_access_token', 'mp_public_key', 'contact_email', 'contact_phone', 'ruc', 'legal_name', 'mode',
         'culqi_customer_id', 'culqi_card_id', 'culqi_subscription_id', 'billing_preapproval_id',
         'paypal_client_id', 'paypal_client_secret', 'paypal_mode', 'paypal_webhook_id',
         'is_express_shipping_enabled', 'express_shipping_cost',
@@ -87,7 +87,77 @@ class Store extends Model
         return $result;
     }
 
+    // ─── Account type ────────────────────────────────────────────
+    public const MODE_BOTH = 'both';
+    public const MODE_POS = 'pos';
+    public const MODE_ONLINE = 'online';
+
+    public const MODES = [
+        self::MODE_BOTH   => 'Sistema POS + Tienda virtual',
+        self::MODE_POS    => 'Solo sistema POS (sin tienda virtual)',
+        self::MODE_ONLINE => 'Solo tienda virtual',
+    ];
+
+    /** The deploy never migrates: until stores.mode exists every store is "both". */
+    public static function modesReady(): bool
+    {
+        static $ready = null;
+        if ($ready === true) {
+            return true;
+        }
+        if (\Illuminate\Support\Facades\Cache::get('stores.modes_ready') === true) {
+            return $ready = true;
+        }
+        try {
+            $ready = \Illuminate\Support\Facades\Schema::hasColumn('stores', 'mode');
+        } catch (\Throwable $e) {
+            report($e);
+
+            return false;
+        }
+        if ($ready) {
+            \Illuminate\Support\Facades\Cache::put('stores.modes_ready', true, now()->addDay());
+        }
+
+        return $ready;
+    }
+
+    public function mode(): string
+    {
+        $mode = $this->getAttributes()['mode'] ?? null;
+
+        return isset(self::MODES[$mode ?? '']) ? $mode : self::MODE_BOTH;
+    }
+
+    /** Has the public online store (catalog, checkout, directory listing). */
+    public function hasStorefront(): bool
+    {
+        return $this->mode() !== self::MODE_POS;
+    }
+
+    /** Has the point-of-sale system (register, shifts, comprobantes). */
+    public function hasPos(): bool
+    {
+        return $this->mode() !== self::MODE_ONLINE;
+    }
+
+    public function isPosOnly(): bool
+    {
+        return $this->mode() === self::MODE_POS;
+    }
+
     // ─── Scopes ──────────────────────────────────────────────────
+    /** Stores the public can see: active and with an online store (a POS-only business never has a public page). */
+    public function scopeOnline($query)
+    {
+        $query->where('status', 'active');
+        if (self::modesReady()) {
+            $query->where('mode', '!=', self::MODE_POS);
+        }
+
+        return $query;
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'active');

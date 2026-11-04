@@ -79,44 +79,19 @@
         @endif
         <nav class="dash-nav" aria-label="Secciones">
             @php
-                $navItems = [
-                    ['dashboard.index', 'grid', 'Dashboard', 'Resumen'],
-                    ['dashboard.productos.index', 'box', 'Productos', 'Catálogo'],
-                    ['dashboard.categorias.index', 'folder', 'Categorías', null],
-                    ['dashboard.marcas.index', 'tag', 'Marcas', null],
-                    ['dashboard.galeria.index', 'image', 'Galería', null],
-                    ['dashboard.pedidos.index', 'cart', 'Pedidos', 'Operación'],
-                    ['dashboard.clientes.index', 'users', 'Clientes', null],
-                    ['dashboard.whatsapp.index', 'chat', 'WhatsApp', null],
-                    ['dashboard.resenas.index', 'star', 'Reseñas', null],
-                    ['dashboard.mensajes.index', 'mail', 'Mensajes', null],
-                    ['dashboard.inventario.index', 'inventory', 'Inventario', null],
-                    ['dashboard.compras.index', 'receipt', 'Compras', null],
-                    ['dashboard.ganancias.index', 'trend', 'Ganancias y pérdidas', null],
-                    ['dashboard.shipping.index', 'truck', 'Zonas de envío', null],
-                    ['dashboard.gateway.edit', 'wallet', 'Pasarela de pago', null],
-                    ['dashboard.marketing.index', 'megaphone', 'Marketing', 'Crecimiento'],
-                    ['dashboard.plantillas.index', 'palette', 'Plantillas', 'Personalización'],
-                    ['dashboard.store.edit', 'store', 'Mi tienda', null],
-                ];
-                if (app(\App\Services\Pos\PosSchema::class)->ready()) {
-                    array_splice($navItems, 6, 0, [['dashboard.pos.index', 'pos', 'Caja', null]]);
-                    if (app(\App\Services\Pos\PosSchema::class)->creditReady()) {
-                        array_splice($navItems, 7, 0, [['dashboard.receivables.index', 'coins', 'Por cobrar', null]]);
-                    }
-                }
+                $navItems = \App\Support\DashboardNav::items($dashboardStore);
                 // "Modo caja" (ERP Fase 4d): a device handed to the staff only shows the register.
                 if ($dashboardStore && app(\App\Services\Pos\PosAccess::class)->active($dashboardStore)) {
-                    $navItems = array_values(array_filter($navItems, fn ($item) => in_array($item[0], ['dashboard.pos.index', 'dashboard.receivables.index'], true)));
-                    $navItems[0][3] = 'Modo caja';
+                    $navItems = array_values(array_filter($navItems, fn ($item) => in_array($item['route'], ['dashboard.pos.index', 'dashboard.receivables.index'], true)));
+                    $navItems[0]['group'] = 'Modo caja';
                 }
                 $unreadMessages = $dashboardStore ? $dashboardStore->contactMessages()->where('is_read', false)->count() : 0;
                 $unreadChats = $dashboardStore && app(\App\Services\Whatsapp\WhatsappSchema::class)->ready()
                     ? \App\Models\WhatsappConversation::where('store_id', $dashboardStore->id)->where('unread_count', '>', 0)->count() : 0;
             @endphp
-            @foreach($navItems as [$route, $icon, $label, $group])
+            @foreach($navItems as $item)
+                @php $route = $item['route']; $icon = $item['icon']; $label = $item['label']; $group = $item['group']; $active = \App\Support\DashboardNav::active($item); @endphp
                 @if($group)<p class="dash-nav-group dash-nav-label">{{ $group }}</p>@endif
-                @php $active = request()->routeIs($route === 'dashboard.index' ? $route : substr($route, 0, strrpos($route, '.')) . '.*'); @endphp
                 <a href="{{ route($route) }}" class="sidebar-link {{ $active ? 'active' : '' }}" @if($active) aria-current="page" @endif title="{{ $label }}">
                     <x-dashboard-icon :name="$icon"/><span class="dash-nav-label">{{ $label }}</span>
                     @if($route === 'dashboard.whatsapp.index' && $unreadChats > 0)<span class="badge badge-gold dash-nav-label" style="margin-left: auto" aria-label="{{ $unreadChats }} chats sin leer">{{ $unreadChats }}</span>@endif
@@ -126,7 +101,7 @@
             @endforeach
         </nav>
         <div class="dash-sidebar-footer">
-            @if($dashboardStore)
+            @if($dashboardStore && $dashboardStore->hasStorefront())
             <a href="{{ route('store.show', $dashboardStore->slug) }}" target="_blank" rel="noopener" class="sidebar-link" title="Ver mi tienda (nueva pestaña)"><x-dashboard-icon name="external"/><span class="dash-nav-label">Ver mi tienda</span></a>
             @endif
             <form method="POST" action="{{ route('logout') }}">@csrf

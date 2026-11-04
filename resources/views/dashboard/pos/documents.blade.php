@@ -1,6 +1,6 @@
 @extends('layouts.dashboard')
-@section('title', 'Comprobantes')
-@section('page_title', '🧾 Comprobantes')
+@section('title', 'Datos y comprobantes')
+@section('page_title', '🧾 Datos y comprobantes')
 @section('content')
 <div class="w-full max-w-3xl mx-auto space-y-5">
     <div class="flex items-center justify-between gap-3 flex-wrap">
@@ -21,8 +21,24 @@
         @csrf
         <section class="glass-card p-4 sm:p-5 space-y-4" aria-labelledby="issuer-title">
             <h2 id="issuer-title" class="text-white font-bold text-base">Datos de tu negocio</h2>
-            <p class="text-xs text-white/60">Salen en el encabezado de la boleta y de la factura. La dirección es la de «Mi tienda»{{ $store->address ? ': ' . $store->address : '' }}.</p>
+            <p class="text-xs text-white/60">Salen en el encabezado de tus tickets. El RUC y la razón social, en boletas y facturas.</p>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="sm:col-span-2">
+                    <label class="input-label" for="biz-name">Nombre del negocio</label>
+                    <input id="biz-name" name="name" class="input-field" maxlength="120" value="{{ old('name', $store->name) }}" required>
+                </div>
+                <div>
+                    <label class="input-label" for="biz-phone">Teléfono</label>
+                    <input id="biz-phone" name="phone" class="input-field" inputmode="tel" maxlength="30" value="{{ old('phone', $store->phone) }}" placeholder="900 000 000">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="input-label" for="biz-address">Dirección</label>
+                    <input id="biz-address" name="address" class="input-field" maxlength="255" value="{{ old('address', $store->address) }}" placeholder="Av. Los Constructores 123">
+                </div>
+                <div>
+                    <label class="input-label" for="biz-city">Ciudad</label>
+                    <input id="biz-city" name="city" class="input-field" maxlength="80" value="{{ old('city', $store->city) }}" placeholder="Chiclayo">
+                </div>
                 <div>
                     <label class="input-label" for="doc-ruc">RUC</label>
                     <input id="doc-ruc" name="ruc" class="input-field" inputmode="numeric" maxlength="11" value="{{ old('ruc', $store->ruc) }}" placeholder="20123456789">

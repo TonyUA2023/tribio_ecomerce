@@ -38,7 +38,7 @@ class DirectoryCatalog
      */
     public function stores(?string $category = null): Collection
     {
-        $stores = Store::active()
+        $stores = Store::online()
             ->when($category, fn (Builder $q) => $q->where('category', $category))
             ->get(['id', 'name', 'slug', 'custom_domain', 'category', 'tagline', 'description', 'logo_path',
                 'template_name', 'template_settings', 'accent_color', 'is_featured', 'city', 'whatsapp_phone']);

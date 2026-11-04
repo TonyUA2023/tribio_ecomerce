@@ -30,7 +30,10 @@ class SalesDocumentsController extends Controller
         $store = $request->user()->currentStore();
         $data = $request->validated();
 
-        $store->update(['ruc' => $data['ruc'] ?? null, 'legal_name' => filled($data['legal_name'] ?? null) ? trim($data['legal_name']) : null]);
+        $store->update(['ruc' => $data['ruc'] ?? null, 'legal_name' => filled($data['legal_name'] ?? null) ? trim($data['legal_name']) : null]
+            // The business's basics, printed on every ticket (only what the form sent: nothing is erased by omission).
+            + array_map(fn ($value) => filled($value) ? trim($value) : null, array_intersect_key($data, array_flip(['phone', 'address', 'city'])))
+            + (isset($data['name']) ? ['name' => trim($data['name'])] : []));
 
         foreach ($this->documents->series($store) as $type => $row) {
             $series = $data['series'][$type];
