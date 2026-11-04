@@ -8,7 +8,7 @@
 @endpush
 @section('content')
 @php $money = fn ($value) => 'S/ ' . number_format((float) $value, 2); @endphp
-<div class="w-full max-w-7xl mx-auto space-y-4"
+<div class="pos-app w-full max-w-7xl mx-auto space-y-3"
      x-data="posRegister({
         productsUrl: @js(route('dashboard.pos.products')),
         customersUrl: @js(route('dashboard.pos.customers')),
@@ -28,13 +28,16 @@
      })"
      @keydown.window.f2.prevent="$refs.search.focus()" @keydown.window.f9.prevent="openPayment()">
 
-    <div class="flex items-center justify-between gap-3 flex-wrap">
-        <p class="text-xs text-white/60">
-            @if($kiosk)<span class="text-white">👤 {{ $kiosk['name'] }}{{ $kiosk['manager'] ? ' (encargado)' : '' }}</span> ·@endif
-            Abierta {{ $session->opened_at->locale('es')->diffForHumans() }} ·
-            <span x-text="sales + (sales === 1 ? ' venta' : ' ventas') + ' · ' + money(salesTotal)"></span>
-        </p>
-        <div class="flex items-center gap-2 flex-wrap text-xs">
+    <div class="pos-toolbar">
+        <div class="pos-toolbar-info">
+            <strong class="pos-register">{{ $register->name }}</strong>
+            <span class="pos-status">
+                @if($kiosk)<span class="pos-kiosk">👤 {{ $kiosk['name'] }}{{ $kiosk['manager'] ? ' (encargado)' : '' }}</span> ·@endif
+                Abierta {{ $session->opened_at->locale('es')->diffForHumans() }} ·
+                <span x-text="sales + (sales === 1 ? ' venta' : ' ventas') + ' · ' + money(salesTotal)"></span>
+            </span>
+        </div>
+        <div class="pos-toolbar-actions">
             <button type="button" class="pos-chip" @click="showCash = !showCash"><x-dashboard-icon name="coins"/>Ingreso / retiro de efectivo</button>
             @if($registers->count() > 1)<a href="{{ route('dashboard.pos.index', ['cajas' => 1]) }}" class="pos-chip"><x-dashboard-icon name="pos"/>Cambiar de caja</a>@endif
             @if($creditEnabled)<a href="{{ route('dashboard.receivables.index') }}" class="pos-chip"><x-dashboard-icon name="wallet"/>Por cobrar</a>@endif
@@ -43,8 +46,8 @@
                 <a href="{{ route('dashboard.returns.index') }}" class="pos-chip"><x-dashboard-icon name="refresh"/>Devoluciones</a>
             @endif
             <a href="{{ route('dashboard.pos.sessions.show', $session->id) }}" class="pos-chip"><x-dashboard-icon name="inventory"/>Ventas del turno</a>
-            <a href="{{ route('dashboard.pos.sessions.close', $session->id) }}" class="btn-secondary !py-1 text-xs">Cerrar caja</a>
-            @if($kiosk)<form method="POST" action="{{ route('dashboard.pos.lock') }}">@csrf<button type="submit" class="btn-ghost !py-1 text-xs">🔒 Bloquear</button></form>@endif
+            @if($kiosk)<form method="POST" action="{{ route('dashboard.pos.lock') }}">@csrf<button type="submit" class="pos-chip">🔒 Bloquear</button></form>@endif
+            <a href="{{ route('dashboard.pos.sessions.close', $session->id) }}" class="pos-chip pos-chip-strong">Cerrar caja</a>
         </div>
     </div>
 
@@ -88,45 +91,63 @@
         <button type="submit" class="btn-secondary">Anotar</button>
     </form>
 
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
+    <div class="pos-layout" x-ref="layout">
         {{-- Products --}}
-        <section class="lg:col-span-3 glass-card p-3 sm:p-4 space-y-3" aria-label="Productos">
-            <div class="relative">
+        <section class="pos-panel pos-products" aria-label="Productos">
+            <div class="pos-search">
                 <label for="pos-search" class="sr-only">Buscar producto o escanear código</label>
+                <x-dashboard-icon name="search" class="pos-search-icon"/>
                 <input id="pos-search" x-ref="search" x-model="query" @input.debounce.250ms="search()" @keydown.enter.prevent="scan()" autofocus autocomplete="off"
                        class="input-field !text-base" placeholder="Busca o escanea un código (F2)">
             </div>
-            <p class="text-xs text-red-300" x-show="searchError" x-text="searchError" role="alert"></p>
-            <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
-                <template x-for="product in products" :key="product.id">
-                    <button type="button" class="text-left rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 p-2 flex flex-col gap-1 min-w-0" @click="add(product)">
-                        <template x-if="product.image"><img :src="product.image" alt="" class="w-full aspect-square object-cover rounded-lg"></template>
-                        <span class="text-xs text-white font-semibold leading-tight break-words" x-text="product.name"></span>
-                        <span class="text-xs text-white/70" x-text="money(product.price)"></span>
-                        <span class="text-[10px]" :class="product.track_stock && product.stock <= 0 ? 'text-red-300' : 'text-white/40'"
-                              x-text="product.track_stock ? 'Stock: ' + product.stock : 'Sin control de stock'"></span>
-                    </button>
-                </template>
+            <p class="pos-error" x-show="searchError" x-text="searchError" role="alert"></p>
+            <div class="pos-products-scroll">
+                <div class="pos-grid">
+                    <template x-for="product in products" :key="product.id">
+                        <button type="button" class="pos-tile" @click="add(product)">
+                            <template x-if="product.image"><img :src="product.image" alt="" class="pos-tile-img"></template>
+                            <template x-if="!product.image"><span class="pos-tile-badge" :style="badgeStyle(product)" x-text="initials(product.name)" aria-hidden="true"></span></template>
+                            <span class="pos-tile-name" x-text="product.name"></span>
+                            <span class="pos-tile-foot">
+                                <span class="pos-tile-price" x-text="money(product.price)"></span>
+                                <span class="pos-stock" :class="stockClass(product)" x-text="stockLabel(product)"></span>
+                            </span>
+                        </button>
+                    </template>
+                </div>
+                <p class="pos-empty" x-show="!loading && products.length === 0">No encontramos productos con ese nombre o código.</p>
             </div>
-            <p class="text-sm text-white/50 text-center py-6" x-show="!loading && products.length === 0">No encontramos productos con ese nombre o código.</p>
         </section>
 
-        {{-- Ticket --}}
-        <section class="lg:col-span-2 glass-card p-3 sm:p-4 space-y-3 lg:sticky lg:top-4" aria-label="Venta actual">
-            <template x-if="!done && !savedQuote">
-                <div class="space-y-3">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-white font-bold text-base">Venta</h3>
-                        <button type="button" class="text-xs text-white/50 hover:text-red-300" x-show="lines.length" @click="reset()">Vaciar</button>
-                    </div>
-                    <p class="text-sm text-white/50 text-center py-4" x-show="!lines.length">Toca un producto o escanéalo para empezar.</p>
+        {{-- Mobile: bar that opens the sale (the ticket is a sheet below lg) --}}
+        <div class="pos-scrim" x-show="cartOpen" x-cloak @click="cartOpen = false" @keydown.escape.window="cartOpen = false"></div>
+        <button type="button" class="pos-cartbar" x-show="lines.length && !cartOpen" x-cloak @click="cartOpen = true" aria-label="Ver la venta">
+            <span class="pos-cartbar-count" x-text="lines.reduce((n, l) => n + Number(l.quantity || 0), 0)"></span>
+            <span class="pos-cartbar-text">Ver venta</span>
+            <strong class="pos-cartbar-total" x-text="money(total())"></strong>
+        </button>
 
-                    <div class="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
+        {{-- Ticket --}}
+        <section class="pos-panel pos-ticket" :class="cartOpen && 'is-open'" aria-label="Venta actual">
+            <template x-if="!done && !savedQuote">
+                <div class="pos-ticket-inner">
+                    <div class="pos-ticket-head">
+                        <h3>Venta <span class="pos-ticket-count" x-show="lines.length" x-text="'· ' + lines.length + (lines.length === 1 ? ' producto' : ' productos')"></span></h3>
+                        <button type="button" class="pos-link-danger" x-show="lines.length" @click="reset()">Vaciar</button>
+                        <button type="button" class="pos-ticket-close" @click="cartOpen = false" aria-label="Cerrar la venta"><x-dashboard-icon name="close"/></button>
+                    </div>
+                    <div class="pos-ticket-body">
+                    <div class="pos-empty-cart" x-show="!lines.length">
+                        <x-dashboard-icon name="cart" class="pos-empty-icon"/>
+                        <p>Toca un producto o escanéalo para empezar.</p>
+                    </div>
+
+                    <div class="space-y-2">
                         <template x-for="(line, index) in lines" :key="line.key">
-                            <div class="rounded-xl border border-white/10 bg-white/5 p-2 space-y-2">
-                                <div class="flex items-start justify-between gap-2">
-                                    <p class="text-sm text-white font-semibold min-w-0 break-words" x-text="line.product.name"></p>
-                                    <button type="button" class="text-white/40 hover:text-red-300 text-xs flex-shrink-0" @click="lines.splice(index, 1)" :aria-label="'Quitar ' + line.product.name">✕</button>
+                            <div class="pos-line">
+                                <div class="pos-line-head">
+                                    <p class="pos-line-name" x-text="line.product.name"></p>
+                                    <button type="button" class="pos-line-remove" @click="lines.splice(index, 1)" :aria-label="'Quitar ' + line.product.name"><x-dashboard-icon name="close"/></button>
                                 </div>
                                 <div class="flex flex-wrap gap-2" x-show="line.product.variants.length || line.product.units.length">
                                     <select class="input-field !py-1 !text-xs !w-auto" x-show="line.product.variants.length" x-model.number="line.variantId" :class="!line.variantId && '!border-amber-400'" aria-label="Variante">
@@ -138,17 +159,17 @@
                                         <template x-for="unit in line.product.units" :key="unit.id"><option :value="unit.id" x-text="unit.name + ' (' + unit.factor + ')'"></option></template>
                                     </select>
                                 </div>
-                                <div class="flex items-center justify-between gap-2">
-                                    <div class="flex items-center gap-1">
-                                        <button type="button" class="btn-ghost !px-2 !py-0.5" @click="line.quantity > 1 ? line.quantity-- : lines.splice(index, 1)" aria-label="Menos">−</button>
-                                        <input type="number" min="1" class="input-field !py-1 !w-16 text-center" x-model.number="line.quantity" aria-label="Cantidad">
-                                        <button type="button" class="btn-ghost !px-2 !py-0.5" @click="line.quantity++" aria-label="Más">+</button>
+                                <div class="pos-line-row">
+                                    <div class="pos-stepper">
+                                        <button type="button" @click="line.quantity > 1 ? line.quantity-- : lines.splice(index, 1)" aria-label="Menos">−</button>
+                                        <input type="number" min="1" x-model.number="line.quantity" aria-label="Cantidad">
+                                        <button type="button" @click="line.quantity++" aria-label="Más">+</button>
                                     </div>
-                                    <label class="flex items-center gap-1 text-xs text-white/60">S/
-                                        <input type="number" step="0.10" min="0" class="input-field !py-1 !w-24 text-right" :value="price(line).toFixed(2)"
+                                    <label class="pos-line-price"><span>S/</span>
+                                        <input type="number" step="0.10" min="0" :value="price(line).toFixed(2)"
                                                @change="line.price = $event.target.value === '' ? null : Number($event.target.value)" aria-label="Precio">
                                     </label>
-                                    <span class="text-sm text-white font-bold whitespace-nowrap" x-text="money(price(line) * line.quantity)"></span>
+                                    <span class="pos-line-total" x-text="money(price(line) * line.quantity)"></span>
                                 </div>
                                 <p class="text-[11px] text-amber-300" x-show="shortage(line)" x-text="shortage(line)"></p>
                                 <p class="text-[11px] text-emerald-300" x-show="tierLabel(line)" x-text="tierLabel(line)"></p>
@@ -196,10 +217,6 @@
                             <label for="pos-discount" class="text-xs text-white/60">Descuento (S/)</label>
                             <input id="pos-discount" type="number" step="0.10" min="0" class="input-field !py-1 !w-28 text-right" x-model.number="discount">
                         </div>
-                        <div class="flex items-center justify-between border-t border-white/10 pt-2">
-                            <span class="text-white/70 text-sm">Total</span>
-                            <span class="text-2xl font-black text-white" x-text="money(total())"></span>
-                        </div>
                     </div>
 
                     {{-- Manager approval (modo caja) --}}
@@ -215,7 +232,7 @@
                     </div>
 
                     {{-- Payment --}}
-                    <div class="space-y-2 border-t border-white/10 pt-3" x-show="paying" x-cloak>
+                    <div class="space-y-2 border-t border-white/10 pt-3" x-ref="payBlock" x-show="paying" x-cloak>
                         <template x-for="(label, method) in methods" :key="method">
                             <div class="flex items-center gap-2">
                                 <span class="text-xs text-white/70 w-24" x-text="label"></span>
@@ -253,8 +270,15 @@
                         </template>
                     </div>
 
-                    <p class="text-xs text-red-300" x-show="error" x-text="error" role="alert"></p>
-                    <button type="button" class="btn-primary w-full !text-base" x-show="lines.length && !paying" @click="openPayment()">Cobrar (F9)</button>
+                    </div>{{-- /pos-ticket-body --}}
+
+                    <div class="pos-ticket-foot" x-show="lines.length">
+                    <div class="pos-total">
+                        <span>Total</span>
+                        <strong x-text="money(total())"></strong>
+                    </div>
+                    <p class="pos-error" x-show="error" x-text="error" role="alert"></p>
+                    <button type="button" class="btn-primary pos-cobrar" x-show="lines.length && !paying" @click="openPayment()">Cobrar <kbd>F9</kbd></button>
                     <div class="flex items-center gap-2" x-show="extras && lines.length && !paying">
                         <button type="button" class="btn-secondary flex-1 text-xs" :disabled="saving" @click="saveQuote()">📝 Guardar como proforma</button>
                         <label class="text-[11px] text-white/50 flex items-center gap-1">válida
@@ -265,12 +289,13 @@
                         <button type="button" class="btn-primary flex-[2]" :disabled="saving || !canPay()" :class="(saving || !canPay()) && 'opacity-50 cursor-not-allowed'" @click="submit()"
                                 x-text="saving ? 'Guardando…' : 'Confirmar venta'"></button>
                     </div>
+                    </div>{{-- /pos-ticket-foot --}}
                 </div>
             </template>
 
             {{-- Quote saved --}}
             <template x-if="savedQuote">
-                <div class="space-y-3 text-center" role="status">
+                <div class="pos-result" role="status">
                     <p class="text-4xl" aria-hidden="true">📝</p>
                     <p class="text-white font-bold" x-text="'Proforma ' + savedQuote.number"></p>
                     <p class="text-2xl font-black text-white" x-text="money(savedQuote.total)"></p>
@@ -285,7 +310,7 @@
 
             {{-- Sale done --}}
             <template x-if="done">
-                <div class="space-y-3 text-center" role="status">
+                <div class="pos-result" role="status">
                     <p class="text-4xl" aria-hidden="true">✅</p>
                     <p class="text-white font-bold" x-text="'Venta ' + done.order_number"></p>
                     <p class="text-2xl font-black text-white" x-text="money(done.total)"></p>
@@ -316,7 +341,7 @@
             ...config,
             query: '', products: [], loading: false, searchError: '',
             lines: [], discount: 0, customer: null, customerQuery: '', customers: [], newCustomer: false, walkIn: { name: '', phone: '', document: '' },
-            paying: false, pay: blankPay(), saving: false, credit: false, terms: { installments: 1, every_days: 30, first_due: config.firstDue.default }, error: '', done: null, uuid: newId(), showCash: false,
+            paying: false, pay: blankPay(), saving: false, credit: false, terms: { installments: 1, every_days: 30, first_due: config.firstDue.default }, error: '', done: null, uuid: newId(), showCash: false, cartOpen: false,
             priceList: 'menor', validDays: 7, quoteId: null, quoteNumber: null, savedQuote: null,
             approval: '', approverPin: '', online: navigator.onLine, pending: [], showPending: false,
             init() {
@@ -324,8 +349,46 @@
                 this.setupOffline();
                 if (this.quote) this.loadQuote(this.quote);
                 this.$watch('done', value => value && this.$nextTick(() => this.$refs.next?.focus()));
+                // Below lg the ticket is a sheet: open it to show the result, close it when the sale is emptied.
+                this.$watch('done', value => { if (value) this.cartOpen = true; });
+                this.$watch('savedQuote', value => { if (value) this.cartOpen = true; });
+                // The amounts live below the lines: bring them into view when charging starts.
+                this.$watch('paying', value => value && this.$nextTick(() => this.$refs.payBlock?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })));
+                this.$watch('lines.length', count => { if (!count && !this.done && !this.savedQuote) this.cartOpen = false; });
+                this.$nextTick(() => this.fitLayout());
+                setTimeout(() => this.fitLayout(), 300);
+                window.addEventListener('resize', () => this.fitLayout());
+            },
+            // From lg up the two panels fill what is left of the screen, each scrolling on its own.
+            fitLayout() {
+                const el = this.$refs.layout;
+                if (!el) return;
+                if (window.innerWidth < 1024) { el.style.removeProperty('--pos-h'); return; }
+                const scroller = el.closest('.dash-content');
+                const top = el.getBoundingClientRect().top + (scroller ? scroller.scrollTop : 0);
+                const bottom = scroller ? parseFloat(getComputedStyle(scroller).paddingBottom) || 0 : 0;
+                el.style.setProperty('--pos-h', Math.max(480, window.innerHeight - top - bottom) + 'px');
             },
             money(value) { return 'S/ ' + Number(value || 0).toFixed(2); },
+            initials(name) {
+                // Letters only ("Bisagra 3" (par)" → BP); a single word gives its first two letters.
+                const words = String(name || '').match(/\p{L}+/gu) || [];
+                const letters = words.length > 1 ? words[0][0] + words[1][0] : (words[0] || '').slice(0, 2);
+                return letters.toUpperCase() || '·';
+            },
+            badgeStyle(product) {
+                const hue = (product.id * 47) % 360;
+                return `background:hsl(${hue} 70% 93%);color:hsl(${hue} 45% 30%)`;
+            },
+            stockClass(product) {
+                if (!product.track_stock) return 'is-none';
+                if (product.stock <= 0) return 'is-out';
+                return product.stock <= 5 ? 'is-low' : '';
+            },
+            stockLabel(product) {
+                if (!product.track_stock) return 'Sin control';
+                return product.stock <= 0 ? 'Sin stock' : 'Stock ' + product.stock;
+            },
             async search(exact = false) {
                 this.loading = true;
                 try {
@@ -553,7 +616,7 @@
                 Object.assign(this, { lines: [], discount: 0, customer: null, customerQuery: '', customers: [], newCustomer: false,
                     walkIn: { name: '', phone: '', document: '' }, paying: false, pay: blankPay(), error: '', done: null, uuid: newId(),
                     credit: false, terms: { installments: 1, every_days: 30, first_due: this.firstDue.default },
-                    priceList: 'menor', quoteId: null, quoteNumber: null, savedQuote: null, approval: '', approverPin: '' });
+                    priceList: 'menor', quoteId: null, quoteNumber: null, savedQuote: null, approval: '', approverPin: '', cartOpen: false });
                 this.$nextTick(() => this.$refs.search?.focus());
             },
         };
