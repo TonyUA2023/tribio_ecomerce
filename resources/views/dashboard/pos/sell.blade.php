@@ -112,15 +112,19 @@
                     <label for="pos-search" class="sr-only">Buscar producto o escanear código</label>
                     <x-dashboard-icon name="search" class="pos-search-icon"/>
                     {{-- type=search + a non-credential name: with a PIN field on the page Chrome would offer the saved e-mail here --}}
-                    <input id="pos-search" name="pos_buscar" type="search" x-ref="search" x-model="query" @input.debounce.250ms="search()" @keydown.enter.prevent="scan()" autofocus
+                    <input id="pos-search" name="pos_buscar" type="search" x-ref="search" x-model="query" @input.debounce.250ms="search()" @keydown.enter.prevent="scan()" :inputmode="coarse && scanMode ? 'none' : 'search'"
                            autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" data-lpignore="true" data-1p-ignore="true" data-form-type="other"
                            class="input-field" placeholder="Busca o escanea un código (F2)">
                 </div>
+                {{-- Touch devices: focusing a field opens the on-screen keyboard and covers the sale. In scanner mode the field stays ready for a Bluetooth/USB reader (inputmode=none) without it. --}}
+                <button type="button" class="pos-scan" x-show="coarse" x-cloak :class="scanMode && 'is-active'" :aria-pressed="scanMode" @click="toggleScan()"
+                        title="Modo escáner: el teclado de la pantalla no se abre y el lector de códigos sigue escribiendo en el buscador" aria-label="Modo escáner"><x-dashboard-icon name="scan"/></button>
                 <div class="pos-view" role="group" aria-label="Vista de productos">
                     <button type="button" :class="view === 'list' && 'is-active'" :aria-pressed="view === 'list'" @click="setView('list')" title="Lista" aria-label="Ver en lista"><x-dashboard-icon name="list"/></button>
                     <button type="button" :class="view === 'grid' && 'is-active'" :aria-pressed="view === 'grid'" @click="setView('grid')" title="Cuadrícula" aria-label="Ver en cuadrícula"><x-dashboard-icon name="grid"/></button>
                 </div>
             </div>
+            <p class="pos-scan-hint" x-show="coarse && scanMode" x-cloak>Modo escáner: el teclado no se abre. Toca el icono otra vez para escribir a mano.</p>
             <p class="pos-error" x-show="searchError" x-text="searchError" role="alert"></p>
             <div class="pos-products-scroll">
                 <template x-if="view === 'list'">
@@ -410,12 +414,17 @@
         const loadView = () => {
             try { return localStorage.getItem('tribio.pos.view') === 'grid' ? 'grid' : 'list'; } catch (e) { return 'list'; }
         };
+        // A touch screen (tablet, phone) has an on-screen keyboard; a mouse-and-keyboard counter does not.
+        const isTouch = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+        const loadScan = () => {
+            try { return localStorage.getItem('tribio.pos.scan') === '1'; } catch (e) { return false; }
+        };
         const blankPay = () => Object.fromEntries(Object.keys(config.methods).map(m => [m, '']));
         return {
             ...config,
             query: '', products: [], loading: false, searchError: '',
             lines: [], discount: 0, customer: null, customerQuery: '', customers: [], newCustomer: false, walkIn: { name: '', phone: '', document: '', address: '' },
-            paying: false, pay: blankPay(), saving: false, credit: false, terms: { installments: 1, every_days: 30, first_due: config.firstDue.default }, error: '', done: null, uuid: newId(), showCash: false, cartOpen: false, showMenu: false, showDetails: false, view: loadView(), documentType: loadDocument(config.documents),
+            paying: false, pay: blankPay(), saving: false, credit: false, terms: { installments: 1, every_days: 30, first_due: config.firstDue.default }, error: '', done: null, uuid: newId(), showCash: false, cartOpen: false, showMenu: false, showDetails: false, view: loadView(), coarse: isTouch, scanMode: loadScan(), documentType: loadDocument(config.documents),
             priceList: 'menor', validDays: 7, quoteId: null, quoteNumber: null, savedQuote: null,
             approval: '', approverPin: '', online: navigator.onLine, pending: [], showPending: false,
             init() {
@@ -431,7 +440,7 @@
                 // The amounts live below the lines: bring them into view when charging starts.
                 this.$watch('paying', value => value && this.$nextTick(() => this.$refs.payBlock?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })));
                 this.$watch('lines.length', count => { if (!count && !this.done && !this.savedQuote) this.cartOpen = false; });
-                this.$nextTick(() => this.fitLayout());
+                this.$nextTick(() => { this.fitLayout(); this.focusSearch(); });
                 setTimeout(() => this.fitLayout(), 300);
                 window.addEventListener('resize', () => this.fitLayout());
             },
@@ -446,6 +455,17 @@
                 el.style.setProperty('--pos-h', Math.max(480, window.innerHeight - top - bottom) + 'px');
             },
             money(value) { return 'S/ ' + Number(value || 0).toFixed(2); },
+            // Back to the search box after adding or selling — but never by surprise on a touch screen, where it would pop up the keyboard.
+            focusSearch() {
+                if (!this.coarse || this.scanMode) this.$refs.search?.focus();
+            },
+            toggleScan() {
+                this.scanMode = !this.scanMode;
+                try { localStorage.setItem('tribio.pos.scan', this.scanMode ? '1' : '0'); } catch (e) { /* private mode */ }
+                const input = this.$refs.search;
+                input.blur();
+                if (this.scanMode) this.$nextTick(() => input.focus());
+            },
             setView(view) {
                 this.view = view;
                 try { localStorage.setItem('tribio.pos.view', view); } catch (e) { /* private mode */ }
@@ -578,7 +598,7 @@
                 if (existing) { existing.quantity++; }
                 else { this.lines.push({ key: product.id + ':' + Date.now() + ':' + Math.random(), product, variantId, unitId, quantity: 1, price: null }); }
                 this.paying = false;
-                this.$refs.search.focus();
+                this.focusSearch();
             },
             unit(line) { return line.product.units.find(u => u.id === line.unitId) || null; },
             baseUnits(productId) {
@@ -727,7 +747,7 @@
                     walkIn: { name: '', phone: '', document: '', address: '' }, paying: false, pay: blankPay(), error: '', done: null, uuid: newId(),
                     credit: false, terms: { installments: 1, every_days: 30, first_due: this.firstDue.default },
                     priceList: 'menor', quoteId: null, quoteNumber: null, savedQuote: null, approval: '', approverPin: '', cartOpen: false, showMenu: false, showDetails: false });
-                this.$nextTick(() => this.$refs.search?.focus());
+                this.$nextTick(() => this.focusSearch());
             },
         };
     }

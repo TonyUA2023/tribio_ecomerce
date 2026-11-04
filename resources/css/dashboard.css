@@ -387,6 +387,10 @@
 .pos-app .pos-search .input-field { width: 100%; min-height: 52px; padding: 0 16px 0 46px; background: #f4f7fb; border: 1px solid transparent; border-radius: 12px; color: var(--dash-ink); font-size: 15px; }
 .pos-app .pos-search .input-field:focus { background: white; border-color: var(--dash-blue); outline: 0; box-shadow: 0 0 0 4px #2176d21f; }
 .pos-app .pos-search .input-field::-webkit-search-cancel-button { cursor: pointer; }
+.pos-app .pos-scan { width: 48px; height: 48px; flex-shrink: 0; display: grid; place-items: center; background: #f0f3f8; border-radius: 12px; color: #7a8da3; transition: background-color .15s, color .15s; }
+.pos-app .pos-scan .dash-icon { width: 20px; height: 20px; }
+.pos-app .pos-scan.is-active { background: var(--dash-blue); color: white; }
+.pos-app .pos-scan-hint { font-size: 11px; font-weight: 600; color: var(--dash-blue); }
 .pos-app .pos-view { display: inline-flex; flex-shrink: 0; padding: 3px; background: #f0f3f8; border-radius: 11px; }
 .pos-app .pos-view button { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 9px; color: #7a8da3; transition: background-color .15s, color .15s; }
 .pos-app .pos-view button .dash-icon { width: 18px; height: 18px; }

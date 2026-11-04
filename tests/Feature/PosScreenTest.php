@@ -73,6 +73,21 @@ class PosScreenTest extends TestCase
         }
     }
 
+    public function test_the_search_box_does_not_grab_focus_by_itself_on_touch_screens(): void
+    {
+        [$user] = $this->shop();
+
+        $html = $this->actingAs($user)->get(route('dashboard.pos.index'))->assertOk()->getContent();
+        $this->assertSame(1, preg_match('/<input\b[^>]*\bid="pos-search"[^>]*>/', $html, $search));
+        // No HTML autofocus (it would open the tablet keyboard on load); focus is decided by the script…
+        $this->assertStringNotContainsString('autofocus', $search[0]);
+        // …which skips it on touch screens unless the scanner mode (inputmode=none) is on.
+        $this->assertStringContainsString(":inputmode=\"coarse && scanMode ? 'none' : 'search'\"", $search[0]);
+        $this->assertStringContainsString('Modo escáner', $html);
+        $this->assertStringContainsString('focusSearch()', $html);
+        $this->assertStringNotContainsString('this.$refs.search.focus();', $html, 'adding a product must not focus the search box directly');
+    }
+
     public function test_secondary_actions_live_in_the_more_menu_and_the_extras_are_folded(): void
     {
         [$user] = $this->shop();
