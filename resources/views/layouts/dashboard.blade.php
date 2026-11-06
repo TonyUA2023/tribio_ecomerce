@@ -77,7 +77,7 @@
             <span class="dash-nav-label min-w-0"><strong>{{ $dashboardStore->name }}</strong><small>Tu espacio de gestión</small></span>
         </a>
         @endif
-        <nav class="dash-nav" aria-label="Secciones">
+        <nav class="dash-nav" aria-label="Secciones" data-keep-scroll="dashboard">
             @php
                 $navItems = \App\Support\DashboardNav::items($dashboardStore);
                 // "Modo caja" (ERP Fase 4d): a device handed to the staff only shows the register.
@@ -100,6 +100,7 @@
                 </a>
             @endforeach
         </nav>
+        @include('layouts._keep-nav-scroll')
         <div class="dash-sidebar-footer">
             @if($dashboardStore && $dashboardStore->hasStorefront())
             <a href="{{ route('store.show', $dashboardStore->slug) }}" target="_blank" rel="noopener" class="sidebar-link" title="Ver mi tienda (nueva pestaña)"><x-dashboard-icon name="external"/><span class="dash-nav-label">Ver mi tienda</span></a>

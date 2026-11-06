@@ -113,4 +113,12 @@ class PurchaseProductSearchTest extends TestCase
         $this->actingAs($user)->get(route('dashboard.compras.create'))->assertOk()
             ->assertSee('compra_buscar_producto', false)->assertDontSee('Repuesto 7', false);
     }
+
+    public function test_dashboard_sidebar_keeps_its_scroll_between_pages(): void
+    {
+        [$user] = $this->owner();
+
+        $this->actingAs($user)->get(route('dashboard.compras.index'))->assertOk()
+            ->assertSee('data-keep-scroll="dashboard"', false)->assertSee("tribio:nav-scroll:", false);
+    }
 }

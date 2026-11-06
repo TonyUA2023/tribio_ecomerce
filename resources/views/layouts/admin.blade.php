@@ -28,7 +28,7 @@
             </div>
         </div>
 
-        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto" data-keep-scroll="admin">
             @php
             $adminNav = [
                 ['route' => 'admin.dashboard', 'icon' => '📊', 'label' => 'Dashboard Global'],
@@ -45,6 +45,7 @@
             </a>
             @endforeach
         </nav>
+        @include('layouts._keep-nav-scroll')
 
         <div class="px-3 py-4 border-t" style="border-color: rgba(255,255,255,0.05);">
             <a href="{{ route('home') }}" class="sidebar-link">🌐 Ver portal</a>
