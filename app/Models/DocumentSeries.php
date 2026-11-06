@@ -10,9 +10,19 @@ class DocumentSeries extends Model
 {
     protected $table = 'document_series';
 
-    protected $fillable = ['store_id', 'type', 'series', 'last_number'];
+    protected $fillable = ['store_id', 'branch_id', 'register_id', 'type', 'series', 'last_number'];
 
     protected $casts = ['last_number' => 'integer'];
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    public function register(): BelongsTo
+    {
+        return $this->belongsTo(Register::class);
+    }
 
     public function store(): BelongsTo
     {

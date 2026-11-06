@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\ProductUnit;
 use App\Models\ProductVariant;
 use App\Models\Quote;
+use App\Models\Register;
 use App\Models\RegisterSession;
 use App\Models\Store;
 use App\Services\Crm\ContactResolver;
@@ -53,6 +54,9 @@ class PosSaleService
         private ContactService $timeline,
         private PriceListService $priceLists,
         private SalesDocuments $documents,
+        private \App\Services\Sunat\SunatSchema $sunat,
+        private \App\Services\Sunat\Branches $branches,
+        private \App\Services\Sunat\ElectronicDocuments $electronic,
     ) {
     }
 
@@ -122,7 +126,13 @@ class PosSaleService
                   + (!empty($data['offline_at']) ? $this->offlineTimestamps($data['offline_at']) : []))->save();
 
                 if ($this->documents->ready()) {
-                    $this->documents->issue($order, $document);
+                    $register = Register::find($session->register_id);
+                    if ($this->sunat->ready() && $register) {
+                        $order->forceFill(['branch_id' => $this->branches->of($register, $order->store)->id])->save();
+                    }
+                    $this->documents->issue($order, $document, $register);
+                    // Boleta/factura marked for SUNAT (by the sale, or by the store's setting): queued with the sale.
+                    $this->electronic->queue($order, $document, $data['send_sunat'] ?? null);
                 }
 
                 $order->items()->createMany(array_map(fn ($line) => $line['item'], $lines));
@@ -155,6 +165,9 @@ class PosSaleService
             }
             throw $e;
         }
+
+        // Marked for SUNAT: it goes out right after the cashier has her answer.
+        $this->electronic->dispatch($order);
 
         // A customer picked by name only has nothing the resolver can match: keep the link and its totals.
         if ($contact && (int) $order->fresh()->contact_id !== (int) $contact->id) {

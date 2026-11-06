@@ -74,6 +74,9 @@ class PosController extends Controller
                 'hasRuc'   => \App\Services\Pos\SalesDocuments::validRuc((string) $store->ruc),
                 'idLimit'  => \App\Services\Pos\SalesDocuments::BOLETA_ID_LIMIT,
                 'settings' => route('dashboard.pos.documents.edit'),
+                // Facturación electrónica: qué se envía a SUNAT sin preguntar y qué se elige en cada venta.
+                'sunat'    => ($sunat = app(\App\Services\Sunat\SunatSchema::class))->ready() && ($sunatSetting = app(\App\Services\Sunat\SunatSettings::class)->for($store))->enabled
+                    ? ['boleta' => $sunatSetting->boleta_mode, 'factura' => $sunatSetting->factura_mode === 'auto' ? 'auto' : 'manual'] : null,
             ] : null,
             'priceLists' => \App\Services\Pos\PriceListService::LISTS,
             'quote'     => $this->schema->extrasReady() && $request->integer('proforma')

@@ -396,6 +396,17 @@ class Store extends Model
         return $this->hasMany(Supplier::class);
     }
 
+    /** Fiscal establishments (sedes) of the business. */
+    public function branches()
+    {
+        return $this->hasMany(Branch::class);
+    }
+
+    public function sunatSetting()
+    {
+        return $this->hasOne(SunatSetting::class);
+    }
+
     public function purchaseOrders()
     {
         return $this->hasMany(PurchaseOrder::class);

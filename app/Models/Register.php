@@ -10,13 +10,18 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 /** A cash register of the store ("Caja principal", "Caja 2"). At most one open session at a time. */
 class Register extends Model
 {
-    protected $fillable = ['store_id', 'name', 'is_active'];
+    protected $fillable = ['store_id', 'branch_id', 'name', 'is_active'];
 
     protected $casts = ['is_active' => 'boolean'];
 
     public function store(): BelongsTo
     {
         return $this->belongsTo(Store::class);
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function sessions(): HasMany

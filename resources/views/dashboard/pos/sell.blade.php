@@ -232,6 +232,10 @@
                                             title="{{ $documents['types'][$type] }}" @click="setDocument('{{ $type }}')">{{ $short }}</button>
                                 @endforeach
                             </div>
+                            <label class="pos-doc-sunat" x-show="sunatMode() === 'toggle'" x-cloak>
+                                <input type="checkbox" x-model="sendSunat"><span>Enviar a SUNAT <small>(boleta o factura electrónica)</small></span>
+                            </label>
+                            <p class="pos-doc-hint is-sunat" x-show="sunatMode() === 'auto'" x-cloak>Se enviará a SUNAT al cobrar.</p>
                             <p class="pos-doc-hint" x-show="documentHint()" x-text="documentHint()"></p>
                         </div>
                         @endif
@@ -424,7 +428,7 @@
             ...config,
             query: '', products: [], loading: false, searchError: '',
             lines: [], discount: 0, customer: null, customerQuery: '', customers: [], newCustomer: false, walkIn: { name: '', phone: '', document: '', address: '' },
-            paying: false, pay: blankPay(), saving: false, credit: false, terms: { installments: 1, every_days: 30, first_due: config.firstDue.default }, error: '', done: null, uuid: newId(), showCash: false, cartOpen: false, showMenu: false, showDetails: false, view: loadView(), coarse: isTouch, scanMode: loadScan(), documentType: loadDocument(config.documents),
+            paying: false, pay: blankPay(), saving: false, credit: false, terms: { installments: 1, every_days: 30, first_due: config.firstDue.default }, error: '', done: null, uuid: newId(), showCash: false, cartOpen: false, showMenu: false, showDetails: false, view: loadView(), coarse: isTouch, scanMode: loadScan(), documentType: loadDocument(config.documents), sendSunat: false,
             priceList: 'menor', validDays: 7, quoteId: null, quoteNumber: null, savedQuote: null,
             approval: '', approverPin: '', online: navigator.onLine, pending: [], showPending: false,
             init() {
@@ -480,6 +484,13 @@
                 if (Number(this.discount) > 0) parts.push('− ' + this.money(this.discount));
                 if (this.extras && this.priceList !== 'menor') parts.push(this.priceLists[this.priceList] || this.priceList);
                 return parts.join(' · ');
+            },
+            // Boleta/factura electrónica: 'auto' (siempre), 'toggle' (se elige en la venta) o null (no se envía).
+            sunatMode() {
+                const sunat = this.documents?.sunat;
+                if (!sunat || !['boleta', 'factura'].includes(this.documentType)) return null;
+                const mode = sunat[this.documentType];
+                return mode === 'auto' ? 'auto' : (mode === 'never' ? null : 'toggle');
             },
             setDocument(type) {
                 this.documentType = type;
@@ -707,6 +718,7 @@
                     uuid: this.uuid,
                     quote_id: this.quoteId,
                     ...(this.documents ? { document_type: this.documentType } : {}),
+                    ...(this.sunatMode() === 'toggle' ? { send_sunat: !!this.sendSunat } : {}),
                     payments: Object.entries(this.pay).filter(([, v]) => Number(v) > 0).map(([method, amount]) => ({ method, amount: Number(amount) })),
                     credit: this.onCredit() ? { ...this.terms } : null,
                     approver_pin: this.approverPin || null,

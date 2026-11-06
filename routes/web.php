@@ -202,6 +202,26 @@ Route::middleware(['auth', 'role:store_owner,super_admin', 'pos.kiosk', 'store.m
     Route::get('/caja/turnos', [\App\Http\Controllers\Dashboard\RegisterSessionController::class, 'index'])->name('pos.sessions.index');
     Route::get('/caja/comprobantes', [\App\Http\Controllers\Dashboard\SalesDocumentsController::class, 'edit'])->name('pos.documents.edit');
     Route::post('/caja/comprobantes', [\App\Http\Controllers\Dashboard\SalesDocumentsController::class, 'update'])->middleware('throttle:20,1')->name('pos.documents.update');
+    // Sedes, cajas y series; facturación electrónica con SUNAT.
+    Route::controller(\App\Http\Controllers\Dashboard\BranchController::class)->prefix('/caja/comprobantes')->name('pos.documents.')->group(function () {
+        Route::get('/sedes', 'index')->name('branches');
+        Route::post('/sedes', 'store')->middleware('throttle:30,1')->name('branches.store');
+        Route::put('/sedes/{branch}', 'update')->whereNumber('branch')->name('branches.update');
+        Route::delete('/sedes/{branch}', 'destroy')->whereNumber('branch')->name('branches.destroy');
+        Route::put('/cajas/{register}/sede', 'assign')->whereNumber('register')->name('registers.branch');
+        Route::post('/series', 'storeSeries')->middleware('throttle:30,1')->name('series.store');
+        Route::delete('/series/{series}', 'destroySeries')->whereNumber('series')->name('series.destroy');
+    });
+    Route::controller(\App\Http\Controllers\Dashboard\SunatController::class)->prefix('/caja/comprobantes')->name('pos.documents.')->group(function () {
+        Route::get('/sunat', 'edit')->name('sunat');
+        Route::post('/sunat', 'update')->middleware('throttle:20,1')->name('sunat.update');
+        Route::post('/sunat/certificado', 'certificate')->middleware('throttle:10,1')->name('sunat.certificate');
+        Route::delete('/sunat/certificado', 'removeCertificate')->name('sunat.certificate.remove');
+        Route::post('/sunat/probar', 'test')->middleware('throttle:10,1')->name('sunat.test');
+        Route::get('/electronicos', 'documents')->name('electronic');
+        Route::post('/electronicos/{document}/reenviar', 'retry')->whereNumber('document')->middleware('throttle:30,1')->name('electronic.retry');
+        Route::get('/electronicos/{document}/{format}', 'download')->whereNumber('document')->whereIn('format', ['pdf', 'xml', 'cdr'])->name('electronic.download');
+    });
     Route::get('/caja/turnos/{session}', [\App\Http\Controllers\Dashboard\RegisterSessionController::class, 'show'])->whereNumber('session')->name('pos.sessions.show');
     Route::post('/caja/turnos/{session}/ventas', [\App\Http\Controllers\Dashboard\PosController::class, 'sell'])->whereNumber('session')->middleware('throttle:120,1')->name('pos.sell');
     Route::post('/caja/turnos/{session}/movimientos', [\App\Http\Controllers\Dashboard\RegisterSessionController::class, 'movement'])->whereNumber('session')->middleware('throttle:30,1')->name('pos.sessions.movement');

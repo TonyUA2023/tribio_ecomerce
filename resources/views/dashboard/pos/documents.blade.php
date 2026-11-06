@@ -2,16 +2,24 @@
 @section('title', 'Datos y comprobantes')
 @section('page_title', '🧾 Datos y comprobantes')
 @section('content')
-<div class="w-full max-w-3xl mx-auto space-y-5">
+<div class="w-full max-w-4xl mx-auto space-y-5">
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <p class="text-sm text-white/60 max-w-2xl">Elige en la caja si vendes con <strong>nota de venta</strong>, <strong>boleta de venta</strong> o <strong>factura</strong>. Cada una lleva su serie y su número correlativo.</p>
         <a href="{{ route('dashboard.pos.index', ['cajas' => 1]) }}" class="pos-chip"><x-dashboard-icon name="back"/>Caja</a>
     </div>
 
+    @include('dashboard.pos._documents-tabs', ['current' => 'data'])
+
+    @if(app(\App\Services\Sunat\SunatSchema::class)->ready())
+    <div class="glass-card p-4 text-xs text-white/70" role="note">
+        Estos son los datos y la numeración de tus comprobantes. Para que la <strong>boleta y la factura</strong> se envíen a SUNAT, conecta tu certificado en la pestaña <a href="{{ route('dashboard.pos.documents.sunat') }}" class="underline font-semibold">SUNAT</a>. La nota de venta es un documento interno y no se envía.
+    </div>
+    @else
     <div class="glass-card p-4 text-xs text-white/70" role="note">
         <strong>Importante:</strong> la numeración y los datos de tu negocio ya salen en el comprobante, pero aún <strong>no se envían a SUNAT</strong>.
-        Para que la boleta y la factura tengan validez tributaria hay que conectar un proveedor de facturación electrónica (OSE/PSE). La nota de venta es un documento interno y no necesita envío.
+        La facturación electrónica se activa con una actualización del servidor de Tribio.
     </div>
+    @endif
 
     @if($errors->any())
         <div class="glass-card p-4" role="alert">@foreach($errors->all() as $error)<p class="text-xs text-red-300">{{ $error }}</p>@endforeach</div>

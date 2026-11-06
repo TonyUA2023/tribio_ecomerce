@@ -64,3 +64,6 @@ Schedule::command('attachments:prune')->dailyAt('04:00')->withoutOverlapping();
 Schedule::command('crm:refresh-stages')->dailyAt('03:30')->withoutOverlapping();
 Schedule::command('marketing:prune-events')->dailyAt('04:15')->withoutOverlapping();
 Schedule::command('whatsapp:broadcasts')->everyMinute()->withoutOverlapping();
+
+// Facturación electrónica: lo que no llegó a SUNAT se reintenta solo (cada 5 min, con espera creciente por comprobante).
+Schedule::command('sunat:reenviar')->everyFiveMinutes()->withoutOverlapping();

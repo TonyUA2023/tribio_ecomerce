@@ -4,6 +4,7 @@ namespace App\Services\Pos;
 
 use App\Models\DocumentSeries;
 use App\Models\Order;
+use App\Models\Register;
 use App\Models\Store;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -72,14 +73,45 @@ class SalesDocuments
         return array_map(fn ($meta) => $meta['label'], self::TYPES);
     }
 
-    /** The store's series, created with their default prefix the first time. @return Collection<string, DocumentSeries> keyed by type */
+    /** Series of one sede or one caja exist only once the sedes migration has run. */
+    private function scoped(): bool
+    {
+        return app(\App\Services\Sunat\SunatSchema::class)->ready();
+    }
+
+    /** The store's default series (the ones of the whole business), created with their default prefix the first time. @return Collection<string, DocumentSeries> keyed by type */
     public function series(Store $store): Collection
     {
         foreach (self::TYPES as $type => $meta) {
-            DocumentSeries::firstOrCreate(['store_id' => $store->id, 'type' => $type], ['series' => $meta['series'], 'last_number' => 0]);
+            $this->defaultSeries($store->id, $type);
         }
 
-        return DocumentSeries::where('store_id', $store->id)->get()->keyBy('type');
+        return DocumentSeries::where('store_id', $store->id)
+            ->when($this->scoped(), fn ($q) => $q->whereNull('branch_id')->whereNull('register_id'))->get()->keyBy('type');
+    }
+
+    private function defaultSeries(int $storeId, string $type): DocumentSeries
+    {
+        $keys = ['store_id' => $storeId, 'type' => $type] + ($this->scoped() ? ['branch_id' => null, 'register_id' => null] : []);
+
+        return DocumentSeries::firstOrCreate($keys, ['series' => self::TYPES[$type]['series'], 'last_number' => 0]);
+    }
+
+    /**
+     * The series a sale is numbered with: the one of its caja, else the one of its sede, else the
+     * business's. That lets each caja or sede keep its own B00x / F00x, as SUNAT allows.
+     */
+    public function seriesFor(int $storeId, string $type, ?Register $register = null): DocumentSeries
+    {
+        if ($register && $this->scoped()) {
+            $row = DocumentSeries::where('store_id', $storeId)->where('type', $type)->where('register_id', $register->id)->first()
+                ?? ($register->branch_id ? DocumentSeries::where('store_id', $storeId)->where('type', $type)->where('branch_id', $register->branch_id)->whereNull('register_id')->first() : null);
+            if ($row) {
+                return $row;
+            }
+        }
+
+        return $this->defaultSeries($storeId, $type);
     }
 
     /**
@@ -110,9 +142,9 @@ class SalesDocuments
     }
 
     /** Gives the order the next number of its type's series. Call it inside the sale's transaction. */
-    public function issue(Order $order, string $type): void
+    public function issue(Order $order, string $type, ?Register $register = null): void
     {
-        $series = DocumentSeries::firstOrCreate(['store_id' => $order->store_id, 'type' => $type], ['series' => self::TYPES[$type]['series'], 'last_number' => 0]);
+        $series = $this->seriesFor($order->store_id, $type, $register);
         $locked = DocumentSeries::whereKey($series->id)->lockForUpdate()->firstOrFail();
         $next = (int) $locked->last_number + 1;
         $locked->update(['last_number' => $next]);

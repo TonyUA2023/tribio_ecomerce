@@ -22,6 +22,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(\App\Services\Geo\GeoCatalog::class);
         $this->app->singleton(TemplateRegistry::class);
+        $this->app->bind(\App\Services\Sunat\SunatGateway::class, \App\Services\Sunat\GreenterGateway::class);
         $this->app->bind(\App\Services\AiMarketing\TextModel::class, \App\Services\AiMarketing\AnthropicTextModel::class);
     }
 

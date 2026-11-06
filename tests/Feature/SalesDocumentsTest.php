@@ -188,7 +188,7 @@ class SalesDocumentsTest extends TestCase
 
         $this->actingAs($user)->get(route('dashboard.pos.index'))->assertOk()->assertSee('Comprobante')->assertSee('Boleta')->assertSee('Factura');
         $this->actingAs($user)->get(route('dashboard.pos.index', ['cajas' => 1]))->assertOk()->assertSee('Comprobantes');
-        $this->actingAs($user)->get(route('dashboard.pos.documents.edit'))->assertOk()->assertSee('NV01')->assertSee('B001')->assertSee('F001')->assertSee('no se envían a SUNAT');
+        $this->actingAs($user)->get(route('dashboard.pos.documents.edit'))->assertOk()->assertSee('NV01')->assertSee('B001')->assertSee('F001')->assertSee('se envíen a SUNAT');
     }
 
     public function test_the_owner_saves_the_ruc_and_changes_a_series(): void
