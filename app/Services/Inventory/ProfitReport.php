@@ -24,6 +24,9 @@ use Illuminate\Support\Facades\DB;
 class ProfitReport
 {
     public const PRESETS = [
+        'hoy'         => 'Hoy',
+        'ayer'        => 'Ayer',
+        '7_dias'      => 'Últimos 7 días',
         'mes'         => 'Este mes',
         'mes_pasado'  => 'Mes pasado',
         '30_dias'     => 'Últimos 30 días',
@@ -34,14 +37,19 @@ class ProfitReport
     {
     }
 
-    /** @return array{0: CarbonInterface, 1: CarbonInterface} */
+    /** The period as Peru days (a sale at 8 pm in Lima is still "today"), as instants any timezone can compare. @return array{0: CarbonInterface, 1: CarbonInterface} */
     public static function range(?string $preset): array
     {
+        $now = now(\App\Services\Reports\ProfitAndLoss::TZ);
+
         return match ($preset) {
-            'mes_pasado' => [now()->subMonthNoOverflow()->startOfMonth(), now()->subMonthNoOverflow()->endOfMonth()],
-            '30_dias'    => [now()->subDays(29)->startOfDay(), now()->endOfDay()],
-            'anio'       => [now()->startOfYear(), now()->endOfDay()],
-            default      => [now()->startOfMonth(), now()->endOfDay()],
+            'hoy'        => [$now->copy()->startOfDay(), $now->copy()->endOfDay()],
+            'ayer'       => [$now->copy()->subDay()->startOfDay(), $now->copy()->subDay()->endOfDay()],
+            '7_dias'     => [$now->copy()->subDays(6)->startOfDay(), $now->copy()->endOfDay()],
+            'mes_pasado' => [$now->copy()->subMonthNoOverflow()->startOfMonth(), $now->copy()->subMonthNoOverflow()->endOfMonth()],
+            '30_dias'    => [$now->copy()->subDays(29)->startOfDay(), $now->copy()->endOfDay()],
+            'anio'       => [$now->copy()->startOfYear(), $now->copy()->endOfDay()],
+            default      => [$now->copy()->startOfMonth(), $now->copy()->endOfDay()],
         };
     }
 
@@ -50,6 +58,10 @@ class ProfitReport
      */
     public function build(Store $store, CarbonInterface $from, CarbonInterface $to): array
     {
+        // Instants go to the database in the app's timezone, whatever timezone the caller built them in.
+        $from = $from->copy()->setTimezone(config('app.timezone'));
+        $to = $to->copy()->setTimezone(config('app.timezone'));
+
         $orders = Order::query()
             ->where('store_id', $store->id)
             ->whereBetween('created_at', [$from, $to])

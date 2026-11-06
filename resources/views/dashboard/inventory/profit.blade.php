@@ -11,15 +11,28 @@
 @endphp
 <div class="w-full max-w-5xl mx-auto space-y-5">
 
+    @php
+        $sameDay = $from->isSameDay($to);
+        $period = $sameDay ? 'el ' . $from->locale('es')->isoFormat('dddd D [de] MMMM YYYY') : 'del ' . $from->locale('es')->isoFormat('D MMM') . ' al ' . $to->locale('es')->isoFormat('D MMM YYYY');
+        $today = now('America/Lima')->toDateString();
+    @endphp
     <div class="flex items-center justify-between gap-3 flex-wrap">
-        <p class="text-sm text-white/60 max-w-2xl">Lo que vendiste, lo que te costó y lo que ganaste con cada producto. Cuentan los pedidos pagados (o con adelanto) y no cancelados, del {{ $from->locale('es')->isoFormat('D MMM') }} al {{ $to->locale('es')->isoFormat('D MMM YYYY') }}.</p>
+        <p class="text-sm text-white/60 max-w-2xl">Lo que vendiste, lo que te costó y lo que ganaste con cada producto. Cuentan los pedidos pagados (o con adelanto) y no cancelados, <strong class="text-white">{{ $period }}</strong>.</p>
         <a href="{{ route('dashboard.inventario.index') }}" class="text-xs text-tribio-cyan underline">← Inventario</a>
     </div>
 
-    <div class="flex flex-wrap gap-2">
-        @foreach(ProfitReport::PRESETS as $key => $label)
-            <a href="{{ route('dashboard.inventario.profit', ['periodo' => $key]) }}" class="{{ $chipBase }} {{ $preset === $key ? $chipOn : $chipOff }}">{{ $label }}</a>
-        @endforeach
+    <div class="rp-filters">
+        <div class="rp-chips" aria-label="Período">
+            @foreach(ProfitReport::PRESETS as $key => $label)
+                <a href="{{ route('dashboard.inventario.profit', ['periodo' => $key]) }}" class="pos-chip {{ $preset === $key ? 'is-active' : '' }}" @if($preset === $key) aria-current="true" @endif>{{ $label }}</a>
+            @endforeach
+        </div>
+        <form method="GET" action="{{ route('dashboard.inventario.profit') }}" class="rp-range" aria-label="Elegir fechas">
+            <label>Desde<input type="date" name="desde" value="{{ $from->toDateString() }}" max="{{ $today }}" required></label>
+            <label>Hasta<input type="date" name="hasta" value="{{ $to->toDateString() }}" max="{{ $today }}" required></label>
+            <button type="submit" class="pos-chip {{ $preset === null ? 'is-active' : '' }}">Ver ganancia</button>
+        </form>
+        @if($rangeError)<p class="rp-error" role="alert">Revisa las fechas: «Hasta» no puede ser anterior a «Desde» y el rango máximo es de 13 meses. Mostramos este mes.</p>@endif
     </div>
 
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -39,7 +52,7 @@
     @if($rows === [])
         <div class="glass-card p-6 text-center">
             <p class="text-white font-semibold">Aún no hay ventas pagadas en este periodo.</p>
-            <p class="text-xs text-white/50 mt-1">Cuando un pedido quede pagado aparecerá aquí con su ganancia.</p>
+            <p class="text-xs text-white/50 mt-1">Cuando un pedido quede pagado aparecerá aquí con su ganancia. Prueba con otro período o con otras fechas.</p>
         </div>
     @else
         <div class="space-y-2">

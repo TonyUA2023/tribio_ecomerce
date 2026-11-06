@@ -94,14 +94,19 @@ class InventoryController extends Controller
     public function profit(Request $request, ProfitReport $report)
     {
         $store = $this->getStore();
-        $preset = array_key_exists($request->query('periodo'), ProfitReport::PRESETS) ? $request->query('periodo') : 'mes';
-        [$from, $to] = ProfitReport::range($preset);
+
+        // A hand-picked range wins over a preset; a bad one (end before start, over ~13 months) falls back to the preset.
+        $custom = $request->filled('desde') ? \App\Services\Reports\ProfitAndLoss::customRange($request->query('desde'), $request->query('hasta') ?: $request->query('desde')) : null;
+        $rangeError = $request->filled('desde') && !$custom;
+        $preset = array_key_exists((string) $request->query('periodo'), ProfitReport::PRESETS) ? $request->query('periodo') : 'mes';
+        [$from, $to] = $custom ?? ProfitReport::range($preset);
 
         return view('dashboard.inventory.profit', [
-            'store'  => $store,
-            'preset' => $preset,
-            'from'   => $from,
-            'to'     => $to,
+            'store'      => $store,
+            'preset'     => $custom ? null : $preset,
+            'from'       => $from,
+            'to'         => $to,
+            'rangeError' => $rangeError,
         ] + $report->build($store, $from, $to));
     }
 

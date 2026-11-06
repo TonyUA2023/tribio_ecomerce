@@ -502,6 +502,18 @@
     .sl-app .sl-periods { margin: 0; padding: 2px 0 4px; flex-wrap: wrap; overflow: visible; }
 }
 
+/* Rentabilidad por producto: períodos y fechas manuales */
+.rp-filters { display: flex; flex-direction: column; gap: 12px; }
+.rp-chips { display: flex; gap: 8px; margin: 0 -16px; padding: 2px 16px 4px; overflow-x: auto; scrollbar-width: none; }
+.rp-chips::-webkit-scrollbar { display: none; }
+.rp-chips .pos-chip { flex-shrink: 0; white-space: nowrap; }
+.rp-range { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; }
+.rp-range label { display: flex; flex-direction: column; gap: 3px; flex: 1 1 140px; min-width: 0; font-size: 11px; font-weight: 600; color: var(--dash-muted); }
+.rp-range input[type=date] { width: 100%; min-width: 0; min-height: 44px; padding: 0 10px; background: white; border: 1px solid #d7e1ec; border-radius: 10px; color: var(--dash-ink); font-size: 14px; }
+.rp-range .pos-chip { min-height: 44px; }
+.rp-error { padding: 10px 14px; background: #fff6f5; border-radius: 10px; font-size: 12px; color: #b03b34; }
+@media (min-width: 640px) { .rp-chips { margin: 0; padding: 2px 0 4px; flex-wrap: wrap; overflow: visible; } }
+
 /* Ganancias y pérdidas */
 .pl-app .pl-range { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: var(--dash-muted); }
 .pl-app .pl-range input[type=date] { min-height: 36px; padding: 0 8px; background: white; border: 1px solid var(--dash-line); border-radius: 8px; color: var(--dash-ink); font-size: 12px; }

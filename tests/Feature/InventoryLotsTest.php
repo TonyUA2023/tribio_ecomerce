@@ -255,7 +255,10 @@ class InventoryLotsTest extends TestCase
     {
         [$user] = $this->owner();
         [$from, $to] = ProfitReport::range('mes_pasado');
-        $this->assertTrue($from->lt(now()->startOfMonth()) && $to->lt(now()->startOfMonth()));
+        // Periods are Peru days: last month ends at 23:59 of its last day in Lima.
+        $thisMonth = now('America/Lima')->startOfMonth();
+        $this->assertTrue($from->lt($thisMonth) && $to->lt($thisMonth));
+        $this->assertSame('America/Lima', $from->getTimezone()->getName());
 
         $this->actingAs($user)->get(route('dashboard.inventario.profit', ['periodo' => 'anio']))->assertOk()
             ->assertSee('Aún no hay ventas pagadas en este periodo.');
