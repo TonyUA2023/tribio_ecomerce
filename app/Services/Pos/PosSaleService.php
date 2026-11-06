@@ -57,7 +57,7 @@ class PosSaleService
     }
 
     /**
-     * @param  array{uuid: string, items: list<array{product_id: int, variant_id?: ?int, unit_id?: ?int, quantity: int, price?: ?float}>,
+     * @param  array{uuid: string, items: list<array{product_id?: int, free?: bool, name?: string, variant_id?: ?int, unit_id?: ?int, quantity: int, price?: ?float}>,
      *               discount?: ?float, contact_id?: ?int, customer_name?: ?string, customer_phone?: ?string, customer_document?: ?string,
      *               payments: list<array{method: string, amount: float}>, notes?: ?string}  $data
      * @return array{0: Order, 1: bool} the order and whether it already existed (same UUID)
@@ -136,6 +136,9 @@ class PosSaleService
                 $order->store()->increment('total_orders');
 
                 foreach ($lines as $line) {
+                    if (!$line['product']) {
+                        continue; // a sale by amount has no stock
+                    }
                     $this->stock->sell($line['product'], $line['variant'], $line['base_quantity'], $order->order_number);
                 }
                 foreach ($payments as $method => $amount) {
@@ -204,7 +207,7 @@ class PosSaleService
      * Priced lines, for a sale or a quote. Wholesale tiers count every line of the same product
      * together, in base units; a price list applies unless a tier is cheaper.
      *
-     * @return list<array{product: Product, variant: ?ProductVariant, base_quantity: int, subtotal: float, item: array}>
+     * @return list<array{product: ?Product, variant: ?ProductVariant, base_quantity: int, subtotal: float, item: array}>
      */
     public function lines(int $storeId, array $items, ?string $list = null): array
     {
@@ -212,6 +215,16 @@ class PosSaleService
         $unitsReady = $this->inventory->unitsReady();
         $resolved = [];
         foreach (array_values($items) as $i => $item) {
+            // "Cobrar por monto" (modo simple): a line with just a name and a price, no product and no stock.
+            if (!empty($item['free'])) {
+                $price = round((float) ($item['price'] ?? 0), 2);
+                $quantity = max(1, (int) ($item['quantity'] ?? 1));
+                if ($price <= 0 || $price > 99999) {
+                    throw ValidationException::withMessages(["items.{$i}" => 'Escribe el monto a cobrar.']);
+                }
+                $resolved[] = ['free' => true, 'name' => mb_substr(trim((string) ($item['name'] ?? '')) ?: 'Venta por monto', 0, 120), 'price' => $price, 'quantity' => $quantity];
+                continue;
+            }
             $product = $products[$item['product_id']] ?? null;
             if (!$product || !$product->is_active) {
                 throw ValidationException::withMessages(["items.{$i}" => 'Ese producto ya no está a la venta.']);
@@ -243,12 +256,27 @@ class PosSaleService
         // Base units per product, for the wholesale tier.
         $totals = [];
         foreach ($resolved as $line) {
+            if (!empty($line['free'])) {
+                continue;
+            }
             $totals[$line['product']->id] = ($totals[$line['product']->id] ?? 0) + $line['quantity'] * $line['factor'];
         }
         $tiers = WholesalePricing::ready();
-        $listPrices = $this->priceLists->prices(array_unique(array_map(fn ($line) => $line['product']->id, $resolved)));
+        $listPrices = $this->priceLists->prices(array_unique(array_map(fn ($line) => $line['product']->id, array_filter($resolved, fn ($line) => empty($line['free'])))));
 
         return array_map(function (array $line) use ($totals, $tiers, $list, $listPrices) {
+            if (!empty($line['free'])) {
+                $subtotal = round($line['price'] * $line['quantity'], 2);
+
+                return [
+                    'product' => null, 'variant' => null, 'base_quantity' => $line['quantity'], 'subtotal' => $subtotal,
+                    'item' => [
+                        'product_id' => null, 'variant_id' => null, 'variant_title' => null, 'variant_attributes' => null,
+                        'product_name' => $line['name'], 'product_sku' => null, 'product_image' => null,
+                        'price' => $line['price'], 'quantity' => $line['quantity'], 'subtotal' => $subtotal, 'unit_name' => null, 'unit_quantity' => null,
+                    ],
+                ];
+            }
             ['product' => $product, 'variant' => $variant, 'unit' => $unit, 'quantity' => $quantity, 'factor' => $factor] = $line;
             $base = (float) ($variant?->price ?: $product->price);
             $ratio = $tiers ? WholesalePricing::factor($product, $totals[$product->id]) : 1.0;

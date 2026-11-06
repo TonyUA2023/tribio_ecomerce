@@ -19,6 +19,11 @@ class DashboardController extends Controller
                 ->with('info', 'Configura tu tienda para comenzar.');
         }
 
+        // Modo simple: the first thing is always the selling screen.
+        if (\App\Models\Store::modesReady() && $store->isSimple()) {
+            return redirect()->route('dashboard.simple.index');
+        }
+
         // A POS-only business lands on "Hoy", not on the online store's dashboard.
         if (\App\Models\Store::modesReady() && $store->isPosOnly()) {
             return $this->posHome($store, $report);

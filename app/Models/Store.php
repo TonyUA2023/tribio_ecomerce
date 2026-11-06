@@ -91,11 +91,14 @@ class Store extends Model
     public const MODE_BOTH = 'both';
     public const MODE_POS = 'pos';
     public const MODE_ONLINE = 'online';
+    /** "Modo simple": sell from the phone in two taps (bodega, puesto, ambulante). A POS without storefront, shifts or paperwork. */
+    public const MODE_SIMPLE = 'simple';
 
     public const MODES = [
         self::MODE_BOTH   => 'Sistema POS + Tienda virtual',
         self::MODE_POS    => 'Solo sistema POS (sin tienda virtual)',
         self::MODE_ONLINE => 'Solo tienda virtual',
+        self::MODE_SIMPLE => 'Modo simple (venta rápida desde el celular)',
     ];
 
     /** The deploy never migrates: until stores.mode exists every store is "both". */
@@ -132,7 +135,7 @@ class Store extends Model
     /** Has the public online store (catalog, checkout, directory listing). */
     public function hasStorefront(): bool
     {
-        return $this->mode() !== self::MODE_POS;
+        return !in_array($this->mode(), [self::MODE_POS, self::MODE_SIMPLE], true);
     }
 
     /** Has the point-of-sale system (register, shifts, comprobantes). */
@@ -141,9 +144,15 @@ class Store extends Model
         return $this->mode() !== self::MODE_ONLINE;
     }
 
+    /** No online store: the simple mode is a POS-only account too, just with a lighter screen. */
     public function isPosOnly(): bool
     {
-        return $this->mode() === self::MODE_POS;
+        return in_array($this->mode(), [self::MODE_POS, self::MODE_SIMPLE], true);
+    }
+
+    public function isSimple(): bool
+    {
+        return $this->mode() === self::MODE_SIMPLE;
     }
 
     // ─── Scopes ──────────────────────────────────────────────────
@@ -152,7 +161,7 @@ class Store extends Model
     {
         $query->where('status', 'active');
         if (self::modesReady()) {
-            $query->where('mode', '!=', self::MODE_POS);
+            $query->whereNotIn('mode', [self::MODE_POS, self::MODE_SIMPLE]);
         }
 
         return $query;

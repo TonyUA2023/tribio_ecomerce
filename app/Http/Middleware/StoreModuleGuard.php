@@ -23,7 +23,7 @@ class StoreModuleGuard
 
     /** Tools of the point-of-sale system. */
     public const POS_ONLY = [
-        'dashboard.pos.*', 'dashboard.quotes.*', 'dashboard.returns.*', 'dashboard.receivables.*', 'dashboard.price-lists.*', 'dashboard.ventas.*',
+        'dashboard.pos.*', 'dashboard.quotes.*', 'dashboard.returns.*', 'dashboard.receivables.*', 'dashboard.price-lists.*', 'dashboard.ventas.*', 'dashboard.simple.*',
     ];
 
     public function handle(Request $request, Closure $next): Response

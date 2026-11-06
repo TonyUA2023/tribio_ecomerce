@@ -18,7 +18,12 @@ class DashboardNav
     public static function items(?Store $store): array
     {
         $pos = app(PosSchema::class);
-        $items = $store && Store::modesReady() && $store->isPosOnly() ? self::posSystem($pos) : self::full($store, $pos);
+        $items = match (true) {
+            !$store || !Store::modesReady() => self::full($store, $pos),
+            $store->isSimple()              => self::simple($pos),
+            $store->isPosOnly()             => self::posSystem($pos),
+            default                         => self::full($store, $pos),
+        };
 
         return array_map(fn (array $item) => $item + ['match' => [], 'except' => []], $items);
     }
@@ -103,6 +108,23 @@ class DashboardNav
         if ($pos->ready()) {
             $items[] = self::item('dashboard.pos.documents.edit', 'store', 'Datos y comprobantes');
         }
+
+        return $items;
+    }
+
+    /** Modo simple: sell, see the day, keep the product list. Nothing else to get lost in. */
+    private static function simple(PosSchema $pos): array
+    {
+        $items = [];
+        if ($pos->ready()) {
+            $items[] = self::item('dashboard.simple.index', 'pos', 'Vender', 'Hoy', ['match' => ['dashboard.simple.index']]);
+            $items[] = self::item('dashboard.simple.today', 'trend', 'Cómo voy hoy', null, ['match' => ['dashboard.simple.today']]);
+            $items[] = self::item('dashboard.ventas.index', 'receipt', 'Mis ventas');
+        }
+        $items[] = self::item('dashboard.productos.rapido', 'plus', 'Agregar productos', 'Mis productos', ['match' => ['dashboard.productos.rapido*']]);
+        $items[] = self::item('dashboard.productos.index', 'box', 'Lista de productos', null, ['except' => ['dashboard.productos.rapido*']]);
+        $items[] = self::item('dashboard.inventario.index', 'inventory', 'Stock');
+        $items[] = self::item('dashboard.ganancias.index', 'trend', 'Ganancias', 'Mi negocio');
 
         return $items;
     }

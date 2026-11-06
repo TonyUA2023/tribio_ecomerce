@@ -283,6 +283,10 @@ Route::middleware(['auth', 'role:store_owner,super_admin', 'pos.kiosk', 'store.m
     Route::get('/inventario/exportar', [InventoryController::class, 'export'])->name('inventario.export');
     Route::get('/inventario/rentabilidad', [InventoryController::class, 'profit'])->name('inventario.profit');
     Route::get('/ganancias', [\App\Http\Controllers\Dashboard\ProfitLossController::class, 'index'])->name('ganancias.index');
+    // Modo simple: vender desde el celular en dos toques, y ver el día.
+    Route::get('/vender', [\App\Http\Controllers\Dashboard\SimpleController::class, 'index'])->name('simple.index');
+    Route::post('/vender', [\App\Http\Controllers\Dashboard\SimpleController::class, 'sell'])->middleware('throttle:120,1')->name('simple.sell');
+    Route::get('/hoy', [\App\Http\Controllers\Dashboard\SimpleController::class, 'today'])->name('simple.today');
     Route::get('/ventas', [\App\Http\Controllers\Dashboard\SalesController::class, 'index'])->name('ventas.index');
     Route::get('/inventario/reposicion', [\App\Http\Controllers\Dashboard\ReorderController::class, 'index'])->name('inventario.reorder');
     Route::post('/inventario/reposicion/compra', [\App\Http\Controllers\Dashboard\ReorderController::class, 'purchase'])->name('inventario.reorder.purchase');

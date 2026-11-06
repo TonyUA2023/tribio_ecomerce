@@ -16,7 +16,7 @@ class StorefrontEnabled
     public function handle(Request $request, Closure $next): Response
     {
         $slug = $request->route('slug');
-        if (is_string($slug) && Store::modesReady() && Store::where('slug', $slug)->where('mode', Store::MODE_POS)->exists()) {
+        if (is_string($slug) && Store::modesReady() && Store::where('slug', $slug)->whereIn('mode', [Store::MODE_POS, Store::MODE_SIMPLE])->exists()) {
             abort(404);
         }
 
