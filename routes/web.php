@@ -266,6 +266,7 @@ Route::middleware(['auth', 'role:store_owner,super_admin', 'pos.kiosk', 'store.m
     // Compras (ERP Fase 1c): proveedores y órdenes de compra; recibir mete el stock con su costo
     Route::get('/compras', [\App\Http\Controllers\Dashboard\PurchaseOrderController::class, 'index'])->name('compras.index');
     Route::get('/compras/nueva', [\App\Http\Controllers\Dashboard\PurchaseOrderController::class, 'create'])->name('compras.create');
+    Route::get('/compras/productos', [\App\Http\Controllers\Dashboard\PurchaseOrderController::class, 'products'])->name('compras.products');
     Route::post('/compras', [\App\Http\Controllers\Dashboard\PurchaseOrderController::class, 'store'])->name('compras.store');
     Route::get('/compras/{order}', [\App\Http\Controllers\Dashboard\PurchaseOrderController::class, 'show'])->whereNumber('order')->name('compras.show');
     Route::get('/compras/{order}/editar', [\App\Http\Controllers\Dashboard\PurchaseOrderController::class, 'edit'])->whereNumber('order')->name('compras.edit');

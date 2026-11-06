@@ -1112,3 +1112,22 @@ html.tpl-noscroll, html.tpl-noscroll body { overflow: hidden; }
     .tpl-thumb, .tpl-live-dot::after { animation: none; }
     .tpl-current-stage .tpl-browser { transform: none; }
 }
+
+/* Compras · buscador de producto con escritura predictiva (.pp-*) */
+.pp-field { position: relative; }
+.pp-search { position: relative; }
+.pp-list { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 40; max-height: min(52vh, 360px); overflow-y: auto; margin: 0; padding: 6px; list-style: none; background: white; border: 1px solid var(--dash-line); border-radius: 14px; box-shadow: 0 16px 40px #20354d29; overscroll-behavior: contain; }
+.pp-list li[role="option"] { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 8px 10px; border-radius: 10px; color: var(--dash-ink); cursor: pointer; }
+.pp-list li[role="option"].is-active { background: #eef5fc; }
+.pp-item-main, .pp-item-side { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pp-item-side { align-items: flex-end; flex-shrink: 0; text-align: right; }
+.pp-item-main strong { font-size: 14px; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+.pp-list small { font-size: 11.5px; color: var(--dash-muted); }
+.pp-item-side b { font-size: 12px; font-weight: 600; color: var(--dash-ink); }
+.pp-item-side b.is-low { color: #b45309; }
+.pp-note { padding: 10px; font-size: 12px; color: var(--dash-muted); }
+.pp-chosen { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; padding: 6px 6px 6px 12px; border: 1px solid rgb(255 255 255 / 0.15); border-radius: 12px; background: rgb(255 255 255 / 0.06); }
+.pp-chosen-text { display: flex; flex-direction: column; min-width: 0; }
+.pp-chosen-text strong { font-size: 14px; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+.pp-chosen-text small { font-size: 11.5px; opacity: .6; }
+.pp-change { flex-shrink: 0; min-height: 36px; padding: 0 12px; border-radius: 10px; font-size: 12px; font-weight: 600; color: var(--dash-blue); background: transparent; border: 1px solid currentColor; }

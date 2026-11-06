@@ -8,6 +8,7 @@ use App\Http\Requests\Dashboard\SavePurchaseOrderRequest;
 use App\Models\PurchaseOrder;
 use App\Services\Inventory\InventorySchema;
 use App\Services\Purchasing\PurchaseOrderService;
+use App\Services\Purchasing\PurchaseProductSearch;
 use App\Services\Purchasing\PurchasingSchema;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,6 +46,14 @@ class PurchaseOrderController extends Controller
         abort_unless($this->schema->ready(), 404);
 
         return $this->form(new PurchaseOrder(['status' => 'draft']));
+    }
+
+    /** JSON for the form's product type-ahead: ?q=words → up to 20 buyable products (empty q → what to restock). */
+    public function products(Request $request, PurchaseProductSearch $search)
+    {
+        abort_unless($this->schema->ready(), 404);
+
+        return response()->json($search->search($request->user()->currentStore(), mb_substr((string) $request->query('q'), 0, 80)));
     }
 
     public function store(SavePurchaseOrderRequest $request, PurchaseOrderService $service): RedirectResponse
@@ -106,23 +115,22 @@ class PurchaseOrderController extends Controller
     {
         $store = Auth::user()->currentStore();
         $units = $this->inventory->unitsReady();
-        $products = $store->products()->where('track_stock', true)
-            ->when($units, fn ($q) => $q->whereDoesntHave('components')->with('units'))
-            ->orderBy('name')->get(['id', 'name', 'sku', 'cost_price', 'stock']);
+        // The catalog is searched on demand (products route): the page only carries the products already in this order.
+        // After a validation error the lines come back from the old input instead.
+        $old = collect(json_decode((string) old('items_json'), true) ?: [])->pluck('product_id');
+        $products = app(PurchaseProductSearch::class)->byIds($store, $order->items->pluck('product_id')->merge($old)->filter()->unique()->all());
 
         return view('dashboard.purchases.form', [
             'order'     => $order,
             'suppliers' => $store->suppliers()->orderBy('name')->get(['id', 'name']),
-            'products'  => $products->map(fn ($p) => [
-                'id' => $p->id, 'name' => $p->name, 'sku' => $p->sku, 'cost' => (float) $p->cost_price, 'stock' => (int) $p->stock,
-                'units' => $units ? $p->units->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'factor' => $u->factor])->values() : [],
-            ])->values(),
+            'products'  => app(PurchaseProductSearch::class)->present($products),
             'lines'     => $order->items->map(fn ($item) => [
                 'product_id' => $item->product_id, 'quantity' => $item->quantity_ordered, 'unit_cost' => (float) $item->unit_cost,
                 'unit_id'    => $units && $item->unit_name
                     ? optional($products->firstWhere('id', $item->product_id)?->units->firstWhere('name', $item->unit_name))->id
                     : null,
             ])->values(),
+            'hasProducts' => $store->products()->where('track_stock', true)->exists(),
         ]);
     }
 }

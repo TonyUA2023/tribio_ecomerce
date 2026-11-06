@@ -214,8 +214,8 @@ class PurchasingTest extends TestCase
         $order = PurchaseOrder::with('items')->sole();
 
         $this->actingAs($user)->get(route('dashboard.compras.index'))->assertOk()->assertSee('OC-0001')->assertSee('Distribuidora Andina');
-        $this->actingAs($user)->get(route('dashboard.compras.create'))->assertOk()->assertSee('Cemento Sol');
-        $this->actingAs($user)->get(route('dashboard.compras.edit', $order->id))->assertOk();
+        $this->actingAs($user)->get(route('dashboard.compras.create'))->assertOk()->assertDontSee('Cemento Sol', false);
+        $this->actingAs($user)->get(route('dashboard.compras.edit', $order->id))->assertOk()->assertSee('Cemento Sol');
         $this->actingAs($user)->get(route('dashboard.compras.show', $order->id))->assertOk()->assertSee('¿Llegó la mercadería?');
         $this->actingAs($user)->get(route('dashboard.proveedores.index'))->assertOk()->assertSee('Distribuidora Andina');
         $this->actingAs($user)->get(route('dashboard.proveedores.edit', $supplier->id))->assertOk()->assertSee('OC-0001');
