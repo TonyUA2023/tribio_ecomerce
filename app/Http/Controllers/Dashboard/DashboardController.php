@@ -24,6 +24,11 @@ class DashboardController extends Controller
             return $this->posHome($store, $report);
         }
 
+        // Pedidos are the online store's; counter sales are Ventas. Revenue adds both when the account has both.
+        $online = fn () => $store->orders()->where('source', '!=', 'pos');
+        $revenue = fn (string $scope) => $store->orders()->where('status', '!=', 'cancelled')
+            ->when($scope === 'pos', fn ($q) => $q->where('source', 'pos'))->when($scope === 'online', fn ($q) => $q->where('source', '!=', 'pos'));
+
         // Estadísticas rápidas
         $stats = [
             'total_products'     => $store->products()->count(),
@@ -37,19 +42,16 @@ class DashboardController extends Controller
                 ->where('track_stock', true)
                 ->where('stock', 0)
                 ->count(),
-            'total_orders'       => $store->orders()->count(),
-            'pending_orders'     => $store->orders()->where('status', 'pending')->count(),
-            'revenue_month'      => $store->orders()
-                ->where('status', '!=', 'cancelled')
-                ->whereMonth('created_at', now()->month)
-                ->sum('total'),
-            'revenue_total'      => $store->orders()
-                ->where('status', '!=', 'cancelled')
-                ->sum('total'),
+            'total_orders'       => $online()->count(),
+            'pending_orders'     => $online()->where('status', 'pending')->count(),
+            'revenue_month'      => $revenue('all')->whereMonth('created_at', now()->month)->sum('total'),
+            'revenue_total'      => $revenue('all')->sum('total'),
+            'revenue_month_pos'    => $revenue('pos')->whereMonth('created_at', now()->month)->sum('total'),
+            'revenue_month_online' => $revenue('online')->whereMonth('created_at', now()->month)->sum('total'),
         ];
 
-        // Pedidos recientes
-        $recentOrders = $store->orders()
+        // Pedidos recientes (de la tienda virtual)
+        $recentOrders = $online()
             ->with('items')
             ->latest()
             ->limit(5)
@@ -67,7 +69,16 @@ class DashboardController extends Controller
             ->orderBy('date')
             ->get();
 
-        return view('dashboard.index', compact('store', 'stats', 'recentOrders', 'topProducts', 'analytics'));
+        // Two charts, one per system, for the same period: counter sales and online orders.
+        $hasPos = app(\App\Services\Pos\PosSchema::class)->ready() && $store->hasPos();
+        $hasStorefront = $store->hasStorefront();
+        $chartPeriod = array_key_exists((string) request('grafico'), \App\Services\Reports\SalesSeries::PERIODS) ? (string) request('grafico') : '7';
+        [$chartFrom, $chartTo] = \App\Services\Reports\SalesSeries::range($chartPeriod);
+        $series = app(\App\Services\Reports\SalesSeries::class);
+        $posSeries = $hasPos ? $series->daily($store, 'pos', $chartFrom, $chartTo) : null;
+        $onlineSeries = $hasStorefront ? $series->daily($store, 'online', $chartFrom, $chartTo) : null;
+
+        return view('dashboard.index', compact('store', 'stats', 'recentOrders', 'topProducts', 'analytics', 'hasPos', 'hasStorefront', 'chartPeriod', 'posSeries', 'onlineSeries'));
     }
 
     /** "Inicio" of the POS system: today at a glance, what needs doing, and the next step for a new account. */
@@ -77,6 +88,10 @@ class DashboardController extends Controller
         [$from, $to] = \App\Services\Reports\ProfitAndLoss::range('7_dias');
         $week = $report->build($store, $from, $to);
         $today = end($week['days']);
+
+        $chartPeriod = array_key_exists((string) request('grafico'), \App\Services\Reports\SalesSeries::PERIODS) ? (string) request('grafico') : '7';
+        [$chartFrom, $chartTo] = \App\Services\Reports\SalesSeries::range($chartPeriod);
+        $salesSeries = app(\App\Services\Reports\SalesSeries::class)->daily($store, 'pos', $chartFrom, $chartTo);
 
         $tracked = $store->products()->where('track_stock', true);
         $lowStock = (clone $tracked)->whereColumn('stock', '<=', 'low_stock_alert')->where('stock', '>', 0)->count();
@@ -106,7 +121,7 @@ class DashboardController extends Controller
         ]));
 
         return view('dashboard.pos-home', [
-            'store' => $store, 'week' => $week, 'today' => $today, 'lowStock' => $lowStock, 'outOfStock' => $outOfStock, 'restock' => $restock,
+            'store' => $store, 'week' => $week, 'today' => $today, 'chartPeriod' => $chartPeriod, 'salesSeries' => $salesSeries, 'lowStock' => $lowStock, 'outOfStock' => $outOfStock, 'restock' => $restock,
             'registers' => $registers, 'owed' => $owed, 'recent' => $recent, 'steps' => $steps, 'posReady' => $pos->ready(), 'creditReady' => $pos->ready() && $pos->creditReady(),
         ]);
     }

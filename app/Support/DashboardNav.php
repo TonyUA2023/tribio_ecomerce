@@ -39,36 +39,45 @@ class DashboardNav
         return ['route' => $route, 'icon' => $icon, 'label' => $label, 'group' => $group] + $extra;
     }
 
-    /** Online store, alone or with the POS. */
+    /**
+     * Online store, alone or with the POS. With both, each system has its own group — Punto de venta
+     * (Caja, Ventas) and Tienda virtual (Pedidos…) — while catalog, stock, customers and reports are shared.
+     */
     private static function full(?Store $store, PosSchema $pos): array
     {
-        $items = [
-            self::item('dashboard.index', 'grid', 'Dashboard', 'Resumen'),
-            self::item('dashboard.productos.index', 'box', 'Productos', 'Catálogo'),
-            self::item('dashboard.categorias.index', 'folder', 'Categorías'),
-            self::item('dashboard.marcas.index', 'tag', 'Marcas'),
-            self::item('dashboard.galeria.index', 'image', 'Galería'),
-            self::item('dashboard.pedidos.index', 'cart', 'Pedidos', 'Operación'),
-            self::item('dashboard.clientes.index', 'users', 'Clientes'),
-            self::item('dashboard.whatsapp.index', 'chat', 'WhatsApp'),
-            self::item('dashboard.resenas.index', 'star', 'Reseñas'),
-            self::item('dashboard.mensajes.index', 'mail', 'Mensajes'),
-            self::item('dashboard.inventario.index', 'inventory', 'Inventario'),
-            self::item('dashboard.compras.index', 'receipt', 'Compras'),
-            self::item('dashboard.ganancias.index', 'trend', 'Ganancias y pérdidas'),
-            self::item('dashboard.shipping.index', 'truck', 'Zonas de envío'),
-            self::item('dashboard.gateway.edit', 'wallet', 'Pasarela de pago'),
-            self::item('dashboard.marketing.index', 'megaphone', 'Marketing', 'Crecimiento'),
-            self::item('dashboard.plantillas.index', 'palette', 'Plantillas', 'Personalización'),
-            self::item('dashboard.store.edit', 'store', 'Mi tienda'),
-        ];
+        $withPos = $pos->ready() && (!$store || $store->hasPos());
 
-        if ($pos->ready() && (!$store || $store->hasPos())) {
-            array_splice($items, 6, 0, [self::item('dashboard.pos.index', 'pos', 'Caja')]);
+        $items = [self::item('dashboard.index', 'grid', 'Dashboard', 'Resumen')];
+
+        if ($withPos) {
+            $items[] = self::item('dashboard.pos.index', 'pos', 'Caja', 'Punto de venta', ['match' => ['dashboard.pos.*', 'dashboard.quotes.*', 'dashboard.returns.*', 'dashboard.price-lists.*'], 'except' => ['dashboard.pos.documents.*']]);
+            $items[] = self::item('dashboard.ventas.index', 'receipt', 'Ventas');
             if ($pos->creditReady()) {
-                array_splice($items, 7, 0, [self::item('dashboard.receivables.index', 'coins', 'Por cobrar')]);
+                $items[] = self::item('dashboard.receivables.index', 'coins', 'Por cobrar');
             }
         }
+
+        $items = array_merge($items, [
+            self::item('dashboard.pedidos.index', 'cart', 'Pedidos', $withPos ? 'Tienda virtual' : 'Operación'),
+            self::item('dashboard.resenas.index', 'star', 'Reseñas'),
+            self::item('dashboard.mensajes.index', 'mail', 'Mensajes'),
+            self::item('dashboard.shipping.index', 'truck', 'Zonas de envío'),
+            self::item('dashboard.gateway.edit', 'wallet', 'Pasarela de pago'),
+            self::item('dashboard.marketing.index', 'megaphone', 'Marketing'),
+            self::item('dashboard.galeria.index', 'image', 'Galería'),
+            self::item('dashboard.plantillas.index', 'palette', 'Plantillas'),
+            self::item('dashboard.store.edit', 'store', 'Mi tienda'),
+
+            self::item('dashboard.productos.index', 'box', 'Productos', 'Productos y stock'),
+            self::item('dashboard.categorias.index', 'folder', 'Categorías'),
+            self::item('dashboard.marcas.index', 'tag', 'Marcas'),
+            self::item('dashboard.inventario.index', 'inventory', 'Inventario'),
+            self::item('dashboard.compras.index', 'receipt', 'Compras'),
+
+            self::item('dashboard.clientes.index', 'users', 'Clientes', 'Clientes y reportes'),
+            self::item('dashboard.whatsapp.index', 'chat', 'WhatsApp'),
+            self::item('dashboard.ganancias.index', 'trend', 'Ganancias y pérdidas'),
+        ]);
 
         return $items;
     }

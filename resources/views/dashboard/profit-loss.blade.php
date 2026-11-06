@@ -87,6 +87,17 @@
                 <p class="pl-note">Las compras no restan a la ganancia: se vuelven costo cuando vendes esa mercadería.</p>
             </section>
 
+            @if($store->hasPos() && $store->hasStorefront() && ($sources['pos']['count'] || $sources['online']['count']))
+                <section class="glass-card p-4" aria-labelledby="pl-src">
+                    <h2 id="pl-src" class="pl-title !p-0 !border-0 !mb-3">Ventas por origen</h2>
+                    <dl class="pl-list">
+                        <div><dt>Punto de venta <small>({{ $sources['pos']['count'] }})</small></dt><dd>{{ $money($sources['pos']['income']) }}</dd></div>
+                        <div><dt>Tienda virtual <small>({{ $sources['online']['count'] }})</small></dt><dd>{{ $money($sources['online']['income']) }}</dd></div>
+                    </dl>
+                    <p class="pl-note">Un solo resultado para todo el negocio: el stock, los costos y los clientes son los mismos.</p>
+                </section>
+            @endif
+
             @if($expenses)
                 <section class="glass-card p-4" aria-labelledby="pl-exp">
                     <h2 id="pl-exp" class="pl-title !p-0 !border-0 !mb-3">Gastos por motivo</h2>

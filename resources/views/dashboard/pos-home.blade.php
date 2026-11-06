@@ -6,7 +6,6 @@
     $money = fn ($value) => (round((float) $value, 2) < 0 ? '−' : '') . 'S/ ' . number_format(abs((float) $value), 2);
     $lima = fn ($at) => $at?->copy()->setTimezone('America/Lima')->locale('es');
     $totals = $week['totals'];
-    $peak = max(1, collect($week['days'])->max('income'));
     $pending = collect($steps)->where('done', false)->count();
     $cash = collect($registers)->sum('cash');
 @endphp
@@ -59,21 +58,15 @@
     </section>
 
     <div class="hm-columns">
-        <section class="glass-card hm-week" aria-labelledby="hm-week-title">
-            <div class="hm-week-head">
-                <h2 id="hm-week-title">Últimos 7 días</h2>
-                <p><strong>{{ $money($totals['income']) }}</strong> vendidos · ganancia bruta <strong>{{ $money($totals['gross']) }}</strong></p>
-            </div>
-            <div class="hm-bars" role="img" aria-label="Ventas por día de los últimos 7 días">
-                @foreach($week['days'] as $date => $d)
-                    <div class="hm-bar {{ $loop->last ? 'is-today' : '' }}">
-                        <span class="hm-bar-value">{{ $d['income'] > 0 ? number_format($d['income'], 0) : '' }}</span>
-                        <i style="height: {{ max(2, round($d['income'] * 100 / $peak)) }}%"></i>
-                        <span class="hm-bar-day">{{ \Illuminate\Support\Carbon::parse($date)->locale('es')->isoFormat('dd D') }}</span>
-                    </div>
+        <div class="dc-section">
+            <div class="dc-filters"><span>Período</span>
+                @foreach(\App\Services\Reports\SalesSeries::PERIODS as $key => $label)
+                    <a href="{{ route('dashboard.index', ['grafico' => $key]) }}" class="pos-chip {{ $chartPeriod === (string) $key ? 'is-active' : '' }}" @if($chartPeriod === (string) $key) aria-current="true" @endif>{{ $label }}</a>
                 @endforeach
             </div>
-        </section>
+            <x-bar-chart title="Ventas del punto de venta" :days="$salesSeries['days']" :total="$salesSeries['total']" :count="$salesSeries['count']" :noun="['venta', 'ventas']" color="#2176d2"
+                         :href="route('dashboard.ventas.index', ['periodo' => $chartPeriod === '7' ? '7_dias' : 'mes'])" cta="Ver ventas" empty="Aún no hay ventas en este período."/>
+        </div>
 
         <div class="hm-side">
             <section class="glass-card hm-card" aria-labelledby="hm-restock">

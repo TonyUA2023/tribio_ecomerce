@@ -8,29 +8,33 @@ use App\Services\Pos\PosSaleService;
 use App\Services\Pos\PosSchema;
 use App\Services\Pos\SalesDocuments;
 use App\Services\Reports\ProfitAndLoss;
+use App\Services\Reports\SalesProfit;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 
-/** Dashboard → Ventas: every counter sale with its comprobante, searchable by number, customer or document. */
+/**
+ * Dashboard → Ventas: the counter sales that went through (cancelled ones are not sales), by day,
+ * month or year, searchable by customer, comprobante or document — with what they earned for
+ * exactly the filters in use. The online store's orders are a different module (Pedidos).
+ */
 class SalesController extends Controller
 {
-    public const PERIODS = ['hoy' => 'Hoy', '7_dias' => 'Últimos 7 días', 'mes' => 'Este mes', 'todas' => 'Todas'];
+    public const PERIODS = ['hoy' => 'Hoy', 'ayer' => 'Ayer', '7_dias' => '7 días', 'mes' => 'Este mes', 'mes_pasado' => 'Mes pasado', 'anio' => 'Este año', 'todas' => 'Todas'];
 
-    public function index(Request $request, PosSchema $schema, SalesDocuments $documents)
+    public function index(Request $request, PosSchema $schema, SalesDocuments $documents, SalesProfit $profit)
     {
         abort_unless($schema->ready(), 404);
         $store = $request->user()->currentStore();
         abort_unless($store, 404);
 
         $custom = $request->filled('desde') ? ProfitAndLoss::customRange($request->query('desde'), $request->query('hasta') ?: $request->query('desde')) : null;
-        $period = array_key_exists((string) $request->query('periodo'), self::PERIODS) ? $request->query('periodo') : '7_dias';
+        $period = array_key_exists((string) $request->query('periodo'), self::PERIODS) ? $request->query('periodo') : 'hoy';
         $range = $custom ?? ($period === 'todas' ? null : ProfitAndLoss::range($period));
         $docsReady = $documents->ready();
         $type = $docsReady && isset(SalesDocuments::TYPES[(string) $request->query('tipo')]) ? $request->query('tipo') : null;
         $method = array_key_exists((string) $request->query('medio'), PosSaleService::METHODS) ? $request->query('medio') : null;
         $term = trim((string) $request->query('q'));
 
-        $query = Order::query()->where('store_id', $store->id)->where('source', 'pos')
+        $sales = Order::query()->where('store_id', $store->id)->where('source', 'pos')->where('status', '!=', 'cancelled')
             ->when($range, fn ($q) => $q->whereBetween('created_at', [
                 $range[0]->copy()->setTimezone(config('app.timezone')), $range[1]->copy()->setTimezone(config('app.timezone')),
             ]))
@@ -47,22 +51,25 @@ class SalesController extends Controller
                 });
             });
 
-        $live = (clone $query)->where('status', '!=', 'cancelled');
-        $summary = ['count' => (clone $live)->count(), 'total' => round((float) (clone $live)->sum('total'), 2), 'cancelled' => (clone $query)->where('status', 'cancelled')->count()];
+        // Where the earnings detail lives, for the same period.
+        $detail = $custom ? ['desde' => $range[0]->toDateString(), 'hasta' => $range[1]->toDateString()] : ['periodo' => $period === 'todas' ? 'anio' : $period];
 
         return view('dashboard.sales.index', [
-            'orders'   => $query->with('payments')->latest('id')->paginate(25)->withQueryString(),
-            'summary'  => $summary,
-            'periods'  => self::PERIODS,
-            'period'   => $custom ? null : $period,
-            'from'     => $range[0] ?? null,
-            'to'       => $range[1] ?? null,
-            'type'     => $type,
-            'method'   => $method,
-            'term'     => $term,
+            'store'     => $store,
+            'orders'    => (clone $sales)->with('payments')->latest('id')->paginate(25)->withQueryString(),
+            'summary'   => $profit->forOrders($sales, $store->id),
+            'periods'   => self::PERIODS,
+            'period'    => $custom ? null : $period,
+            'from'      => $range[0] ?? null,
+            'to'        => $range[1] ?? null,
+            'type'      => $type,
+            'method'    => $method,
+            'term'      => $term,
             'docsReady' => $docsReady,
-            'methods'  => PosSaleService::METHODS,
-            'extras'   => $schema->extrasReady(),
+            'methods'   => PosSaleService::METHODS,
+            'extras'    => $schema->extrasReady(),
+            'detailUrl' => route('dashboard.ganancias.index', $detail),
+            'hasStorefront' => $store->hasStorefront(),
         ]);
     }
 }

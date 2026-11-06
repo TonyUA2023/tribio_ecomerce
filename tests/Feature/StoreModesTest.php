@@ -164,15 +164,15 @@ class StoreModesTest extends TestCase
         $sell(['document_type' => 'factura', 'customer_name' => 'Constructora Andina SAC', 'customer_document' => '20131312955']);
 
         $page = $this->actingAs($user)->get(route('dashboard.ventas.index'))->assertOk();
-        $page->assertSee('B001-00000001')->assertSee('NV01-00000001')->assertSee('F001-00000001')->assertSee('<strong>3</strong> ventas', false);
+        $page->assertSee('B001-00000001')->assertSee('NV01-00000001')->assertSee('F001-00000001')->assertSee('<small>Ventas</small><strong>3</strong>', false);
 
-        $this->actingAs($user)->get(route('dashboard.ventas.index', ['q' => 'b001-1']))->assertOk()->assertSee('B001-00000001')->assertDontSee('F001-00000001')->assertSee('<strong>1</strong> venta', false);
+        $this->actingAs($user)->get(route('dashboard.ventas.index', ['q' => 'b001-1']))->assertOk()->assertSee('B001-00000001')->assertDontSee('F001-00000001')->assertSee('<small>Ventas</small><strong>1</strong>', false);
         $this->actingAs($user)->get(route('dashboard.ventas.index', ['q' => 'Andina']))->assertOk()->assertSee('F001-00000001')->assertDontSee('NV01-00000001');
         $this->actingAs($user)->get(route('dashboard.ventas.index', ['q' => '45678912']))->assertOk()->assertSee('B001-00000001')->assertDontSee('F001-00000001');
         $this->actingAs($user)->get(route('dashboard.ventas.index', ['tipo' => 'factura']))->assertOk()->assertSee('F001-00000001')->assertDontSee('B001-00000001');
         $this->actingAs($user)->get(route('dashboard.ventas.index', ['tipo' => 'nota_venta']))->assertOk()->assertSee('NV01-00000001')->assertDontSee('F001-00000001');
         $this->actingAs($user)->get(route('dashboard.ventas.index', ['medio' => 'yape']))->assertOk()->assertSee('No hay ventas');
-        $this->actingAs($user)->get(route('dashboard.ventas.index', ['periodo' => 'todas', 'medio' => 'cash']))->assertOk()->assertSee('<strong>3</strong> ventas', false);
+        $this->actingAs($user)->get(route('dashboard.ventas.index', ['periodo' => 'todas', 'medio' => 'cash']))->assertOk()->assertSee('<small>Ventas</small><strong>3</strong>', false);
     }
 
     public function test_sales_of_other_stores_never_show_up(): void
@@ -182,6 +182,6 @@ class StoreModesTest extends TestCase
         $order = new Order();
         $order->forceFill(['store_id' => $other->id, 'order_number' => 'TRB-AJENA', 'customer_name' => 'Cliente ajeno', 'subtotal' => 10, 'total' => 10, 'currency' => 'PEN', 'status' => 'delivered', 'payment_status' => 'paid', 'source' => 'pos'])->save();
 
-        $this->actingAs($user)->get(route('dashboard.ventas.index', ['periodo' => 'todas']))->assertOk()->assertDontSee('TRB-AJENA')->assertSee('<strong>0</strong> ventas', false);
+        $this->actingAs($user)->get(route('dashboard.ventas.index', ['periodo' => 'todas']))->assertOk()->assertDontSee('TRB-AJENA')->assertSee('<small>Ventas</small><strong>0</strong>', false);
     }
 }

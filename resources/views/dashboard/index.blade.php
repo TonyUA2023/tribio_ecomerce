@@ -9,14 +9,35 @@
             @php
                 $statCards = [
                     ['label' => 'Productos activos', 'value' => $stats['active_products'], 'icon' => 'box', 'sub' => $stats['total_products'] . ' productos en tu catálogo', 'route' => route('dashboard.productos.index', ['status' => 'active'])],
-                    ['label' => 'Pedidos pendientes', 'value' => $stats['pending_orders'], 'icon' => 'cart', 'sub' => $stats['total_orders'] . ' pedidos en total', 'route' => route('dashboard.pedidos.index', ['status' => 'pending'])],
+                    ['label' => 'Pedidos pendientes', 'value' => $stats['pending_orders'], 'icon' => 'cart', 'sub' => $stats['total_orders'] . ' pedidos de la tienda en total', 'route' => route('dashboard.pedidos.index', ['status' => 'pending'])],
                     ['label' => 'Stock bajo', 'value' => $stats['low_stock_products'], 'icon' => 'inventory', 'sub' => $stats['out_of_stock'] . ' productos sin stock', 'route' => route('dashboard.inventario.index', ['filter' => 'low'])],
                 ];
+                if ($hasPos && $posSeries) {
+                    $todayPos = end($posSeries['days']);
+                    array_splice($statCards, 1, 0, [['label' => 'Ventas de hoy', 'value' => $todayPos['count'], 'icon' => 'receipt', 'sub' => 'S/ ' . number_format($todayPos['total'], 2) . ' vendidos en caja', 'route' => route('dashboard.ventas.index', ['periodo' => 'hoy'])]]);
+                }
             @endphp
             @foreach($statCards as $card)
             <a href="{{ $card['route'] }}" class="dash-metric"><span class="dash-metric-top"><span>{{ $card['label'] }}</span><x-dashboard-icon :name="$card['icon']"/></span><strong>{{ $card['value'] }}</strong><small>{{ $card['sub'] }}</small></a>
             @endforeach
         </div>
+        <section class="dc-section" aria-label="Ventas y pedidos">
+            <div class="dc-filters"><span>Período</span>
+                @foreach(\App\Services\Reports\SalesSeries::PERIODS as $key => $label)
+                    <a href="{{ route('dashboard.index', ['grafico' => $key]) }}" class="pos-chip {{ $chartPeriod === (string) $key ? 'is-active' : '' }}" @if($chartPeriod === (string) $key) aria-current="true" @endif>{{ $label }}</a>
+                @endforeach
+            </div>
+            <div class="dc-charts {{ $posSeries && $onlineSeries ? 'is-two' : '' }}">
+                @if($posSeries)
+                    <x-bar-chart title="Ventas del punto de venta" :days="$posSeries['days']" :total="$posSeries['total']" :count="$posSeries['count']" :noun="['venta', 'ventas']" color="#2176d2"
+                                 :href="route('dashboard.ventas.index', ['periodo' => $chartPeriod === 'mes' ? 'mes' : ($chartPeriod === '30' ? 'mes' : '7_dias')])" cta="Ver ventas" empty="Aún no hay ventas de caja en este período."/>
+                @endif
+                @if($onlineSeries)
+                    <x-bar-chart title="Pedidos de la tienda virtual" :days="$onlineSeries['days']" :total="$onlineSeries['total']" :count="$onlineSeries['count']" :noun="['pedido', 'pedidos']" color="#0f8f86"
+                                 :href="route('dashboard.pedidos.index')" cta="Ver pedidos" empty="Aún no hay pedidos de tu tienda en este período."/>
+                @endif
+            </div>
+        </section>
         @include('dashboard._share-store')
         <section class="dash-section" aria-labelledby="top-products-heading">
             <div class="dash-section-heading"><div><h2 id="top-products-heading">Tus productos más vendidos</h2><p>Un vistazo a tu catálogo</p></div><a href="{{ route('dashboard.productos.index') }}" class="dash-text-link">Ver todos <x-dashboard-icon name="chevron"/></a></div>
@@ -47,7 +68,7 @@
         </section>
     </div>
     <aside class="dash-summary" aria-label="Resumen de mi tienda">
-        <section><h2>Balance de tu tienda</h2><div class="dash-balance"><div><span>Ingresos del mes</span><x-dashboard-icon name="wallet"/></div><strong>S/. {{ number_format($stats['revenue_month'], 2) }}</strong><p>{{ now()->locale('es')->translatedFormat('F Y') }}</p><footer><span>Ingresos acumulados</span><b>S/. {{ number_format($stats['revenue_total'], 2) }}</b></footer></div><p class="dash-balance-note">Importes de pedidos no cancelados.</p></section>
+        <section><h2>{{ $hasPos && $hasStorefront ? 'Balance de tu negocio' : 'Balance de tu tienda' }}</h2><div class="dash-balance"><div><span>Ingresos del mes</span><x-dashboard-icon name="wallet"/></div><strong>S/. {{ number_format($stats['revenue_month'], 2) }}</strong><p>{{ now()->locale('es')->translatedFormat('F Y') }}</p>@if($hasPos && $hasStorefront)<ul class="dash-balance-split"><li><span>Punto de venta</span><b>S/. {{ number_format($stats['revenue_month_pos'], 2) }}</b></li><li><span>Tienda virtual</span><b>S/. {{ number_format($stats['revenue_month_online'], 2) }}</b></li></ul>@endif<footer><span>Ingresos acumulados</span><b>S/. {{ number_format($stats['revenue_total'], 2) }}</b></footer></div><p class="dash-balance-note">Importes de ventas y pedidos no cancelados.</p></section>
         <section><h2>Acciones rápidas</h2><div class="dash-shortcuts">
             @foreach([['dashboard.productos.create', 'box', 'Nuevo producto', 'Amplía tu catálogo'], ['dashboard.pedidos.index', 'cart', 'Ver pedidos', 'Consulta tus ventas'], ['dashboard.galeria.index', 'image', 'Subir fotos', 'Da vida a tu tienda'], ['dashboard.store.edit', 'store', 'Personalizar tienda', 'Hazla a tu estilo']] as [$route, $icon, $label, $description])
             <a href="{{ route($route) }}"><span class="dash-shortcut-icon"><x-dashboard-icon :name="$icon"/></span><span><strong>{{ $label }}</strong><small>{{ $description }}</small></span><x-dashboard-icon name="chevron"/></a>

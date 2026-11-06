@@ -1,5 +1,5 @@
 @php use App\Models\Contact; @endphp
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 [&>*]:min-w-0">
     <div>
         <label class="input-label" for="ct-name">Nombre</label>
         <input id="ct-name" name="name" class="input-field" maxlength="120" value="{{ old('name', $contact->name) }}" required>

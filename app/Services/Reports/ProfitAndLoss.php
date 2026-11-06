@@ -39,6 +39,7 @@ class ProfitAndLoss
 
     public const PRESETS = [
         'hoy'        => 'Hoy',
+        'ayer'       => 'Ayer',
         '7_dias'     => 'Últimos 7 días',
         'mes'        => 'Este mes',
         'mes_pasado' => 'Mes pasado',
@@ -55,6 +56,7 @@ class ProfitAndLoss
 
         return match ($preset) {
             'hoy'        => [$now->copy()->startOfDay(), $now->copy()->endOfDay()],
+            'ayer'       => [$now->copy()->subDay()->startOfDay(), $now->copy()->subDay()->endOfDay()],
             'mes'        => [$now->copy()->startOfMonth(), $now->copy()->endOfDay()],
             'mes_pasado' => [$now->copy()->subMonthNoOverflow()->startOfMonth(), $now->copy()->subMonthNoOverflow()->endOfMonth()],
             '30_dias'    => [$now->copy()->subDays(29)->startOfDay(), $now->copy()->endOfDay()],
@@ -78,7 +80,7 @@ class ProfitAndLoss
 
     /**
      * @return array{
-     *   days: array<string, array>, totals: array, methods: array<string, float>, documents: array<string, array{count: int, total: float}>,
+     *   days: array<string, array>, totals: array, sources: array<string, array{count: int, income: float}>, methods: array<string, float>, documents: array<string, array{count: int, total: float}>,
      *   expenses: list<array{reason: string, amount: float}>, losses: list<array>, estimated: bool, missing_cost: bool, untracked_items: int
      * }
      */
@@ -101,6 +103,7 @@ class ProfitAndLoss
         $counted = Order::query()->where('store_id', $store->id)->whereBetween('created_at', [$dbFrom, $dbTo])
             ->where('status', '!=', 'cancelled')->whereIn('payment_status', ['paid', 'partial'])->where('currency', 'PEN');
         $documents = [];
+        $sources = ['pos' => ['count' => 0, 'income' => 0.0], 'online' => ['count' => 0, 'income' => 0.0]];
         $orderColumns = ['id', 'subtotal', 'discount', 'total', 'source', 'created_at'];
         if (app(\App\Services\Pos\SalesDocuments::class)->ready()) {
             $orderColumns[] = 'document_type'; // the column exists once the comprobantes migration has run
@@ -112,6 +115,9 @@ class ProfitAndLoss
             }
             $days[$key]['sales']++;
             $days[$key]['sold'] += (float) $order->subtotal - (float) $order->discount;
+            $origin = $order->source === 'pos' ? 'pos' : 'online';
+            $sources[$origin]['count']++;
+            $sources[$origin]['income'] += (float) $order->subtotal - (float) $order->discount;
 
             $type = $order->document_type ?: ($order->source === 'pos' ? 'nota_venta' : 'tienda');
             $documents[$type] ??= ['count' => 0, 'total' => 0.0];
@@ -221,6 +227,7 @@ class ProfitAndLoss
             'totals'    => $totals,
             'methods'   => array_map(fn ($v) => round($v, 2), $methods),
             'documents' => array_map(fn ($d) => ['count' => $d['count'], 'total' => round($d['total'], 2)], $documents),
+            'sources'   => array_map(fn ($s) => ['count' => $s['count'], 'income' => round($s['income'], 2)], $sources),
             'expenses'  => array_map(fn ($reason, $amount) => ['reason' => $reason, 'amount' => round($amount, 2)], array_keys($expenseTotals), $expenseTotals),
             'losses'    => array_slice($losses, 0, 15),
             'estimated' => $estimated,

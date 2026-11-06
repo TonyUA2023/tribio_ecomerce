@@ -25,7 +25,10 @@ class OrderController extends Controller
 
         $search = trim((string) $request->search);
 
-        $orders = $store->orders()
+        // Pedidos are the online store's; counter sales have their own module (Ventas).
+        $online = fn () => $store->orders()->where('source', '!=', 'pos');
+
+        $orders = $online()
             ->withCount('items')
             ->withSum('items', 'quantity')
             ->when($request->status === 'por_confirmar', fn($q) => $q->where('payment_confirmation', 'awaiting'))
@@ -41,12 +44,12 @@ class OrderController extends Controller
             ->withQueryString();
 
         // One grouped query instead of one COUNT per status.
-        $counts = $store->orders()->selectRaw('status, COUNT(*) as total')->groupBy('status')->pluck('total', 'status');
+        $counts = $online()->selectRaw('status, COUNT(*) as total')->groupBy('status')->pluck('total', 'status');
         $statusCounts = collect(['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'])
             ->mapWithKeys(fn($s) => [$s => (int) ($counts[$s] ?? 0)])
             ->all();
         $totalCount = (int) $counts->sum();
-        $statusCounts['por_confirmar'] = $store->orders()->where('payment_confirmation', 'awaiting')->count();
+        $statusCounts['por_confirmar'] = $online()->where('payment_confirmation', 'awaiting')->count();
 
         return view('dashboard.orders.index', compact('store', 'orders', 'statusCounts', 'totalCount', 'search'));
     }
@@ -55,6 +58,12 @@ class OrderController extends Controller
     {
         $store = $this->getStore();
         abort_if($order->store_id !== $store->id, 403);
+
+        // A counter sale is not a pedido: its page is the ticket (and its place is Ventas).
+        if ($order->source === 'pos' && app(\App\Services\Pos\PosSchema::class)->ready()) {
+            return redirect()->route('dashboard.pos.receipt', $order->id);
+        }
+
         $order->load(['items.attachments', 'payments' => fn($q) => $q->orderBy('paid_at')]);
 
         return view('dashboard.orders.show', compact('store', 'order'));

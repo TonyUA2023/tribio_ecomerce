@@ -17,6 +17,11 @@
     $chipOff  = 'bg-white/5 border-white/10 text-white/60 hover:border-white/20';
 @endphp
 
+<div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+    <p class="text-sm text-white/60 max-w-2xl">Los pedidos que llegan desde tu <strong>tienda virtual</strong>.@if($store->hasPos() && app(\App\Services\Pos\PosSchema::class)->ready()) Las ventas de tu caja están en <a href="{{ route('dashboard.ventas.index') }}" class="underline">Ventas</a>.@endif</p>
+    @if($store->hasPos() && app(\App\Services\Pos\PosSchema::class)->ready())<a href="{{ route('dashboard.ventas.index') }}" class="pos-chip"><x-dashboard-icon name="receipt"/>Ver ventas de caja</a>@endif
+</div>
+
 {{-- Buscador --}}
 <form method="GET" action="{{ route('dashboard.pedidos.index') }}" class="flex gap-2 mb-4">
     @if($activeStatus)<input type="hidden" name="status" value="{{ $activeStatus }}">@endif
