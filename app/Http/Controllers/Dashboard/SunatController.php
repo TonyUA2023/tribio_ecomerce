@@ -3,18 +3,22 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\DocumentSeries;
 use App\Models\ElectronicDocument;
+use App\Models\Order;
 use App\Models\Store;
 use App\Models\SunatSetting;
 use App\Services\Pos\SalesDocuments;
 use App\Services\Sunat\ComprobantePdf;
 use App\Services\Sunat\ElectronicDocuments;
+use App\Services\Sunat\InvoiceBuilder;
 use App\Services\Sunat\SunatGateway;
 use App\Services\Sunat\SunatSchema;
 use App\Services\Sunat\SunatSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /** Caja → Comprobantes → SUNAT: certificate and SOL keys, what gets sent, and the comprobantes electrónicos already sent. */
 class SunatController extends Controller
@@ -43,7 +47,7 @@ class SunatController extends Controller
         $data = $request->validate([
             'enabled'        => ['nullable', 'boolean'],
             'environment'    => ['required', Rule::in([SunatSetting::BETA, SunatSetting::PRODUCTION])],
-            'factura_mode'   => ['required', Rule::in(['auto', 'manual'])],
+            'factura_mode'   => ['required', Rule::in(['manual', 'auto', 'never'])],
             'boleta_mode'    => ['required', Rule::in(['manual', 'auto', 'never'])],
             'sol_user'       => ['nullable', 'string', 'max:30'],
             'sol_password'   => ['nullable', 'string', 'max:60'],
@@ -91,30 +95,55 @@ class SunatController extends Controller
         return redirect()->route('dashboard.pos.documents.sunat')->with('sunat_test', $ping);
     }
 
-    public function documents(Request $request)
+    /** Every boleta and factura of the business with where it stands: waiting for the button, sent, with problems or internal. */
+    public function documents(Request $request, ElectronicDocuments $documents)
     {
         $store = $this->store($request);
-        $status = array_key_exists((string) $request->query('estado'), ElectronicDocument::STATUSES) ? $request->query('estado') : null;
+        $filter = in_array($request->query('estado'), ['por_enviar', 'problemas', 'enviados', 'internos'], true) ? $request->query('estado') : 'por_enviar';
+
+        $query = fn (string $name) => $this->scope($store, $name);
+        $counts = collect(['por_enviar', 'problemas', 'enviados', 'internos'])->mapWithKeys(fn ($name) => [$name => $query($name)->count()]);
+
+        $docColumns = 'id,order_id,store_id,type,series,number,environment,status,sunat_code,sunat_message,attempts,sent_at,emailed_at,created_at';
+        $orders = $query($filter)->with("electronicDocument:{$docColumns}")->orderByDesc('id')->paginate(25)->withQueryString();
 
         return view('dashboard.pos.electronic', [
-            'store'  => $store,
-            'status' => $status,
-            'docs'   => ElectronicDocument::where('store_id', $store->id)->with('order:id,customer_name,total,order_number')
-                ->when($status, fn ($q) => $q->where('status', $status))->latest('id')->paginate(25)->withQueryString(),
-            'counts' => ElectronicDocument::where('store_id', $store->id)->selectRaw('status, COUNT(*) as total')->groupBy('status')->pluck('total', 'status'),
+            'store'   => $store,
+            'filter'  => $filter,
+            'counts'  => $counts,
+            'orders'  => $orders,
+            'states'  => $orders->getCollection()->mapWithKeys(fn ($order) => [$order->id => $documents->state($order)]),
             'setting' => $this->settings->for($store),
+            'numbering' => $this->numbering($store),
         ]);
     }
 
-    public function retry(Request $request, ElectronicDocuments $documents, int $document): RedirectResponse
+    /** The button on a comprobante: builds, signs and sends it now, with the number it already has. */
+    public function submit(Request $request, ElectronicDocuments $documents, int $order): RedirectResponse
     {
-        $doc = $this->owned($request, $document);
-        if (!$doc->canRetry()) {
-            return back()->with('error', 'Este comprobante ya no se puede reenviar.');
-        }
-        $doc = $documents->send($doc);
+        $store = $this->store($request);
+        $sale = Order::where('store_id', $store->id)->where('source', 'pos')->findOrFail($order);
 
-        return back()->with($doc->isDelivered() ? 'success' : 'error', $doc->isDelivered() ? "SUNAT recibió {$doc->code()}." : 'No se pudo enviar: ' . ($doc->sunat_message ?: 'inténtalo de nuevo en unos minutos.'));
+        try {
+            $doc = $documents->submit($sale);
+        } catch (ValidationException $e) {
+            return back()->with('error', $e->validator->errors()->first());
+        }
+
+        return back()->with($doc->isDelivered() ? 'success' : 'error', $doc->isDelivered()
+            ? "SUNAT recibió {$doc->code()}" . ($doc->emailed_at ? ' y te enviamos el comprobante por correo.' : '.')
+            : "No se pudo enviar {$doc->code()}: " . ($doc->sunat_message ?: 'inténtalo de nuevo en unos minutos.'));
+    }
+
+    /** "Enviar todo lo pendiente": the oldest comprobantes still waiting, up to 20 at a time. */
+    public function submitPending(Request $request, ElectronicDocuments $documents): RedirectResponse
+    {
+        $result = $documents->submitPending($this->store($request), 20);
+        if (!$result['sent'] && !$result['failed']) {
+            return back()->with('error', 'No hay comprobantes pendientes que se puedan enviar ahora.');
+        }
+
+        return back()->with($result['failed'] ? 'error' : 'success', "Enviados a SUNAT: {$result['sent']}" . ($result['failed'] ? ". Con problema: {$result['failed']} (revisa «Con problemas»)." : '.'));
     }
 
     public function download(Request $request, ComprobantePdf $pdf, int $document, string $format)
@@ -128,6 +157,62 @@ class SunatController extends Controller
             'cdr'   => $doc->cdr_zip ? response(base64_decode($doc->cdr_zip), 200, ['Content-Type' => 'application/zip', 'Content-Disposition' => 'attachment; filename="R-' . $base . '.zip"']) : abort(404),
             default => abort(404),
         };
+    }
+
+    /** The sales of one tab. "Internos" = a series marked solo interna, or boletas/facturas the business set to "no se envían". */
+    private function scope(Store $store, string $name)
+    {
+        $types = array_keys(InvoiceBuilder::TYPE_CODES);
+        $internalSeries = $this->schema->flagReady() ? DocumentSeries::where('store_id', $store->id)->where('electronic', false)->get(['type', 'series']) : collect();
+        $never = collect($types)->filter(fn ($type) => ($type === 'factura' ? $this->settings->for($store)->factura_mode : $this->settings->for($store)->boleta_mode) === 'never')->values()->all();
+
+        $internal = function ($q) use ($internalSeries, $never) {
+            $q->where(function ($w) use ($internalSeries, $never) {
+                $w->whereRaw('1 = 0');
+                foreach ($internalSeries as $row) {
+                    $w->orWhere(fn ($p) => $p->where('document_type', $row->type)->where('document_series', $row->series));
+                }
+                if ($never) {
+                    $w->orWhereIn('document_type', $never);
+                }
+            });
+        };
+
+        $base = Order::where('store_id', $store->id)->where('source', 'pos')->where('status', '!=', 'cancelled')->whereIn('document_type', $types);
+
+        return match ($name) {
+            'enviados'  => $base->whereHas('electronicDocument', fn ($d) => $d->whereIn('status', [ElectronicDocument::ACCEPTED, ElectronicDocument::OBSERVED])),
+            'problemas' => $base->whereHas('electronicDocument', fn ($d) => $d->whereIn('status', [ElectronicDocument::ERROR, ElectronicDocument::REJECTED])),
+            'internos'  => $base->whereDoesntHave('electronicDocument')->where($internal),
+            default     => $base->whereNot($internal)->where(fn ($q) => $q->whereDoesntHave('electronicDocument')->orWhereHas('electronicDocument', fn ($d) => $d->where('status', ElectronicDocument::PENDING))),
+        };
+    }
+
+    /**
+     * Control of the numbering, per series: how many were issued, up to which number, how many SUNAT already has.
+     * A series that is reported should end up with everything it issued sent: this is where the gaps show.
+     *
+     * @return list<array{type: string, series: string, emitted: int, last: int, delivered: int, waiting: int, oldest: ?int, internal: bool}>
+     */
+    private function numbering(Store $store): array
+    {
+        $rows = Order::where('store_id', $store->id)->where('source', 'pos')->where('status', '!=', 'cancelled')->whereIn('document_type', array_keys(InvoiceBuilder::TYPE_CODES))
+            ->whereNotNull('document_series')->selectRaw('document_type as type, document_series as series, COUNT(*) as emitted, MAX(document_number) as last_number')
+            ->groupBy('document_type', 'document_series')->orderBy('document_type')->orderBy('document_series')->get();
+        $delivered = ElectronicDocument::where('store_id', $store->id)->whereIn('status', [ElectronicDocument::ACCEPTED, ElectronicDocument::OBSERVED])
+            ->selectRaw('type, series, COUNT(*) as total')->groupBy('type', 'series')->get()->mapWithKeys(fn ($r) => [$r->type . '|' . $r->series => (int) $r->total]);
+        $internal = $this->schema->flagReady() ? DocumentSeries::where('store_id', $store->id)->where('electronic', false)->get(['type', 'series'])->map(fn ($r) => $r->type . '|' . $r->series)->all() : [];
+
+        return $rows->map(function ($row) use ($delivered, $internal, $store) {
+            $key = $row->type . '|' . $row->series;
+            $isInternal = in_array($key, $internal, true);
+            $sent = (int) ($delivered[$key] ?? 0);
+            $oldest = $isInternal ? null : Order::where('store_id', $store->id)->where('source', 'pos')->where('status', '!=', 'cancelled')->where('document_type', $row->type)->where('document_series', $row->series)
+                ->whereDoesntHave('electronicDocument', fn ($d) => $d->whereIn('status', [ElectronicDocument::ACCEPTED, ElectronicDocument::OBSERVED]))->min('document_number');
+
+            return ['type' => $row->type, 'series' => $row->series, 'emitted' => (int) $row->emitted, 'last' => (int) $row->last_number, 'delivered' => $sent,
+                'waiting' => $isInternal ? 0 : max(0, (int) $row->emitted - $sent), 'oldest' => $oldest ? (int) $oldest : null, 'internal' => $isInternal];
+        })->all();
     }
 
     private function owned(Request $request, int $id): ElectronicDocument

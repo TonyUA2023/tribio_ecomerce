@@ -84,19 +84,20 @@
                 <div>
                     <label class="input-label" for="s-fac">Facturas</label>
                     <select id="s-fac" name="factura_mode" class="input-field">
-                        <option value="auto" @selected(old('factura_mode', $setting->factura_mode) === 'auto')>Todas se envían a SUNAT</option>
-                        <option value="manual" @selected(old('factura_mode', $setting->factura_mode) === 'manual')>Yo elijo en cada venta</option>
+                        <option value="manual" @selected(old('factura_mode', $setting->factura_mode) === 'manual')>Las envío yo con el botón «Enviar a SUNAT»</option>
+                        <option value="auto" @selected(old('factura_mode', $setting->factura_mode) === 'auto')>Se envían solas al cobrar</option>
+                        <option value="never" @selected(old('factura_mode', $setting->factura_mode) === 'never')>No se envían (solo numeración interna)</option>
                     </select>
                 </div>
-                <div class="sm:col-span-2">
+                <div>
                     <label class="input-label" for="s-bol">Boletas</label>
                     <select id="s-bol" name="boleta_mode" class="input-field">
-                        <option value="manual" @selected(old('boleta_mode', $setting->boleta_mode) === 'manual')>Yo elijo en cada venta (solo se envían algunas)</option>
-                        <option value="auto" @selected(old('boleta_mode', $setting->boleta_mode) === 'auto')>Todas se envían a SUNAT</option>
-                        <option value="never" @selected(old('boleta_mode', $setting->boleta_mode) === 'never')>Ninguna: solo la numeración interna</option>
+                        <option value="manual" @selected(old('boleta_mode', $setting->boleta_mode) === 'manual')>Las envío yo con el botón «Enviar a SUNAT»</option>
+                        <option value="auto" @selected(old('boleta_mode', $setting->boleta_mode) === 'auto')>Se envían solas al cobrar</option>
+                        <option value="never" @selected(old('boleta_mode', $setting->boleta_mode) === 'never')>No se envían (solo numeración interna)</option>
                     </select>
-                    <p class="text-[11px] text-white/50 mt-1">Con «Yo elijo», al cobrar una boleta aparece el interruptor «Enviar a SUNAT».</p>
                 </div>
+                <p class="sm:col-span-2 text-[11px] text-white/50">Con el botón, cada boleta y factura sale numerada al cobrar y el comprobante electrónico se genera recién cuando la envías (desde el ticket, Ventas o la pestaña Envíos a SUNAT), con ese mismo número. Para que algunas boletas nunca se informen, usa una serie «solo interna» en Sedes y cajas.</p>
             </div>
         </section>
 
@@ -137,7 +138,7 @@
                 <div>
                     <label class="input-label" for="s-tries">Intentos automáticos por comprobante</label>
                     <input id="s-tries" name="max_attempts" type="number" min="1" max="10" class="input-field" value="{{ old('max_attempts', $setting->max_attempts) }}">
-                    <p class="text-[11px] text-white/50 mt-1">Si SUNAT no responde se reintenta solo, con esperas cada vez más largas. SUNAT recibe hasta 3 días después de la venta.</p>
+                    <p class="text-[11px] text-white/50 mt-1">Si SUNAT no responde se reintenta solo, con esperas cada vez más largas. SUNAT recibe las facturas hasta 3 días después de la venta y las boletas hasta 7.</p>
                 </div>
             </div>
         </details>

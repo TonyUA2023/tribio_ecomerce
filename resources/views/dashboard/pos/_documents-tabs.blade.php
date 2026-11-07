@@ -3,7 +3,7 @@
         'data'      => ['Datos y series', route('dashboard.pos.documents.edit')],
         'branches'  => ['Sedes y cajas', route('dashboard.pos.documents.branches')],
         'sunat'     => ['SUNAT', route('dashboard.pos.documents.sunat')],
-        'electronic' => ['Enviados', route('dashboard.pos.documents.electronic')],
+        'electronic' => ['Envíos a SUNAT', route('dashboard.pos.documents.electronic')],
     ];
 @endphp
 @if(app(\App\Services\Sunat\SunatSchema::class)->ready())

@@ -34,6 +34,7 @@ class BranchController extends Controller
             'store'     => $store,
             'branches'  => $branches,
             'registers' => $registers->registers($store),
+            'flag'      => $this->schema->flagReady(),
             'series'    => DocumentSeries::where('store_id', $store->id)->with(['branch:id,name,sunat_code', 'register:id,name'])->orderBy('type')->orderBy('series')->get(),
             'types'     => SalesDocuments::TYPES,
         ]);
@@ -81,6 +82,7 @@ class BranchController extends Controller
             'branch_id'   => ['nullable', 'integer'],
             'register_id' => ['nullable', 'integer'],
             'start'       => ['nullable', 'integer', 'min:1', 'max:99999999'],
+            'electronic'  => ['nullable', 'boolean'],
         ]);
         $series = strtoupper($data['series']);
         $prefix = ['boleta' => 'B', 'factura' => 'F'][$data['type']] ?? null;
@@ -101,9 +103,26 @@ class BranchController extends Controller
             throw ValidationException::withMessages(['series' => 'Ya hay una serie de ese tipo para esa sede o caja: una sola por tipo.']);
         }
 
-        DocumentSeries::create(['store_id' => $store->id, 'type' => $data['type'], 'series' => $series, 'last_number' => max(0, (int) ($data['start'] ?? 1) - 1)] + $scope);
+        DocumentSeries::create(['store_id' => $store->id, 'type' => $data['type'], 'series' => $series, 'last_number' => max(0, (int) ($data['start'] ?? 1) - 1)] + $scope
+            + ($this->schema->flagReady() ? ['electronic' => $request->boolean('electronic', true)] : []));
 
         return back()->with('success', "Creamos la serie {$series}.");
+    }
+
+    /** Marks a series as reported to SUNAT or «solo interna». Only while it has not issued anything: a series cannot change nature half way. */
+    public function updateSeries(Request $request, int $series): RedirectResponse
+    {
+        abort_unless($this->schema->flagReady(), 404);
+        $row = DocumentSeries::where('store_id', $this->current($request)->id)->findOrFail($series);
+        if ($row->type === SalesDocuments::NOTA) {
+            throw ValidationException::withMessages(['series' => 'La nota de venta nunca se envía a SUNAT.']);
+        }
+        if ($row->last_number > 0) {
+            throw ValidationException::withMessages(['series' => 'Esta serie ya emitió comprobantes: no puede cambiar de tipo. Crea una serie nueva.']);
+        }
+        $row->update(['electronic' => $request->boolean('electronic')]);
+
+        return back()->with('success', $row->electronic ? "La serie {$row->series} se informa a SUNAT." : "La serie {$row->series} es solo interna: no se envía a SUNAT.");
     }
 
     public function destroySeries(Request $request, int $series): RedirectResponse

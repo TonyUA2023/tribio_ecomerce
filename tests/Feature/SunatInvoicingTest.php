@@ -80,7 +80,7 @@ class SunatInvoicingTest extends TestCase
         [$file] = $this->certificate();
         $this->actingAs($user)->post(route('dashboard.pos.documents.sunat.certificate'), ['certificate' => $file, 'certificate_password' => 'secreto'])->assertSessionHasNoErrors();
         $this->actingAs($user)->post(route('dashboard.pos.documents.sunat.update'), $settings + [
-            'enabled' => '1', 'environment' => 'beta', 'factura_mode' => 'auto', 'boleta_mode' => 'manual', 'email_company' => '1', 'email_to' => 'facturas@norte.pe',
+            'enabled' => '1', 'environment' => 'beta', 'factura_mode' => 'manual', 'boleta_mode' => 'manual', 'email_company' => '1', 'email_to' => 'facturas@norte.pe',
         ])->assertSessionHasNoErrors();
 
         return $gateway;
@@ -207,134 +207,236 @@ class SunatInvoicingTest extends TestCase
         $this->assertSame('claveSecreta9', $setting->fresh()->sol_password);
     }
 
-    // ───────── envío por venta
 
-    public function test_only_the_sales_marked_for_sunat_are_sent_and_the_company_gets_the_email(): void
+    // ───────── enviar a SUNAT: el botón
+
+    private function sale(User $user, RegisterSession $session, Product $product, string $type, array $extra = [], int $quantity = 1): Order
+    {
+        $this->sell($user, $session, $product, ['document_type' => $type] + $extra, $quantity)->assertSuccessful();
+
+        return Order::latest('id')->first();
+    }
+
+    public function test_every_boleta_is_numbered_at_checkout_and_only_the_button_sends_it_to_sunat(): void
     {
         [$user, $store, $cement] = $this->owner();
         $gateway = $this->configured($user, $store);
         $session = $this->shift($user, $store);
 
-        $this->sell($user, $session, $cement, ['document_type' => 'boleta'])->assertSuccessful();                          // no toggle → internal only
-        $this->sell($user, $session, $cement, ['document_type' => 'nota_venta', 'send_sunat' => true])->assertSuccessful(); // nota never goes
-        $this->sell($user, $session, $cement, ['document_type' => 'boleta', 'send_sunat' => true])->assertSuccessful();    // boleta marked → goes
-        $this->sell($user, $session, $cement, ['document_type' => 'factura', 'customer_name' => 'Constructora Andes SAC', 'customer_document' => self::CLIENT_RUC])->assertSuccessful(); // factura auto
+        $first = $this->sale($user, $session, $cement, 'boleta');
+        $second = $this->sale($user, $session, $cement, 'boleta');
+        $this->sale($user, $session, $cement, 'nota_venta');
+        $invoice = $this->sale($user, $session, $cement, 'factura', ['customer_name' => 'Constructora Andes SAC', 'customer_document' => self::CLIENT_RUC]);
 
-        $docs = ElectronicDocument::orderBy('id')->get();
-        $this->assertSame(['boleta', 'factura'], $docs->pluck('type')->all());
-        $this->assertSame(['B001-00000002', 'F001-00000001'], $docs->map->code()->all());
-        $this->assertSame(['accepted', 'accepted'], $docs->pluck('status')->all());
-        $this->assertCount(2, $gateway->sent);
-        $this->assertNotNull($docs[0]->xml);
-        $this->assertStringContainsString('B001-2', $gateway->sent[0]);
-        $this->assertStringContainsString(self::RUC, $gateway->sent[0]);
+        $this->assertSame(['B001-00000001', 'B001-00000002', 'F001-00000001'], [$first->document_code, $second->document_code, $invoice->document_code]);
+        $this->assertSame(0, ElectronicDocument::count(), 'nothing is built or sent until the button');
+        $this->assertSame([], $gateway->sent);
+        Mail::assertNothingSent();
+
+        // The comprobante is generated now, with the number the sale already had.
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit', $second->id))->assertSessionHas('success');
+        $doc = ElectronicDocument::sole();
+        $this->assertSame(['B001-00000002', 'accepted'], [$doc->code(), $doc->status]);
+        $this->assertNotNull($doc->xml);
+        $this->assertStringContainsString('<cbc:ID>B001-2</cbc:ID>', $gateway->sent[0]);
         $this->assertStringContainsString('ds:Signature', $gateway->sent[0], 'signed with the business certificate');
-
-        Mail::assertSent(ElectronicDocumentMail::class, 2);
         Mail::assertSent(ElectronicDocumentMail::class, fn ($mail) => $mail->hasTo('facturas@norte.pe') && count($mail->attachments()) === 3);
-        $this->assertNotNull($docs[0]->fresh()->emailed_at);
+        $this->assertNotNull($doc->fresh()->emailed_at);
+
+        // The others keep waiting, numbered; a second press does nothing; a nota is not a comprobante electrónico.
+        $this->assertNull(Order::find($first->id)->electronicDocument);
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit', $second->id))->assertSessionHas('error');
+        $this->assertCount(1, $gateway->sent);
+        $nota = Order::where('document_type', 'nota_venta')->first();
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit', $nota->id))->assertSessionHas('error');
+        $this->assertSame(1, ElectronicDocument::count());
+
+        // The factura goes when the owner presses it, and keeps its own number.
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit', $invoice->id))->assertSessionHas('success');
+        $this->assertSame(['B001-00000002', 'F001-00000001'], ElectronicDocument::orderBy('id')->get()->map->code()->all());
     }
 
-    public function test_boleta_mode_auto_and_never_and_a_disabled_business(): void
+    public function test_the_ticket_and_the_sales_list_offer_the_button_and_show_the_result(): void
+    {
+        [$user, $store, $cement] = $this->owner();
+        $this->configured($user, $store);
+        $session = $this->shift($user, $store);
+        $order = $this->sale($user, $session, $cement, 'boleta');
+
+        $this->actingAs($user)->get(route('dashboard.pos.receipt', $order->id))->assertOk()->assertSee('Todavía no se envió a SUNAT')->assertSee('Enviar a SUNAT')->assertSee('B001-00000001');
+        $this->actingAs($user)->get(route('dashboard.ventas.index'))->assertOk()->assertSee('Enviar a SUNAT');
+
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit', $order->id));
+        $this->actingAs($user)->get(route('dashboard.pos.receipt', $order->id))->assertOk()->assertSee('SUNAT recibió B001-00000001')->assertDontSee('Todavía no se envió');
+        $this->actingAs($user)->get(route('dashboard.ventas.index'))->assertOk()->assertSee('SUNAT: Aceptado');
+    }
+
+    public function test_the_envios_screen_lists_what_waits_and_controls_the_numbering(): void
+    {
+        [$user, $store, $cement] = $this->owner();
+        $this->configured($user, $store);
+        $session = $this->shift($user, $store);
+        $a = $this->sale($user, $session, $cement, 'boleta');
+        $this->sale($user, $session, $cement, 'boleta');
+        $this->sale($user, $session, $cement, 'boleta');
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit', $a->id));
+
+        $page = $this->actingAs($user)->get(route('dashboard.pos.documents.electronic'))->assertOk();
+        $page->assertSee('Por enviar')->assertSee('B001-00000002')->assertSee('B001-00000003')->assertSee('Enviar a SUNAT')->assertSee('Control de numeración')->assertSee('desde B001-00000002');
+        $this->assertStringNotContainsString('B001-00000001', explode('Control de numeración', $page->getContent())[1] ?? '', 'the sent one left the waiting list') ;
+        $this->actingAs($user)->get(route('dashboard.pos.documents.electronic', ['estado' => 'enviados']))->assertOk()->assertSee('B001-00000001')->assertSee('PDF');
+
+        // "Enviar todo lo pendiente" sends the rest, in order.
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit-pending'))->assertSessionHas('success');
+        $this->assertSame(['B001-00000001', 'B001-00000002', 'B001-00000003'], ElectronicDocument::orderBy('id')->get()->map->code()->all());
+        $this->assertSame(0, ElectronicDocument::where('status', '!=', 'accepted')->count());
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit-pending'))->assertSessionHas('error');
+    }
+
+    public function test_a_serie_solo_interna_never_reaches_sunat_and_cannot_change_after_use(): void
+    {
+        [$user, $store, $cement] = $this->owner();
+        $gateway = $this->configured($user, $store);
+        $this->actingAs($user)->post(route('dashboard.pos.registers.store'), ['name' => 'Caja 2']);
+        $second = Register::where('name', 'Caja 2')->sole();
+        $this->actingAs($user)->post(route('dashboard.pos.documents.series.store'), ['type' => 'boleta', 'series' => 'B900', 'scope' => 'register', 'register_id' => $second->id, 'electronic' => '0'])->assertSessionHasNoErrors();
+        $internal = DocumentSeries::where('series', 'B900')->sole();
+        $this->assertFalse($internal->electronic);
+
+        $reported = $this->shift($user, $store, Register::where('store_id', $store->id)->orderBy('id')->first());
+        $inner = $this->shift($user, $store, $second);
+        $a = $this->sale($user, $reported, $cement, 'boleta');
+        $b = $this->sale($user, $inner, $cement, 'boleta');
+        $this->assertSame(['B001-00000001', 'B900-00000001'], [$a->document_code, $b->document_code], 'each series keeps its own correlative');
+
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit', $b->id))->assertSessionHas('error');
+        $this->assertSame(0, ElectronicDocument::count());
+        $this->actingAs($user)->get(route('dashboard.pos.documents.electronic'))->assertOk()->assertSee('B001-00000001')->assertSeeInOrder(['Control de numeración', 'Serie interna']);
+        $this->actingAs($user)->get(route('dashboard.pos.documents.electronic', ['estado' => 'internos']))->assertOk()->assertSee('B900-00000001')->assertSee('No se informa a SUNAT');
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit-pending'));
+        $this->assertSame(['B001-00000001'], ElectronicDocument::get()->map->code()->all(), 'pending sends only the reported series');
+        $this->actingAs($user)->get(route('dashboard.pos.receipt', $b->id))->assertSee('Comprobante interno');
+
+        // Once a series issued numbers it cannot become something else.
+        $this->actingAs($user)->put(route('dashboard.pos.documents.series.update', $internal->id), ['electronic' => '1'])->assertSessionHasErrors('series');
+        $fresh = $this->actingAs($user)->post(route('dashboard.pos.documents.series.store'), ['type' => 'factura', 'series' => 'F900', 'scope' => 'register', 'register_id' => $second->id, 'electronic' => '0']);
+        $row = DocumentSeries::where('series', 'F900')->sole();
+        $this->actingAs($user)->put(route('dashboard.pos.documents.series.update', $row->id), ['electronic' => '1'])->assertSessionHasNoErrors();
+        $this->assertTrue($row->fresh()->electronic);
+        $this->assertCount(1, $gateway->sent);
+    }
+
+    public function test_the_business_can_choose_all_automatic_or_none(): void
     {
         [$user, $store, $cement] = $this->owner();
         $gateway = $this->configured($user, $store, ['boleta_mode' => 'auto']);
         $session = $this->shift($user, $store);
-        $this->sell($user, $session, $cement, ['document_type' => 'boleta'])->assertSuccessful();
-        $this->assertSame(1, ElectronicDocument::count(), 'every boleta goes');
-
-        $this->actingAs($user)->post(route('dashboard.pos.documents.sunat.update'), ['enabled' => '1', 'environment' => 'beta', 'factura_mode' => 'auto', 'boleta_mode' => 'never']);
-        $this->sell($user, $session, $cement, ['document_type' => 'boleta', 'send_sunat' => true])->assertSuccessful();
-        $this->assertSame(1, ElectronicDocument::count(), 'never: not even when asked');
-
-        $this->actingAs($user)->post(route('dashboard.pos.documents.sunat.update'), ['environment' => 'beta', 'factura_mode' => 'auto', 'boleta_mode' => 'auto']);
-        $this->assertFalse(SunatSetting::sole()->enabled);
-        $this->sell($user, $session, $cement, ['document_type' => 'boleta'])->assertSuccessful();
-        $this->assertSame(1, ElectronicDocument::count(), 'switched off: nothing is sent');
+        $this->sale($user, $session, $cement, 'boleta');
+        $this->assertSame(1, ElectronicDocument::count(), 'automatic: sent right at checkout');
         $this->assertCount(1, $gateway->sent);
+
+        $this->actingAs($user)->post(route('dashboard.pos.documents.sunat.update'), ['enabled' => '1', 'environment' => 'beta', 'factura_mode' => 'manual', 'boleta_mode' => 'never']);
+        $order = $this->sale($user, $session, $cement, 'boleta');
+        $this->assertSame(1, ElectronicDocument::count());
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit', $order->id))->assertSessionHas('error');
+        $this->actingAs($user)->get(route('dashboard.pos.documents.electronic', ['estado' => 'internos']))->assertOk()->assertSee($order->document_code);
+
+        // Switched off: nothing can be sent.
+        $this->actingAs($user)->post(route('dashboard.pos.documents.sunat.update'), ['environment' => 'beta', 'factura_mode' => 'manual', 'boleta_mode' => 'manual']);
+        $this->assertFalse(SunatSetting::sole()->enabled);
+        $off = $this->sale($user, $session, $cement, 'boleta');
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit', $off->id))->assertSessionHas('error');
+        $this->assertSame(1, ElectronicDocument::count());
+    }
+
+    public function test_the_deadline_is_three_days_for_facturas_and_seven_for_boletas(): void
+    {
+        [$user, $store, $cement] = $this->owner();
+        $this->configured($user, $store);
+        $session = $this->shift($user, $store);
+        $boleta = $this->sale($user, $session, $cement, 'boleta');
+        $factura = $this->sale($user, $session, $cement, 'factura', ['customer_name' => 'Constructora Andes SAC', 'customer_document' => self::CLIENT_RUC]);
+
+        $this->travel(5)->days();
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit', $factura->id))->assertSessionHas('error');
+        $this->assertSame(0, ElectronicDocument::count());
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit', $boleta->id))->assertSessionHas('success');
+
+        $this->travel(5)->days();
+        $late = $this->actingAs($user)->get(route('dashboard.pos.receipt', $factura->id))->assertOk();
+        $late->assertSee('Venció el plazo');
     }
 
     public function test_the_xml_totals_match_the_sale_even_with_a_discount(): void
     {
         [$user, $store, $cement] = $this->owner();
-        $gateway = $this->configured($user, $store, ['boleta_mode' => 'auto']);
+        $gateway = $this->configured($user, $store);
         $session = $this->shift($user, $store);
 
-        $this->sell($user, $session, $cement, ['document_type' => 'boleta', 'discount' => 7.33], 3)->assertSuccessful();
-        $order = Order::latest('id')->first();
+        $order = $this->sale($user, $session, $cement, 'boleta', ['discount' => 7.33], 3);
         $this->assertEquals(84.17, (float) $order->total);
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit', $order->id))->assertSessionHas('success');
 
         $xml = $gateway->sent[0];
         $this->assertMatchesRegularExpression('~<cbc:PayableAmount[^>]*>84\.17<~', $xml);
         preg_match_all('~<cbc:TaxAmount[^>]*>([\d.]+)<~', $xml, $taxes);
-        $igv = (float) ($taxes[1][0] ?? 0);
-        $this->assertEqualsWithDelta(round(84.17 - 84.17 / 1.18, 2), $igv, 0.011);
+        $this->assertEqualsWithDelta(round(84.17 - 84.17 / 1.18, 2), (float) ($taxes[1][0] ?? 0), 0.011);
         $this->assertStringContainsString('OCHENTA Y CUATRO CON 17/100 SOLES', $xml);
         $this->assertStringContainsString('Cemento Sol 42.5 kg', $xml);
     }
 
-    public function test_sunat_down_is_retried_and_a_rejection_is_not(): void
+    public function test_sunat_down_is_retried_with_the_same_xml_and_a_rejection_is_final(): void
     {
         [$user, $store, $cement] = $this->owner();
-        $gateway = $this->configured($user, $store, ['boleta_mode' => 'auto'], new FakeSunatGateway(SunatResult::error('Sin conexión', '0100')));
+        $gateway = $this->configured($user, $store, [], new FakeSunatGateway(SunatResult::error('Sin conexión', '0100')));
         $session = $this->shift($user, $store);
+        $order = $this->sale($user, $session, $cement, 'boleta');
 
-        $this->sell($user, $session, $cement, ['document_type' => 'boleta'])->assertSuccessful();
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit', $order->id))->assertSessionHas('error');
         $doc = ElectronicDocument::sole();
         $this->assertSame(['error', 1], [$doc->status, $doc->attempts]);
         Mail::assertNothingSent();
+        $this->actingAs($user)->get(route('dashboard.pos.documents.electronic', ['estado' => 'problemas']))->assertOk()->assertSee('Sin enviar')->assertSee('Reenviar');
 
-        // Too soon: the backoff waits. Later, SUNAT answers.
+        // Too soon: the backoff waits. Later SUNAT answers and the same signed XML goes again.
         $this->assertSame(0, app(ElectronicDocuments::class)->retryDue());
         $this->travel(5)->minutes();
         $gateway->answers = [new SunatResult('accepted', '0', 'Aceptada', base64_encode('cdr'))];
         $this->assertSame(1, app(ElectronicDocuments::class)->retryDue());
         $this->assertSame(['accepted', 2], [$doc->fresh()->status, $doc->fresh()->attempts]);
-        $this->assertCount(1, array_unique($gateway->sent), 'the same signed XML is resent, never rebuilt');
+        $this->assertCount(1, array_unique($gateway->sent));
         Mail::assertSent(ElectronicDocumentMail::class, 1);
 
-        // A rejection is final: nothing to retry, no mail.
+        // A rejection is final: no retry button, no mail.
         $gateway->answers = [new SunatResult('rejected', '2335', 'El documento electrónico ingresado ha sido alterado')];
-        $this->sell($user, $session, $cement, ['document_type' => 'boleta'])->assertSuccessful();
-        $rejected = ElectronicDocument::latest('id')->first();
-        $this->assertSame(['rejected', '2335'], [$rejected->status, $rejected->sunat_code]);
-        $this->assertFalse($rejected->canRetry());
-        $this->actingAs($user)->post(route('dashboard.pos.documents.electronic.retry', $rejected->id))->assertSessionHas('error');
+        $rejected = $this->sale($user, $session, $cement, 'boleta');
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit', $rejected->id))->assertSessionHas('error');
+        $this->assertSame(['rejected', '2335'], [$rejected->electronicDocument->status, $rejected->electronicDocument->sunat_code]);
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit', $rejected->id))->assertSessionHas('error');
+        $this->assertCount(3, $gateway->sent, 'first try, the retry, and the rejected one sent once: a second press does not resend it');
         Mail::assertSent(ElectronicDocumentMail::class, 1);
     }
 
-    public function test_manual_retry_from_the_screen_and_downloads(): void
+    public function test_downloads_belong_to_the_business_and_a_delivered_comprobante_warns_on_returns(): void
     {
         [$user, $store, $cement] = $this->owner();
-        $gateway = $this->configured($user, $store, ['boleta_mode' => 'auto'], new FakeSunatGateway(SunatResult::error('SUNAT no responde')));
+        $this->configured($user, $store);
         $session = $this->shift($user, $store);
-        $this->sell($user, $session, $cement, ['document_type' => 'boleta'])->assertSuccessful();
+        $order = $this->sale($user, $session, $cement, 'boleta');
+        $this->actingAs($user)->post(route('dashboard.pos.documents.submit', $order->id));
         $doc = ElectronicDocument::sole();
-
-        $this->actingAs($user)->get(route('dashboard.pos.documents.electronic'))->assertOk()->assertSee('B001-00000001')->assertSee('Sin enviar')->assertSee('Reenviar');
-        $gateway->answers = [new SunatResult('accepted', '0', 'Aceptada', base64_encode('PK-cdr'))];
-        $this->actingAs($user)->post(route('dashboard.pos.documents.electronic.retry', $doc->id))->assertSessionHas('success');
-        $this->assertSame('accepted', $doc->fresh()->status);
 
         $pdf = $this->actingAs($user)->get(route('dashboard.pos.documents.electronic.download', [$doc->id, 'pdf']))->assertOk();
         $this->assertSame('application/pdf', $pdf->headers->get('Content-Type'));
         $this->assertStringStartsWith('%PDF', $pdf->getContent());
         $this->assertStringContainsString('ds:Signature', $this->actingAs($user)->get(route('dashboard.pos.documents.electronic.download', [$doc->id, 'xml']))->assertOk()->getContent());
-        $this->assertSame('PK-cdr', $this->actingAs($user)->get(route('dashboard.pos.documents.electronic.download', [$doc->id, 'cdr']))->assertOk()->getContent());
+        $this->assertSame('PK-fake-cdr', $this->actingAs($user)->get(route('dashboard.pos.documents.electronic.download', [$doc->id, 'cdr']))->assertOk()->getContent());
+
+        $this->actingAs($user)->get(route('dashboard.returns.create', $order->id))->assertOk()->assertSee('ya está en SUNAT')->assertSee('nota de crédito');
 
         [$stranger] = $this->owner('otra');
         $this->actingAs($stranger)->get(route('dashboard.pos.documents.electronic.download', [$doc->id, 'xml']))->assertNotFound();
-        $this->actingAs($stranger)->post(route('dashboard.pos.documents.electronic.retry', $doc->id))->assertNotFound();
-    }
-
-    public function test_the_register_offers_the_switch_only_when_the_business_chooses_per_sale(): void
-    {
-        [$user, $store] = $this->owner();
-        $session = $this->shift($user, $store);
-        $this->actingAs($user)->get(route('dashboard.pos.index'))->assertOk()->assertSee('\\u0022sunat\\u0022:null', false);
-
-        $this->configured($user, $store, ['boleta_mode' => 'manual']);
-        $this->actingAs($user)->get(route('dashboard.pos.index'))->assertOk()->assertSee('Enviar a SUNAT', false)->assertSee('\\u0022sunat\\u0022:{\\u0022boleta\\u0022:\\u0022manual\\u0022,\\u0022factura\\u0022:\\u0022auto\\u0022}', false);
+        $this->actingAs($stranger)->post(route('dashboard.pos.documents.submit', $order->id))->assertNotFound();
     }
 
     public function test_the_retry_command_and_the_unmigrated_server(): void

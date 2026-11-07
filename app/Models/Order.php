@@ -404,6 +404,12 @@ class Order extends Model
     }
 
     /** Installments of a credit sale (ERP Fase 4b), oldest first. */
+    /** The boleta/factura sent (or on its way) to SUNAT. Only exists once the sale's comprobante was sent. */
+    public function electronicDocument()
+    {
+        return $this->hasOne(ElectronicDocument::class);
+    }
+
     public function installments()
     {
         return $this->hasMany(OrderInstallment::class)->orderBy('number');

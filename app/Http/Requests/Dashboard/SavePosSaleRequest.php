@@ -31,7 +31,6 @@ class SavePosSaleRequest extends FormRequest
             'customer_document'   => ['nullable', 'regex:/^(\d{8}|\d{11})$/'],
             'customer_address'    => ['nullable', 'string', 'max:255'],
             'document_type'       => ['nullable', Rule::in(array_keys(\App\Services\Pos\SalesDocuments::TYPES))],
-            'send_sunat'          => ['nullable', 'boolean'],
             'payments'            => ['nullable', 'array', 'max:5'],
             'payments.*.method'   => ['required', Rule::in(array_keys(PosSaleService::METHODS))],
             'payments.*.amount'   => ['required', 'numeric', 'min:0', 'max:1000000'],

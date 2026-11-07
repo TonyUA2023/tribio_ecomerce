@@ -35,6 +35,28 @@ class SunatSchema
         return $memo = $ready;
     }
 
+    /** The "serie solo interna" flag (2026_11_09): until it has run every series is reported to SUNAT. */
+    public function flagReady(): bool
+    {
+        static $memo = null;
+        if ($memo === true || Cache::get('sunat.flag_ready') === true) {
+            return $memo = true;
+        }
+
+        try {
+            $ready = $this->ready() && Schema::hasColumn('document_series', 'electronic');
+        } catch (\Throwable $e) {
+            report($e);
+
+            return false;
+        }
+        if ($ready) {
+            Cache::put('sunat.flag_ready', true, now()->addDay());
+        }
+
+        return $memo = $ready;
+    }
+
     /** Greenter signs and builds the XML; sending it also needs PHP's SOAP extension. */
     public function libraryReady(): bool
     {

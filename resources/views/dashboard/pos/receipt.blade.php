@@ -26,13 +26,21 @@
         td { padding: 1px 0; vertical-align: top; }
         td.r { text-align: right; white-space: nowrap; padding-left: 6px; }
         .total td { font-size: 15px; font-weight: 700; padding-top: 3px; }
+        .sunat { width: 80mm; max-width: 100%; margin: -8px auto 16px; padding: 10px 12px; background: #fff; border-radius: 8px; font: 13px/1.4 system-ui, sans-serif; color: #111; }
+        .sunat strong { display: block; margin-bottom: 2px; }
+        .sunat small { color: #555; display: block; margin-top: 2px; }
+        .sunat form { margin-top: 8px; }
+        .sunat button { width: 100%; padding: 11px; border-radius: 8px; border: 0; background: #1b8a5a; color: #fff; font: 700 14px system-ui, sans-serif; cursor: pointer; }
+        .sunat .ok { color: #146c43; } .sunat .bad { color: #b42318; } .sunat .warn { color: #8a5200; }
+        .flash { width: 80mm; max-width: 100%; margin: 0 auto 10px; padding: 9px 12px; border-radius: 8px; font: 600 13px system-ui, sans-serif; }
+        .flash.ok { background: #e6f6ef; color: #146c43; } .flash.bad { background: #fdecec; color: #b42318; }
         .actions { width: 80mm; max-width: 100%; margin: 0 auto 16px; display: flex; gap: 8px; }
         .actions button, .actions a { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ccc; background: #fff; font: 600 13px system-ui, sans-serif; color: #111; text-align: center; text-decoration: none; cursor: pointer; }
         @media print {
             @page { size: 80mm auto; margin: 0; }
             body { background: #fff; }
             .ticket { margin: 0; width: 80mm; padding: 2mm 3mm 4mm; }
-            .actions { display: none; }
+            .actions, .sunat, .flash { display: none; }
         }
     </style>
 </head>
@@ -105,6 +113,31 @@
         <a href="{{ route('dashboard.pos.index') }}">Volver a la caja</a>
         @if(app(\App\Services\Pos\PosSchema::class)->extrasReady() && !in_array($order->status, ['cancelled', 'refunded'], true))<a href="{{ route('dashboard.returns.create', $order->id) }}">Devolver</a>@endif
     </div>
+    @if(session('success'))<div class="flash ok" role="status">{{ session('success') }}</div>@endif
+    @if(session('error'))<div class="flash bad" role="alert">{{ session('error') }}</div>@endif
+    @if($sunat)
+        @php $doc = $sunat['doc']; @endphp
+        <section class="sunat" aria-label="SUNAT">
+            @if($sunat['state'] === 'internal')
+                <strong>Comprobante interno</strong><small>Esta serie no se informa a SUNAT.</small>
+            @elseif($doc && $doc->isDelivered())
+                <strong class="ok">✓ SUNAT recibió {{ $doc->code() }}</strong>
+                <small>{{ $doc->label() }}@if($doc->environment === 'beta') · ambiente de pruebas @endif</small>
+                <small><a href="{{ route('dashboard.pos.documents.electronic.download', [$doc->id, 'pdf']) }}" target="_blank">PDF</a> · <a href="{{ route('dashboard.pos.documents.electronic.download', [$doc->id, 'xml']) }}">XML</a>· <a href="{{ route('dashboard.pos.documents.electronic.download', [$doc->id, 'cdr']) }}">CDR</a></small>
+            @elseif($doc && $doc->status === 'rejected')
+                <strong class="bad">SUNAT rechazó este comprobante</strong><small>{{ $doc->sunat_message }}</small>
+            @else
+                <strong class="{{ $doc ? 'bad' : 'warn' }}">{{ $doc ? 'No se pudo enviar a SUNAT' : 'Todavía no se envió a SUNAT' }}</strong>
+                @if($doc?->sunat_message)<small>{{ $doc->sunat_message }}</small>@endif
+                @if($sunat['can'])
+                    <form method="POST" action="{{ route('dashboard.pos.documents.submit', $order->id) }}">@csrf<button type="submit">{{ $doc ? 'Reintentar envío' : 'Enviar a SUNAT' }}</button></form>
+                    @if($sunat['deadline'])<small>Plazo: hasta el {{ $sunat['deadline']->format('d/m/Y') }}. Se enviará con el número {{ $order->document_code }}.</small>@endif
+                @elseif($sunat['why'])
+                    <small>{{ $sunat['why'] }}</small>
+                @endif
+            @endif
+        </section>
+    @endif
     @if($print)<script>window.addEventListener('load', () => window.print());</script>@endif
 </body>
 </html>

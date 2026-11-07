@@ -74,9 +74,6 @@ class PosController extends Controller
                 'hasRuc'   => \App\Services\Pos\SalesDocuments::validRuc((string) $store->ruc),
                 'idLimit'  => \App\Services\Pos\SalesDocuments::BOLETA_ID_LIMIT,
                 'settings' => route('dashboard.pos.documents.edit'),
-                // Facturación electrónica: qué se envía a SUNAT sin preguntar y qué se elige en cada venta.
-                'sunat'    => ($sunat = app(\App\Services\Sunat\SunatSchema::class))->ready() && ($sunatSetting = app(\App\Services\Sunat\SunatSettings::class)->for($store))->enabled
-                    ? ['boleta' => $sunatSetting->boleta_mode, 'factura' => $sunatSetting->factura_mode === 'auto' ? 'auto' : 'manual'] : null,
             ] : null,
             'priceLists' => \App\Services\Pos\PriceListService::LISTS,
             'quote'     => $this->schema->extrasReady() && $request->integer('proforma')
@@ -140,7 +137,15 @@ class PosController extends Controller
             $order->load('installments');
         }
 
-        return view('dashboard.pos.receipt', ['order' => $order, 'methods' => PosSaleService::METHODS, 'print' => $request->boolean('imprimir')]);
+        // boleta/factura: where it stands with SUNAT (button «Enviar a SUNAT», sent, or internal series)
+        $sunat = app(\App\Services\Sunat\SunatSchema::class)->ready() && in_array($order->document_type, ['boleta', 'factura'], true)
+            ? app(\App\Services\Sunat\ElectronicDocuments::class)->state($order) : null;
+        // A device handed to the staff ("modo caja") cannot reach the owner's SUNAT screens.
+        if ($sunat && $sunat['can'] && app(\App\Services\Pos\PosAccess::class)->active($order->store)) {
+            $sunat = ['can' => false, 'why' => 'El dueño lo envía a SUNAT desde su panel.'] + $sunat;
+        }
+
+        return view('dashboard.pos.receipt', ['order' => $order, 'methods' => PosSaleService::METHODS, 'print' => $request->boolean('imprimir'), 'sunat' => $sunat]);
     }
 
     /**

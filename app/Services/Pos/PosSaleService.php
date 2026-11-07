@@ -131,8 +131,8 @@ class PosSaleService
                         $order->forceFill(['branch_id' => $this->branches->of($register, $order->store)->id])->save();
                     }
                     $this->documents->issue($order, $document, $register);
-                    // Boleta/factura marked for SUNAT (by the sale, or by the store's setting): queued with the sale.
-                    $this->electronic->queue($order, $document, $data['send_sunat'] ?? null);
+                    // Only when the business chose "send all automatically"; otherwise the comprobante waits for its «Enviar a SUNAT» button.
+                    $this->electronic->queue($order, $document);
                 }
 
                 $order->items()->createMany(array_map(fn ($line) => $line['item'], $lines));
@@ -166,7 +166,7 @@ class PosSaleService
             throw $e;
         }
 
-        // Marked for SUNAT: it goes out right after the cashier has her answer.
+        // Automatic mode: it goes out right after the cashier has her answer.
         $this->electronic->dispatch($order);
 
         // A customer picked by name only has nothing the resolver can match: keep the link and its totals.

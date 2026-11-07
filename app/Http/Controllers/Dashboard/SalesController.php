@@ -54,9 +54,18 @@ class SalesController extends Controller
         // Where the earnings detail lives, for the same period.
         $detail = $custom ? ['desde' => $range[0]->toDateString(), 'hasta' => $range[1]->toDateString()] : ['periodo' => $period === 'todas' ? 'anio' : $period];
 
+        $sunat = app(\App\Services\Sunat\SunatSchema::class)->ready();
+        $orders = (clone $sales)->with('payments')
+            ->when($sunat, fn ($q) => $q->with('electronicDocument:id,order_id,store_id,type,series,number,environment,status,sunat_message,attempts,emailed_at'))
+            ->latest('id')->paginate(25)->withQueryString();
+        // Boleta/factura: waiting for the «Enviar a SUNAT» button, sent, or internal.
+        $electronic = $sunat ? $orders->getCollection()->filter(fn ($o) => in_array($o->document_type, ['boleta', 'factura'], true))
+            ->mapWithKeys(fn ($o) => [$o->id => app(\App\Services\Sunat\ElectronicDocuments::class)->state($o)]) : collect();
+
         return view('dashboard.sales.index', [
             'store'     => $store,
-            'orders'    => (clone $sales)->with('payments')->latest('id')->paginate(25)->withQueryString(),
+            'orders'    => $orders,
+            'electronic' => $electronic,
             'summary'   => $profit->forOrders($sales, $store->id),
             'periods'   => self::PERIODS,
             'period'    => $custom ? null : $period,

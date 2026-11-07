@@ -34,7 +34,7 @@ class SunatSettings
         $setting = $this->for($store);
         $fields = [
             'environment'    => $data['environment'] === SunatSetting::PRODUCTION ? SunatSetting::PRODUCTION : SunatSetting::BETA,
-            'factura_mode'   => $data['factura_mode'] === 'manual' ? 'manual' : 'auto',
+            'factura_mode'   => in_array($data['factura_mode'], ['manual', 'auto', 'never'], true) ? $data['factura_mode'] : 'manual',
             'boleta_mode'    => in_array($data['boleta_mode'], ['manual', 'auto', 'never'], true) ? $data['boleta_mode'] : 'manual',
             'endpoint'       => filled($data['endpoint'] ?? null) ? trim($data['endpoint']) : null,
             'email_company'  => (bool) ($data['email_company'] ?? false),

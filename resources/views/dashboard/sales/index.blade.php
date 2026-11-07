@@ -12,6 +12,8 @@
     $day = null;
 @endphp
 <div class="sl-app w-full max-w-4xl mx-auto">
+    @if(session('success'))<div class="sl-flash is-ok" role="status">{{ session('success') }}</div>@endif
+    @if(session('error'))<div class="sl-flash is-bad" role="alert">{{ session('error') }}</div>@endif
     <div class="sl-head">
         <p>Ventas de tu caja que se concretaron. <span>{{ $periodLabel }}</span></p>
         <a href="{{ route('dashboard.pos.index') }}" class="btn-primary">Nueva venta</a>
@@ -89,6 +91,12 @@
                 <div class="sl-side">
                     <strong class="sl-total">{{ $money($order->total) }}</strong>
                     <span class="sl-actions">
+                        @php $sun = $electronic[$order->id] ?? null; @endphp
+                        @if($sun && $sun['state'] !== 'internal')
+                            @if($sun['doc'])<a href="{{ route('dashboard.pos.receipt', $order->id) }}" target="_blank" rel="noopener" class="sl-sunat is-{{ $sun['doc']->status }}">SUNAT: {{ $sun['doc']->label() }}</a>
+                            @elseif($sun['can'])<form method="POST" action="{{ route('dashboard.pos.documents.submit', $order->id) }}" class="inline">@csrf<button type="submit" class="sl-sunat is-unsent">Enviar a SUNAT</button></form>
+                            @else<a href="{{ route('dashboard.pos.receipt', $order->id) }}" target="_blank" rel="noopener" class="sl-sunat is-unsent" title="{{ $sun['why'] }}">Sin enviar a SUNAT</a>@endif
+                        @endif
                         <a href="{{ route('dashboard.pos.receipt', $order->id) }}" target="_blank" rel="noopener">Ticket</a>
                         @if($extras)<a href="{{ route('dashboard.returns.create', $order->id) }}">Devolver</a>@endif
                     </span>

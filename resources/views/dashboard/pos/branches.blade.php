@@ -83,10 +83,10 @@
     {{-- Series --}}
     <section class="glass-card p-4 sm:p-5 space-y-3" aria-labelledby="se-title">
         <h2 id="se-title" class="text-white font-bold text-base">Series por sede o por caja</h2>
-        <p class="text-xs text-white/60">Una caja usa, en este orden, la serie de su caja, la de su sede o la del negocio (en Datos y series). Así cada local puede llevar su propio B002, F002… como SUNAT permite.</p>
+        <p class="text-xs text-white/60">Una caja usa, en este orden, la serie de su caja, la de su sede o la del negocio (en Datos y series). Así cada local puede llevar su propio B002, F002… como SUNAT permite.<br><strong>Boletas que no se informan a SUNAT:</strong> sácalas de una serie propia marcada «solo interna» (por ejemplo B900 en una caja). Así las series que sí se informan no quedan con números saltados.</p>
         <div class="overflow-x-auto">
             <table class="w-full text-xs">
-                <thead><tr class="text-left text-white/50"><th class="py-2 pr-3">Documento</th><th class="pr-3">Serie</th><th class="pr-3">Corresponde a</th><th class="pr-3">Último</th><th></th></tr></thead>
+                <thead><tr class="text-left text-white/50"><th class="py-2 pr-3">Documento</th><th class="pr-3">Serie</th><th class="pr-3">Corresponde a</th><th class="pr-3">Último</th>@if($flag)<th class="pr-3">Se informa a SUNAT</th>@endif<th></th></tr></thead>
                 <tbody>
                 @foreach($series as $row)
                     <tr class="border-t border-white/10">
@@ -94,6 +94,18 @@
                         <td class="pr-3 font-mono text-white">{{ $row->series }}</td>
                         <td class="pr-3 text-white/70">{{ $row->register ? 'Caja: ' . $row->register->name : ($row->branch ? 'Sede: ' . $row->branch->name : 'Todo el negocio') }}</td>
                         <td class="pr-3 text-white/70">{{ $row->last_number ? \App\Services\Pos\SalesDocuments::code($row->series, $row->last_number) : '—' }}</td>
+                        @if($flag)
+                            <td class="pr-3">
+                                @if($row->type === 'nota_venta')<span class="text-white/40">No aplica</span>
+                                @elseif($row->last_number > 0)<span class="{{ $row->electronic ? 'text-emerald-300' : 'text-white/60' }}">{{ $row->electronic ? 'Sí' : 'No · solo interna' }}</span>
+                                @else
+                                    <form method="POST" action="{{ route('dashboard.pos.documents.series.update', $row->id) }}" class="flex items-center gap-2">@csrf @method('PUT')
+                                        <select name="electronic" class="input-field !py-1 !min-h-0 text-xs" onchange="this.form.submit()" aria-label="Se informa a SUNAT">
+                                            <option value="1" @selected($row->electronic)>Sí</option><option value="0" @selected(!$row->electronic)>No · solo interna</option>
+                                        </select></form>
+                                @endif
+                            </td>
+                        @endif
                         <td class="text-right">@if(($row->branch_id || $row->register_id) && !$row->last_number)<form method="POST" action="{{ route('dashboard.pos.documents.series.destroy', $row->id) }}">@csrf @method('DELETE')<button class="text-red-300 underline min-h-[36px]">Quitar</button></form>@endif</td>
                     </tr>
                 @endforeach
@@ -111,6 +123,8 @@
                 <select id="ns-branch" name="branch_id" class="input-field">@foreach($branches as $branch)<option value="{{ $branch->id }}">{{ $branch->name }}</option>@endforeach</select></div>
             <div x-show="scope === 'register'" x-cloak><label class="input-label" for="ns-reg">Caja</label>
                 <select id="ns-reg" name="register_id" class="input-field">@foreach($registers as $register)<option value="{{ $register->id }}">{{ $register->name }}</option>@endforeach</select></div>
+            @if($flag)<div class="col-span-2"><label class="input-label" for="ns-el">¿Se informa a SUNAT?</label>
+                <select id="ns-el" name="electronic" class="input-field"><option value="1">Sí, es una serie electrónica</option><option value="0">No, es solo interna</option></select></div>@endif
             <div><label class="input-label" for="ns-start">Empieza en</label><input id="ns-start" name="start" type="number" min="1" class="input-field" value="1"></div>
             <button type="submit" class="btn-primary text-sm">Crear serie</button>
         </form>

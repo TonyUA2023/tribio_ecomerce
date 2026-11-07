@@ -18,6 +18,12 @@
         <a href="{{ route('dashboard.returns.index') }}" class="text-xs text-tribio-cyan underline">← Devoluciones</a>
     </div>
 
+    @if(app(\App\Services\Sunat\SunatSchema::class)->ready() && ($electronicDoc = \App\Models\ElectronicDocument::where('order_id', $order->id)->whereIn('status', ['accepted', 'observed'])->first()))
+        <div class="glass-card p-4 text-xs text-amber-300" role="note">
+            <strong>{{ $electronicDoc->code() }} ya está en SUNAT.</strong> Esta devolución devuelve el dinero y el stock, pero <strong>no anula el comprobante ante SUNAT</strong>: para eso se necesita una nota de crédito (todavía no disponible en Tribio). Coordínalo con tu contador.
+        </div>
+    @endif
+
     @if($errors->any())
         <div class="glass-card p-4" role="alert">@foreach($errors->all() as $error)<p class="text-xs text-red-300">{{ $error }}</p>@endforeach</div>
     @endif

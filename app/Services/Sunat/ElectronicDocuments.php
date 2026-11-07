@@ -4,25 +4,33 @@ namespace App\Services\Sunat;
 
 use App\Jobs\SendElectronicDocument;
 use App\Mail\ElectronicDocumentMail;
+use App\Models\DocumentSeries;
 use App\Models\ElectronicDocument;
 use App\Models\Order;
 use App\Models\Store;
 use App\Models\SunatSetting;
 use App\Services\Pos\SalesDocuments;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Boletas and facturas on their way to SUNAT. Not every sale goes: the business chooses (per sale, or
- * "all boletas" / "all facturas" in its settings). A sale marked for SUNAT is saved with its document
- * `pending`; right after the answer goes back to the cashier it is signed and sent, and whatever could
- * not be delivered is retried (by the scheduler, or by hand from Comprobantes electrónicos).
+ * Boletas and facturas on their way to SUNAT.
+ *
+ * Every boleta and factura is numbered when the sale is rung up (that number never changes). Sending it to
+ * SUNAT is a separate act on that comprobante: the «Enviar a SUNAT» button builds, signs and sends the
+ * electronic document with the same series and number. A business that prefers can switch on "send all
+ * automatically at checkout", and a series can be marked "solo interna" so its comprobantes are never reported
+ * (keeping the series that are reported free of gaps).
  */
 class ElectronicDocuments
 {
-    /** SUNAT only takes comprobantes up to 3 days after the issue date. */
-    public const MAX_AGE_DAYS = 3;
+    /** Days SUNAT still takes a comprobante after its issue date (facturas 3; boletas 7). Confirm with your accountant. */
+    public const DEADLINE_DAYS = [SalesDocuments::FACTURA => 3, SalesDocuments::BOLETA => 7];
+
+    public const STATE_INTERNAL = 'internal';
+    public const STATE_UNSENT = 'unsent';
 
     public function __construct(
         private SunatSchema $schema,
@@ -34,40 +42,87 @@ class ElectronicDocuments
     ) {
     }
 
-    /** Does this sale go to SUNAT? Nota de venta never; factura by default; boleta only when asked (unless the store says "all"). */
-    public function wants(Store $store, string $type, ?bool $requested): bool
+    /** The mode ("manual" button, "auto" at checkout, "never") the business chose for this kind of comprobante. */
+    public function mode(Store $store, string $type): string
     {
-        if (!$this->schema->ready() || !isset(InvoiceBuilder::TYPE_CODES[$type])) {
-            return false;
-        }
         $setting = $this->settings->for($store);
-        if (!$setting->enabled) {
-            return false;
-        }
 
-        return match ($type) {
-            SalesDocuments::FACTURA => $setting->factura_mode === 'auto' ? true : (bool) $requested,
-            default                 => match ($setting->boleta_mode) {
-                'auto'  => true,
-                'never' => false,
-                default => (bool) $requested,
-            },
-        };
+        return ($type === SalesDocuments::FACTURA ? $setting->factura_mode : $setting->boleta_mode) ?: 'manual';
     }
 
-    /** Call inside the sale's transaction, once the order has its number. */
-    public function queue(Order $order, string $type, ?bool $requested): ?ElectronicDocument
+    /** Is this series reported to SUNAT? Series marked "solo interna" never are. */
+    public function reported(Order $order): bool
+    {
+        if (!$this->schema->flagReady()) {
+            return true;
+        }
+        $series = DocumentSeries::where('store_id', $order->store_id)->where('type', $order->document_type)->where('series', $order->document_series)->first();
+
+        return $series ? $series->isElectronic() : true;
+    }
+
+    public function deadline(Order $order): ?Carbon
+    {
+        $days = self::DEADLINE_DAYS[$order->document_type] ?? null;
+
+        return $days ? $order->created_at->copy()->setTimezone('America/Lima')->startOfDay()->addDays($days)->endOfDay() : null;
+    }
+
+    /**
+     * Where a comprobante stands for the screens: `internal` (never reported), `unsent` (numbered, waiting for the
+     * button) or the electronic document's own status. `can` says whether the button works right now, `why` not.
+     *
+     * @return array{state: string, doc: ?ElectronicDocument, can: bool, why: ?string, deadline: ?Carbon}
+     */
+    public function state(Order $order): array
+    {
+        $none = ['state' => self::STATE_INTERNAL, 'doc' => null, 'can' => false, 'why' => null, 'deadline' => null];
+        if (!$this->schema->ready() || !isset(InvoiceBuilder::TYPE_CODES[$order->document_type])) {
+            return $none;
+        }
+        $store = Store::find($order->store_id);
+        $doc = $order->relationLoaded('electronicDocument') ? $order->electronicDocument : $order->electronicDocument()->first();
+        if ($doc) {
+            return ['state' => $doc->status, 'doc' => $doc, 'can' => $doc->canRetry() && $this->sendable($order, $store) === null, 'why' => $doc->canRetry() ? $this->sendable($order, $store) : null, 'deadline' => $this->deadline($order)];
+        }
+        if (!$this->reported($order) || $this->mode($store, $order->document_type) === 'never') {
+            return $none;
+        }
+        $why = $this->sendable($order, $store);
+
+        return ['state' => self::STATE_UNSENT, 'doc' => null, 'can' => $why === null, 'why' => $why, 'deadline' => $this->deadline($order)];
+    }
+
+    /** Why this sale cannot be sent right now (null = it can). */
+    private function sendable(Order $order, Store $store): ?string
+    {
+        $setting = $this->settings->for($store);
+        if (!$setting->enabled) {
+            return 'La facturación electrónica está desactivada: actívala en Comprobantes → SUNAT.';
+        }
+        if ($problems = $this->settings->problems($store, $setting)) {
+            return $problems[0];
+        }
+        if ($order->status === 'cancelled') {
+            return 'La venta está anulada.';
+        }
+        if (($deadline = $this->deadline($order)) && $deadline->isPast()) {
+            return 'Venció el plazo para enviarla (hasta el ' . $deadline->format('d/m/Y') . ').';
+        }
+
+        return null;
+    }
+
+    /** At checkout, only when the business asked for "all automatic". Call inside the sale's transaction, once the order has its number. */
+    public function queue(Order $order, string $type): ?ElectronicDocument
     {
         $store = $order->store;
-        if (!$this->wants($store, $type, $requested)) {
+        if (!$this->schema->ready() || !isset(InvoiceBuilder::TYPE_CODES[$type]) || !$this->settings->for($store)->enabled
+            || $this->mode($store, $type) !== 'auto' || !$this->reported($order)) {
             return null;
         }
         $setting = $this->settings->for($store);
-
         $problems = $this->settings->problems($store, $setting);
-        if ($problems && $requested) {
-            throw ValidationException::withMessages(['send_sunat' => 'No se puede enviar a SUNAT: ' . implode(' ', array_slice($problems, 0, 2))]);
-        }
 
         return ElectronicDocument::create([
             'store_id'    => $order->store_id,
@@ -90,6 +145,68 @@ class ElectronicDocuments
         }
     }
 
+    /**
+     * The «Enviar a SUNAT» button: the electronic comprobante is built, signed and sent now, with the series
+     * and number the sale already has. Runs in the request, so the cashier sees SUNAT's answer.
+     *
+     * @throws ValidationException when it cannot be sent (with the reason)
+     */
+    public function submit(Order $order): ElectronicDocument
+    {
+        $store = Store::findOrFail($order->store_id);
+        if (!$this->schema->ready() || $order->source !== 'pos' || !isset(InvoiceBuilder::TYPE_CODES[$order->document_type])) {
+            throw ValidationException::withMessages(['send' => 'Solo las boletas y facturas se envían a SUNAT.']);
+        }
+        if (!$this->reported($order) || $this->mode($store, $order->document_type) === 'never') {
+            throw ValidationException::withMessages(['send' => 'Este comprobante es de una serie interna: no se envía a SUNAT.']);
+        }
+        if ($why = $this->sendable($order, $store)) {
+            throw ValidationException::withMessages(['send' => $why]);
+        }
+
+        $doc = ElectronicDocument::where('order_id', $order->id)->first();
+        if ($doc?->isDelivered()) {
+            throw ValidationException::withMessages(['send' => "SUNAT ya recibió {$doc->code()}."]);
+        }
+        if ($doc && !$doc->canRetry()) {
+            throw ValidationException::withMessages(['send' => 'SUNAT rechazó este comprobante: no se puede reenviar tal cual.']);
+        }
+        $doc ??= ElectronicDocument::create([
+            'store_id' => $order->store_id, 'order_id' => $order->id, 'type' => $order->document_type, 'series' => $order->document_series,
+            'number' => $order->document_number, 'environment' => $this->settings->for($store)->environment, 'status' => ElectronicDocument::PENDING,
+        ]);
+
+        return $this->send($doc);
+    }
+
+    /**
+     * Sends, oldest first, the comprobantes still waiting for the button (up to $limit): "enviar todo lo pendiente".
+     *
+     * @return array{sent: int, failed: int}
+     */
+    public function submitPending(Store $store, int $limit = 20): array
+    {
+        $orders = Order::where('store_id', $store->id)->where('source', 'pos')->where('status', '!=', 'cancelled')->whereIn('document_type', array_keys(InvoiceBuilder::TYPE_CODES))
+            ->where(fn ($q) => $q->whereDoesntHave('electronicDocument')->orWhereHas('electronicDocument', fn ($d) => $d->whereIn('status', [ElectronicDocument::PENDING, ElectronicDocument::ERROR])))
+            ->orderBy('id')->limit($limit * 3)->get();
+
+        $result = ['sent' => 0, 'failed' => 0];
+        foreach ($orders as $order) {
+            if ($result['sent'] + $result['failed'] >= $limit) {
+                break;
+            }
+            if ($this->state($order)['can']) {
+                try {
+                    $this->submit($order)->isDelivered() ? $result['sent']++ : $result['failed']++;
+                } catch (ValidationException $e) {
+                    $result['failed']++;
+                }
+            }
+        }
+
+        return $result;
+    }
+
     /** Signs (once) and sends one document; records SUNAT's answer and mails the result. */
     public function send(ElectronicDocument $doc): ElectronicDocument
     {
@@ -110,13 +227,13 @@ class ElectronicDocuments
             if ($problems = $this->settings->problems($store, $setting)) {
                 return $this->record($doc, SunatResult::error(implode(' ', $problems)));
             }
-            if ($doc->created_at->lt(now()->subDays(self::MAX_AGE_DAYS)->subHours(12)) && !$doc->xml) {
-                return $this->record($doc, SunatResult::error('Pasaron más de ' . self::MAX_AGE_DAYS . ' días desde la venta: SUNAT ya no recibe este comprobante.'));
+            $order = Order::with(['items', 'installments'])->findOrFail($doc->order_id);
+            if (($deadline = $this->deadline($order)) && $deadline->isPast()) {
+                return $this->record($doc, SunatResult::error('Venció el plazo para enviarla (hasta el ' . $deadline->format('d/m/Y') . '): SUNAT ya no la recibe.'));
             }
 
             try {
                 if (!$doc->xml) {
-                    $order = Order::with(['items', 'installments'])->findOrFail($doc->order_id);
                     $branch = ($order->branch_id ? \App\Models\Branch::find($order->branch_id) : null) ?? $this->branches->main($store);
                     $signed = $this->signer->sign($setting, $this->builder->build($order, $store, $branch));
                     $doc->forceFill(['xml' => $signed['xml'], 'hash' => $signed['hash']])->save();
@@ -138,7 +255,7 @@ class ElectronicDocuments
     {
         $sent = 0;
         $query = ElectronicDocument::whereIn('status', [ElectronicDocument::PENDING, ElectronicDocument::ERROR])
-            ->where('created_at', '>=', now()->subDays(self::MAX_AGE_DAYS))->orderBy('id')->limit($limit * 3);
+            ->where('created_at', '>=', now()->subDays(max(self::DEADLINE_DAYS)))->orderBy('id')->limit($limit * 3);
 
         foreach ($query->get() as $doc) {
             if ($sent >= $limit) {
