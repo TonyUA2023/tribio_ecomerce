@@ -1326,3 +1326,21 @@ body.sm-lock .sm-scroll { overflow: hidden; }
 .mod-actions { display: flex; justify-content: flex-end; margin-top: 4px; }
 .mod-actions .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
 @media (max-width: 560px) { .mod-gives, .mod-off, .mod-sub { margin-left: 0; } }
+
+/* Legibilidad en el panel claro: las pantallas antiguas usan tonos pastel pensados para fondo oscuro
+   (emerald-300, red-300…). Sobre las píldoras y tarjetas claras del panel no se leen: aquí van a su
+   versión oscura (contraste ≥ 4.5:1). Los tonos ya remapeados arriba (amber-300, tribio-cyan…) no se repiten. */
+.dashboard-workspace :is(.text-emerald-200, .text-emerald-300, .hover\:text-emerald-300:hover) { color: #1f6b43 !important; }
+.dashboard-workspace :is(.text-red-200, .text-red-300, .text-red-400, .hover\:text-red-300:hover, .group:hover .group-hover\:text-red-300) { color: #b03b34 !important; }
+.dashboard-workspace :is(.text-amber-100, .text-amber-200, .text-amber-400, .hover\:text-amber-300:hover) { color: #8b610e !important; }
+.dashboard-workspace :is(.text-sky-300, .text-blue-300, .text-cyan-300) { color: #1b69b7 !important; }
+.dashboard-workspace :is(.text-tribio-purple, .text-violet-300, .text-indigo-300) { color: #6d4cac !important; }
+.dashboard-workspace :is(.text-tribio-gold, .text-yellow-300) { color: #8b610e !important; }
+.dashboard-workspace :is(.text-white\/50, .text-white\/45) { color: #55667c !important; }
+/* Insignias y botones de estado con fondo translúcido: el borde acompaña al texto oscuro. */
+.dashboard-workspace :is(.border-emerald-500\/30, .border-emerald-500\/40) { border-color: #9fd6b8 !important; }
+.dashboard-workspace :is(.border-amber-500\/30, .border-amber-500\/40) { border-color: #e6c27a !important; }
+.dashboard-workspace :is(.border-red-500\/30, .border-red-500\/40) { border-color: #eeaaa5 !important; }
+.dashboard-workspace :is(.bg-emerald-500\/20, .bg-emerald-500\/10) { background-color: #e1f4ea !important; }
+.dashboard-workspace :is(.bg-amber-500\/20, .bg-amber-500\/10) { background-color: #fdf0d3 !important; }
+.dashboard-workspace :is(.bg-red-500\/20, .bg-red-500\/10) { background-color: #fde6e4 !important; }
