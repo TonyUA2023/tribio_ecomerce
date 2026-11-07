@@ -404,6 +404,12 @@ class Order extends Model
     }
 
     /** Installments of a credit sale (ERP Fase 4b), oldest first. */
+    /** The sede the sale was rung up in (null for sales from before the sedes existed). */
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
     /** The boleta/factura sent (or on its way) to SUNAT. Only exists once the sale's comprobante was sent. */
     public function electronicDocument()
     {

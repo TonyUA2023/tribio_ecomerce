@@ -38,6 +38,11 @@
         async setCatalog(storeId, products) {
             return tx('kv', 'readwrite', s => s.put({ products, at: Date.now() }, 'catalog:' + storeId)).catch(() => null);
         },
+        /** How old the saved catalog is, in ms (null when there is none). */
+        async catalogAge(storeId) {
+            const row = await tx('kv', 'readonly', s => s.get('catalog:' + storeId)).catch(() => null);
+            return row ? Date.now() - row.at : null;
+        },
         async catalog(storeId) {
             const row = await tx('kv', 'readonly', s => s.get('catalog:' + storeId)).catch(() => null);
             return row ? row.products : [];
@@ -46,7 +51,7 @@
         async searchLocal(storeId, text) {
             const products = await api.catalog(storeId);
             const q = (text || '').trim().toLowerCase();
-            if (!q) return { exact: null, products: products.slice(0, 20) };
+            if (!q) return { exact: null, products: products.slice(0, 20), size: products.length };
             let exact = null;
             for (const p of products) {
                 const unit = p.units.find(u => u.barcode && u.barcode.toLowerCase() === q);
@@ -57,7 +62,7 @@
             }
             const found = products.filter(p => p.name.toLowerCase().includes(q) || (p.sku || '').toLowerCase().startsWith(q));
             if (exact && !found.some(p => p.id === exact.product_id)) found.unshift(products.find(p => p.id === exact.product_id));
-            return { exact, products: found.slice(0, 20) };
+            return { exact, products: found.slice(0, 20), size: products.length };
         },
         async enqueue(item) {
             return tx('queue', 'readwrite', s => s.put({ ...item, queued_at: Date.now(), error: null }));

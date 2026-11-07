@@ -34,12 +34,17 @@ class SalesController extends Controller
         $method = array_key_exists((string) $request->query('medio'), PosSaleService::METHODS) ? $request->query('medio') : null;
         $term = trim((string) $request->query('q'));
 
+        // Businesses with several sedes can look at one of them (the principal also owns sales from before the sedes existed).
+        $branches = app(\App\Services\Sunat\SunatSchema::class)->ready() ? \App\Models\Branch::where('store_id', $store->id)->where('is_active', true)->orderByDesc('is_main')->orderBy('sunat_code')->get(['id', 'name', 'is_main']) : collect();
+        $branch = $branches->count() > 1 ? $branches->firstWhere('id', $request->integer('sede')) : null;
+
         $sales = Order::query()->where('store_id', $store->id)->where('source', 'pos')->where('status', '!=', 'cancelled')
             ->when($range, fn ($q) => $q->whereBetween('created_at', [
                 $range[0]->copy()->setTimezone(config('app.timezone')), $range[1]->copy()->setTimezone(config('app.timezone')),
             ]))
             ->when($type === SalesDocuments::NOTA, fn ($q) => $q->where(fn ($n) => $n->where('document_type', SalesDocuments::NOTA)->orWhereNull('document_type')))
             ->when($type && $type !== SalesDocuments::NOTA, fn ($q) => $q->where('document_type', $type))
+            ->when($branch, fn ($q) => $q->where(fn ($w) => $w->where('branch_id', $branch->id)->when($branch->is_main, fn ($m) => $m->orWhereNull('branch_id'))))
             ->when($method, fn ($q) => $q->whereHas('payments', fn ($p) => $p->where('method', $method)->where('status', 'paid')))
             ->when($term !== '', function ($q) use ($term, $docsReady) {
                 $q->where(function ($w) use ($term, $docsReady) {
@@ -73,6 +78,8 @@ class SalesController extends Controller
             'to'        => $range[1] ?? null,
             'type'      => $type,
             'method'    => $method,
+            'branches'  => $branches->count() > 1 ? $branches : collect(),
+            'branch'    => $branch,
             'term'      => $term,
             'docsReady' => $docsReady,
             'methods'   => PosSaleService::METHODS,

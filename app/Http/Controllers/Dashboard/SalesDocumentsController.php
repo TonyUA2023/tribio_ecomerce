@@ -38,8 +38,11 @@ class SalesDocumentsController extends Controller
         foreach ($this->documents->series($store) as $type => $row) {
             $series = $data['series'][$type];
             if ($series !== $row->series) {
-                // The correlative belongs to the series: a new series starts again at 1.
-                $row->update(['series' => $series, 'last_number' => 0]);
+                if (\App\Models\DocumentSeries::where('store_id', $store->id)->where('type', $type)->where('series', $series)->where('id', '!=', $row->id)->exists()) {
+                    throw \Illuminate\Validation\ValidationException::withMessages(["series.{$type}" => "La serie {$series} ya la usa una caja o sede: elige otra."]);
+                }
+                // The correlative belongs to the series: a new one starts at 1, and one used before goes on after its last number.
+                $row->update(['series' => $series, 'last_number' => (int) \App\Models\Order::where('store_id', $store->id)->where('document_type', $type)->where('document_series', $series)->max('document_number')]);
             }
         }
 

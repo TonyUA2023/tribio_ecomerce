@@ -36,6 +36,7 @@ class Branches
 
     public function save(Store $store, array $data, ?Branch $branch = null): Branch
     {
+        $this->main($store); // the principal sede always exists before a second one is added
         if (!$branch && Branch::where('store_id', $store->id)->count() >= self::MAX) {
             throw ValidationException::withMessages(['name' => 'Llegaste al máximo de ' . self::MAX . ' sedes.']);
         }

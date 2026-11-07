@@ -4,7 +4,7 @@
 @push('head')
     <link rel="manifest" href="/pos-manifest.webmanifest">
     <meta name="theme-color" content="#0e7490">
-    <script defer src="/pos/offline.js?v=1"></script>
+    <script defer src="/pos/offline.js?v=3"></script>
 @endpush
 @section('content')
 @php $money = fn ($value) => 'S/ ' . number_format((float) $value, 2); @endphp
@@ -31,7 +31,7 @@
 
     <div class="pos-toolbar">
         <div class="pos-toolbar-info">
-            <strong class="pos-register">{{ $register->name }}</strong>
+            <strong class="pos-register">{{ $register->name }}</strong>@if($sede)<span class="pos-sede">📍 {{ $sede }}</span>@endif
             <span class="pos-pill"><i aria-hidden="true"></i>Abierta · {{ $session->opened_at->locale('es')->diffForHumans(null, true) }}</span>
             <span class="pos-status">
                 @if($kiosk)<span class="pos-kiosk">👤 {{ $kiosk['name'] }}{{ $kiosk['manager'] ? ' (encargado)' : '' }}</span> ·@endif
@@ -422,7 +422,7 @@
         const blankPay = () => Object.fromEntries(Object.keys(config.methods).map(m => [m, '']));
         return {
             ...config,
-            query: '', products: [], loading: false, searchError: '',
+            query: '', products: [], loading: false, searchError: '', searchSeq: 0, searchCtrl: null, top: null,
             lines: [], discount: 0, customer: null, customerQuery: '', customers: [], newCustomer: false, walkIn: { name: '', phone: '', document: '', address: '' },
             paying: false, pay: blankPay(), saving: false, credit: false, terms: { installments: 1, every_days: 30, first_due: config.firstDue.default }, error: '', done: null, uuid: newId(), showCash: false, cartOpen: false, showMenu: false, showDetails: false, view: loadView(), coarse: isTouch, scanMode: loadScan(), documentType: loadDocument(config.documents),
             priceList: 'menor', validDays: 7, quoteId: null, quoteNumber: null, savedQuote: null,
@@ -442,7 +442,7 @@
                 this.$watch('lines.length', count => { if (!count && !this.done && !this.savedQuote) this.cartOpen = false; });
                 this.$nextTick(() => { this.fitLayout(); this.focusSearch(); });
                 setTimeout(() => this.fitLayout(), 300);
-                window.addEventListener('resize', () => this.fitLayout());
+                let resizing = false; window.addEventListener('resize', () => { if (resizing) return; resizing = true; requestAnimationFrame(() => { resizing = false; this.fitLayout(); }); });
             },
             // From lg up the two panels fill what is left of the screen, each scrolling on its own.
             fitLayout() {
@@ -517,22 +517,40 @@
                 if (!product.track_stock) return 'Sin control';
                 return product.stock <= 0 ? 'Sin stock' : 'Stock ' + product.stock;
             },
-            async search(exact = false) {
+            // Only the answer to the LAST thing typed is shown: a slow reply to "bro" must never replace the list for "cemento".
+            async search() {
+                const seq = ++this.searchSeq;
+                this.searchCtrl?.abort();
+                const controller = this.searchCtrl = new AbortController();
+                const text = this.query;
                 this.loading = true;
                 try {
-                    const response = await fetch(this.productsUrl + '?q=' + encodeURIComponent(this.query), { headers: { 'Accept': 'application/json' } });
+                    const response = await fetch(this.productsUrl + '?q=' + encodeURIComponent(text), { headers: { 'Accept': 'application/json' }, signal: controller.signal });
                     if (!response.ok) throw new Error();
                     const data = await response.json();
+                    if (seq !== this.searchSeq) return null;
                     this.products = data.products;
+                    if (!text.trim()) this.top = data.products;
                     this.searchError = '';
                     return data;
                 } catch (e) {
+                    if (e.name === 'AbortError' || seq !== this.searchSeq) return null;
                     // No connection: the copy of the catalog kept on this device.
-                    const data = window.TribioPosOffline ? await window.TribioPosOffline.searchLocal(this.offline.storeId, this.query) : null;
-                    if (data && data.products.length) { this.products = data.products; this.searchError = ''; return data; }
+                    const data = window.TribioPosOffline ? await window.TribioPosOffline.searchLocal(this.offline.storeId, text) : null;
+                    if (seq !== this.searchSeq) return null;
+                    // The copy answered (even with nothing found): show exactly that, never the list of an earlier search.
+                    if (data && data.size > 0) { this.products = data.products; this.searchError = ''; return data; }
+                    this.products = [];
                     this.searchError = 'Sin conexión y sin catálogo guardado en este equipo.';
                     return null;
-                } finally { this.loading = false; }
+                } finally { if (seq === this.searchSeq) this.loading = false; }
+            },
+            // Back to the best sellers without asking the server again (and without a flash of the list).
+            showTop() {
+                this.query = '';
+                if (!this.top) return this.search();
+                this.searchSeq++; this.searchCtrl?.abort(); this.loading = false;
+                this.products = this.top; this.searchError = '';
             },
             setupOffline() {
                 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/pos-sw.js', { scope: '/dashboard/caja' }).catch(() => null);
@@ -540,14 +558,25 @@
                 ready().then(async () => {
                     await this.refreshPending();
                     this.syncNow();
+                    this.refreshCatalog();
+                });
+                window.addEventListener('online', () => { this.online = true; this.syncNow(); this.refreshCatalog(); });
+                window.addEventListener('offline', () => { this.online = false; });
+                setInterval(() => this.syncNow(), 30000);
+            },
+            // The offline copy of the catalog is big (thousands of products): it is renewed when it is old (15 min) or missing,
+            // and only when the browser is idle, so opening the register or typing never waits on it.
+            refreshCatalog(force = false) {
+                const run = async () => {
+                    if (!navigator.onLine || !window.TribioPosOffline) return;
                     try {
+                        const age = await window.TribioPosOffline.catalogAge(this.offline.storeId);
+                        if (!force && age !== null && age < 15 * 60 * 1000) return;
                         const response = await fetch(this.offline.catalogUrl, { headers: { 'Accept': 'application/json' } });
                         if (response.ok) await window.TribioPosOffline.setCatalog(this.offline.storeId, (await response.json()).products);
                     } catch (e) { /* offline: keep the last copy */ }
-                });
-                window.addEventListener('online', () => { this.online = true; this.syncNow(); });
-                window.addEventListener('offline', () => { this.online = false; });
-                setInterval(() => this.syncNow(), 30000);
+                };
+                'requestIdleCallback' in window ? requestIdleCallback(run, { timeout: 8000 }) : setTimeout(run, 2500);
             },
             async refreshPending() {
                 if (!window.TribioPosOffline) return;
@@ -585,8 +614,7 @@
                 const hit = data.exact ? data.products.find(p => p.id === data.exact.product_id) : (data.products.length === 1 ? data.products[0] : null);
                 if (!hit) { this.searchError = data.products.length ? 'Toca el producto correcto en la lista.' : 'Ningún producto tiene ese código.'; return; }
                 this.add(hit, data.exact?.variant_id || null, data.exact?.unit_id || null);
-                this.query = '';
-                this.search();
+                this.showTop();
             },
             add(product, variantId = null, unitId = null) {
                 if (this.done || this.savedQuote) this.reset();

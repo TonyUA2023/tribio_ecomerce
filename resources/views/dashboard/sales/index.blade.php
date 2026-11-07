@@ -7,7 +7,7 @@
     $lima = fn ($at) => $at?->copy()->setTimezone('America/Lima')->locale('es');
     $keep = fn (array $over = []) => array_filter(array_merge(request()->except('page'), $over), fn ($v) => $v !== null && $v !== '');
     $typeLabels = ['' => 'Todos'] + \App\Services\Pos\SalesDocuments::labels();
-    $activeFilters = ($type ? 1 : 0) + ($method ? 1 : 0);
+    $activeFilters = ($type ? 1 : 0) + ($method ? 1 : 0) + ($branch ? 1 : 0);
     $periodLabel = $period ? ($periods[$period] ?? '') : ($from && $to ? ($from->isSameDay($to) ? $from->locale('es')->isoFormat('D MMM YYYY') : $from->locale('es')->isoFormat('D MMM') . ' – ' . $to->locale('es')->isoFormat('D MMM YYYY')) : '');
     $day = null;
 @endphp
@@ -53,7 +53,7 @@
         </button>
         <div x-show="open" x-cloak class="sl-more-body">
             <form method="GET" action="{{ route('dashboard.ventas.index') }}" class="sl-range">
-                @foreach(['q', 'tipo', 'medio'] as $field)@if(request($field))<input type="hidden" name="{{ $field }}" value="{{ request($field) }}">@endif @endforeach
+                @foreach(['q', 'tipo', 'medio', 'sede'] as $field)@if(request($field))<input type="hidden" name="{{ $field }}" value="{{ request($field) }}">@endif @endforeach
                 <label>Desde<input type="date" name="desde" value="{{ $from?->toDateString() }}"></label>
                 <label>Hasta<input type="date" name="hasta" value="{{ $to?->toDateString() }}"></label>
                 <button type="submit" class="pos-chip {{ $period === null ? 'is-active' : '' }}">Aplicar fechas</button>
@@ -61,6 +61,12 @@
             @if($docsReady)
                 <div class="sl-group"><span>Comprobante</span>
                     @foreach($typeLabels as $key => $label)<a href="{{ route('dashboard.ventas.index', $keep(['tipo' => $key ?: null])) }}" class="pos-chip {{ ($type ?? '') === $key ? 'is-active' : '' }}">{{ $label }}</a>@endforeach
+                </div>
+            @endif
+            @if($branches->isNotEmpty())
+                <div class="sl-group"><span>Sede</span>
+                    <a href="{{ route('dashboard.ventas.index', $keep(['sede' => null])) }}" class="pos-chip {{ !$branch ? 'is-active' : '' }}">Todas</a>
+                    @foreach($branches as $b)<a href="{{ route('dashboard.ventas.index', $keep(['sede' => $b->id])) }}" class="pos-chip {{ $branch?->id === $b->id ? 'is-active' : '' }}">{{ $b->name }}</a>@endforeach
                 </div>
             @endif
             <div class="sl-group"><span>Pagó con</span>

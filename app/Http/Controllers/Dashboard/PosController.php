@@ -32,6 +32,8 @@ class PosController extends Controller
             return view('dashboard.pos.locked', ['store' => $store, 'caja' => $request->integer('caja') ?: null]);
         }
         $all = $registers->registers($store);
+        // Several sedes: each caja says where it sells from, so nobody rings up a sale in the wrong local.
+        $sedes = $this->sedeNames($store, $all);
         $register = $all->firstWhere('id', $request->integer('caja'))
             ?? $all->first(fn (Register $r) => $r->openSession?->opened_by === $request->user()->id)
             ?? $all->first(fn (Register $r) => $r->openSession !== null);
@@ -39,6 +41,7 @@ class PosController extends Controller
         if (!$register?->openSession || $request->boolean('cajas')) {
             return view('dashboard.pos.registers', [
                 'registers' => $all,
+                'sedes'     => $sedes,
                 'kiosk'     => $access->active($store),
                 'staffMember' => $staff,
                 'staffReady' => $this->schema->staffReady(),
@@ -54,6 +57,7 @@ class PosController extends Controller
             'session'   => $session,
             'summary'   => $registers->summary($session),
             'registers' => $all,
+            'sede'      => $sedes[$register->id] ?? null,
             'methods'   => PosSaleService::METHODS,
             'creditEnabled' => $this->schema->creditReady(),
             'kiosk'     => $access->active($store) ? [
@@ -127,12 +131,28 @@ class PosController extends Controller
         ], $duplicate ? 200 : 201);
     }
 
+    /** @return array<int, string> register id → sede name, only when the business has more than one sede */
+    private function sedeNames(\App\Models\Store $store, $registers): array
+    {
+        if (!app(\App\Services\Sunat\SunatSchema::class)->ready()) {
+            return [];
+        }
+        $branches = \App\Models\Branch::where('store_id', $store->id)->where('is_active', true)->get(['id', 'name', 'is_main']);
+        if ($branches->count() < 2) {
+            return [];
+        }
+        $main = $branches->firstWhere('is_main', true);
+
+        return $registers->mapWithKeys(fn ($register) => [$register->id => ($branches->firstWhere('id', $register->branch_id) ?? $main)?->name])->filter()->all();
+    }
+
     /** The 80 mm ticket (print CSS); `?imprimir=1` opens the print dialog. */
     public function receipt(Request $request, int $order)
     {
         abort_unless($this->schema->ready(), 404);
         $order = Order::where('store_id', $request->user()->currentStore()->id)->where('source', 'pos')
-            ->with(['items', 'payments', 'store', 'registerSession.register'])->findOrFail($order);
+            ->with(['items', 'payments', 'store', 'registerSession.register'])
+            ->when(app(\App\Services\Sunat\SunatSchema::class)->ready(), fn ($q) => $q->with('branch'))->findOrFail($order);
         if ($this->schema->creditReady()) {
             $order->load('installments');
         }

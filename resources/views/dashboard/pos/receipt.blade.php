@@ -50,7 +50,9 @@
             <h1>{{ $fiscal && $store->legal_name ? $store->legal_name : $store->name }}</h1>
             @if($fiscal && $store->legal_name && $store->legal_name !== $store->name)<div class="muted">{{ $store->name }}</div>@endif
             @if($fiscal && $store->ruc)<div><strong>RUC {{ $store->ruc }}</strong></div>@endif
-            @if($store->address)<div class="muted">{{ $store->address }}{{ $store->city ? ', ' . $store->city : '' }}</div>@endif
+            @php $local = $order->relationLoaded('branch') ? $order->branch : null; @endphp
+            @if($local && $local->address)<div class="muted">{{ $local->address }}@if($local->district), {{ $local->district }}@endif</div>
+            @elseif($store->address)<div class="muted">{{ $store->address }}{{ $store->city ? ', ' . $store->city : '' }}</div>@endif
             @if($store->phone || $store->whatsapp_phone)<div class="muted">Tel. {{ $store->phone ?: $store->whatsapp_phone }}</div>@endif
             <hr>
             <strong>{{ mb_strtoupper($order->document_label) }}</strong><br>{{ $order->document_code ?? $order->order_number }}

@@ -146,7 +146,10 @@ class SalesDocuments
     {
         $series = $this->seriesFor($order->store_id, $type, $register);
         $locked = DocumentSeries::whereKey($series->id)->lockForUpdate()->firstOrFail();
-        $next = (int) $locked->last_number + 1;
+        // The counter can fall behind what was really issued (a series switched back to an old code, a restored backup):
+        // numbering goes on after the highest number of that series, never into one already taken.
+        $issued = (int) Order::where('store_id', $order->store_id)->where('document_type', $type)->where('document_series', $locked->series)->max('document_number');
+        $next = max((int) $locked->last_number, $issued) + 1;
         $locked->update(['last_number' => $next]);
 
         $order->forceFill(['document_type' => $type, 'document_series' => $locked->series, 'document_number' => $next])->save();

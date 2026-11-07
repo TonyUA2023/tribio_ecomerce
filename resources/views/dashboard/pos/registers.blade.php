@@ -42,7 +42,7 @@
         @foreach($registers as $register)
             <div class="glass-card p-4 sm:p-5 space-y-3">
                 <div class="flex items-center justify-between gap-2">
-                    <h3 class="text-white font-bold text-base">{{ $register->name }}</h3>
+                    <div class="min-w-0"><h3 class="text-white font-bold text-base">{{ $register->name }}</h3>@if(!empty($sedes[$register->id]))<p class="text-[11px] text-white/50 mt-0.5">📍 {{ $sedes[$register->id] }}</p>@endif</div>
                     <span class="badge {{ $register->openSession ? 'badge-green' : 'badge-gray' }}">{{ $register->openSession ? 'Abierta' : 'Cerrada' }}</span>
                 </div>
                 @if($session = $register->openSession)

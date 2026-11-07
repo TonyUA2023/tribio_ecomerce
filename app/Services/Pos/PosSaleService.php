@@ -225,6 +225,7 @@ class PosSaleService
     public function lines(int $storeId, array $items, ?string $list = null): array
     {
         $products = Product::where('store_id', $storeId)->whereIn('id', array_column($items, 'product_id'))->get()->keyBy('id');
+        $store = Store::find($storeId); // once, not once per line (isMadeToOrder would load it for each product)
         $unitsReady = $this->inventory->unitsReady();
         $resolved = [];
         foreach (array_values($items) as $i => $item) {
@@ -242,7 +243,7 @@ class PosSaleService
             if (!$product || !$product->is_active) {
                 throw ValidationException::withMessages(["items.{$i}" => 'Ese producto ya no está a la venta.']);
             }
-            if ($product->isMadeToOrder()) {
+            if ($product->isMadeToOrder($store)) {
                 throw ValidationException::withMessages(["items.{$i}" => "«{$product->name}» se vende por encargo: regístralo como pedido."]);
             }
 
