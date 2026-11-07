@@ -126,6 +126,7 @@
                     <x-dashboard-icon name="chevron" class="dash-account-chevron"/>
                 </button>
                 <div id="dashboard-account" x-cloak x-show="open" @click.outside="open = false" class="dash-account-menu">
+                    <a href="{{ route('dashboard.modules.edit') }}">Módulos del negocio</a>
                     <a href="{{ route('dashboard.store.edit') }}">Configurar tienda</a>
                     <a href="{{ route('dashboard.password.edit') }}">Correo y contraseña</a>
                     <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit">Cerrar sesión</button></form>

@@ -26,18 +26,21 @@ class StoreModuleGuard
         'dashboard.pos.*', 'dashboard.quotes.*', 'dashboard.returns.*', 'dashboard.receivables.*', 'dashboard.price-lists.*', 'dashboard.ventas.*', 'dashboard.simple.*',
     ];
 
+    /** Tools of the CRM (Configuración → Módulos can switch it off). */
+    public const CRM_ONLY = ['dashboard.clientes.*', 'dashboard.whatsapp.*'];
+
     public function handle(Request $request, Closure $next): Response
     {
         $store = $request->user()?->currentStore();
-        if (!$store || !Store::modesReady()) {
+        if (!$store) {
             return $next($request);
         }
 
-        $blocked = match (true) {
+        $blocked = (Store::modesReady() && match (true) {
             $store->isPosOnly() => $request->routeIs(...self::STOREFRONT_ONLY),
             !$store->hasPos()   => $request->routeIs(...self::POS_ONLY),
             default             => false,
-        };
+        }) || (!$store->hasCrm() && $request->routeIs(...self::CRM_ONLY));
         if (!$blocked) {
             return $next($request);
         }
@@ -46,6 +49,6 @@ class StoreModuleGuard
             return response()->json(['message' => 'Esta función no está incluida en tu plan.'], 403);
         }
 
-        return redirect()->route('dashboard.index')->with('info', 'Esa función no está incluida en el tipo de cuenta de tu negocio.');
+        return redirect()->route('dashboard.index')->with('info', 'Esa función no está activada en tu negocio. Puedes encenderla en Configuración → Módulos.');
     }
 }

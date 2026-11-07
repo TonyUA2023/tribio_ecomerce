@@ -17,6 +17,7 @@
         'search' => 'M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15 M16 16l5 5',
         'chevron' => 'm9 5 7 7-7 7',
         'plus' => 'M12 5v14 M5 12h14',
+        'settings' => 'M4 6h9 M17 6h3 M4 12h3 M11 12h9 M4 18h11 M19 18h1 M15 4v4 M9 10v4 M17 16v4',
         'wallet' => 'M3 6h17v15H3V6z M3 6V3h14v3 M15 11h7v5h-7z',
         'alert' => 'm12 3 10 18H2L12 3z M12 9v5 M12 17h.01',
         'check' => 'm5 12 4 4L19 6',

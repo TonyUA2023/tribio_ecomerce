@@ -305,6 +305,9 @@ Route::middleware(['auth', 'role:store_owner,super_admin', 'pos.kiosk', 'store.m
     Route::get('/inventario/exportar', [InventoryController::class, 'export'])->name('inventario.export');
     Route::get('/inventario/rentabilidad', [InventoryController::class, 'profit'])->name('inventario.profit');
     Route::get('/ganancias', [\App\Http\Controllers\Dashboard\ProfitLossController::class, 'index'])->name('ganancias.index');
+    // Configuración → Módulos: encender o apagar tienda virtual, POS y CRM.
+    Route::get('/configuracion/modulos', [\App\Http\Controllers\Dashboard\ModulesController::class, 'edit'])->name('modules.edit');
+    Route::put('/configuracion/modulos', [\App\Http\Controllers\Dashboard\ModulesController::class, 'update'])->middleware('throttle:20,1')->name('modules.update');
     // Modo simple: vender desde el celular en dos toques, y ver el día.
     Route::get('/vender', [\App\Http\Controllers\Dashboard\SimpleController::class, 'index'])->name('simple.index');
     Route::post('/vender', [\App\Http\Controllers\Dashboard\SimpleController::class, 'sell'])->middleware('throttle:120,1')->name('simple.sell');

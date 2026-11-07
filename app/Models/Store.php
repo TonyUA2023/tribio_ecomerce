@@ -24,7 +24,7 @@ class Store extends Model
         'total_views', 'total_orders', 'total_revenue',
         'manual_payments', 'delivery_coverage', 'exchange_hours',
         'checkout_mode', 'payment_gateway', 'gateway_public_key', 'gateway_private_key', 'gateway_access_token',
-        'mp_access_token', 'mp_public_key', 'contact_email', 'contact_phone', 'ruc', 'legal_name', 'mode',
+        'mp_access_token', 'mp_public_key', 'contact_email', 'contact_phone', 'ruc', 'legal_name', 'mode', 'crm_enabled',
         'culqi_customer_id', 'culqi_card_id', 'culqi_subscription_id', 'billing_preapproval_id',
         'paypal_client_id', 'paypal_client_secret', 'paypal_mode', 'paypal_webhook_id',
         'is_express_shipping_enabled', 'express_shipping_cost',
@@ -123,6 +123,36 @@ class Store extends Model
         }
 
         return $ready;
+    }
+
+    /** The deploy never migrates: until stores.crm_enabled exists every business keeps its CRM. */
+    public static function crmReady(): bool
+    {
+        static $ready = null;
+        if ($ready === true) {
+            return true;
+        }
+        if (\Illuminate\Support\Facades\Cache::get('stores.crm_ready') === true) {
+            return $ready = true;
+        }
+        try {
+            $ready = \Illuminate\Support\Facades\Schema::hasColumn('stores', 'crm_enabled');
+        } catch (\Throwable $e) {
+            report($e);
+
+            return false;
+        }
+        if ($ready) {
+            \Illuminate\Support\Facades\Cache::put('stores.crm_ready', true, now()->addDay());
+        }
+
+        return $ready;
+    }
+
+    /** Clientes, seguimientos, oportunidades and WhatsApp. The POS works the same without them (customers are still remembered quietly). */
+    public function hasCrm(): bool
+    {
+        return !array_key_exists('crm_enabled', $this->getAttributes()) || (bool) $this->getAttributes()['crm_enabled'];
     }
 
     public function mode(): string

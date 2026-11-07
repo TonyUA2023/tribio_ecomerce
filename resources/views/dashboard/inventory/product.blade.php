@@ -90,7 +90,7 @@
             </div>
             <button type="submit" class="btn-secondary text-xs sm:text-sm">Guardar</button>
         </div>
-        @if($product->consumption_days)
+        @if($product->consumption_days && auth()->user()->currentStore()?->hasCrm())
             <p class="text-[11px] text-white/50 mt-2">{{ $reorderPending }} {{ $reorderPending === 1 ? 'recompra agendada' : 'recompras agendadas' }} en <a href="{{ route('dashboard.clientes.tasks.index') }}" class="underline">Seguimientos</a>.</p>
         @endif
     </form>

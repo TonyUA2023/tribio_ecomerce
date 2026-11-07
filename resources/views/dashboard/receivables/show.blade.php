@@ -11,7 +11,7 @@
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <div class="flex items-center gap-3 text-xs flex-wrap">
             <a href="{{ route('dashboard.receivables.index') }}" class="text-tribio-cyan underline">← Por cobrar</a>
-            <a href="{{ route('dashboard.clientes.show', $contact->id) }}" class="text-tribio-cyan underline">Ficha del cliente</a>
+            @if(auth()->user()->currentStore()?->hasCrm())<a href="{{ route('dashboard.clientes.show', $contact->id) }}" class="text-tribio-cyan underline">Ficha del cliente</a>@endif
         </div>
         @if($reminder)<a href="{{ $reminder }}" target="_blank" rel="noopener" class="btn-secondary !py-1 text-xs">💬 Recordar por WhatsApp</a>@endif
     </div>

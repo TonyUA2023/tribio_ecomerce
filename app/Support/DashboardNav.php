@@ -25,7 +25,35 @@ class DashboardNav
             default                         => self::full($store, $pos),
         };
 
+        // CRM switched off in Configuración → Módulos: its entries disappear (the header moves to what follows).
+        if ($store && !$store->hasCrm()) {
+            $items = self::without($items, ['dashboard.clientes.index', 'dashboard.whatsapp.index']);
+        }
+        if ($store && Store::modesReady()) {
+            $items[] = self::item('dashboard.modules.edit', 'settings', 'Módulos del negocio', 'Configuración');
+        }
+
         return array_map(fn (array $item) => $item + ['match' => [], 'except' => []], $items);
+    }
+
+    /** Drops items by route; a group header that went with one is handed to the next item so the menu keeps its sections. */
+    private static function without(array $items, array $routes): array
+    {
+        $kept = [];
+        $carry = null;
+        foreach ($items as $item) {
+            if (in_array($item['route'], $routes, true)) {
+                $carry ??= $item['group'];
+                continue;
+            }
+            if ($carry && !$item['group']) {
+                $item['group'] = $carry;
+            }
+            $carry = null;
+            $kept[] = $item;
+        }
+
+        return $kept;
     }
 
     /** Is this item the page being shown? */
