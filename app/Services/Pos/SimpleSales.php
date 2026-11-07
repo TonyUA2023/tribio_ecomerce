@@ -106,6 +106,39 @@ class SimpleSales
             ->values()->all();
     }
 
+    /** Is there more on sale than the screen carries? Then the search box also asks the server. */
+    public function hasMore(Store $store): bool
+    {
+        return Product::where('store_id', $store->id)->where('is_active', true)->where('has_variants', false)->count() > self::CATALOG_LIMIT;
+    }
+
+    /**
+     * Server-side search for businesses with more products than the screen holds: every word must be in the name
+     * (or the code starts with it). Same shape as `catalog`.
+     *
+     * @return list<array{id: int, name: string, price: float, stock: ?int}>
+     */
+    public function search(Store $store, string $term): array
+    {
+        $words = array_slice(array_filter(explode(' ', trim(preg_replace('/\s+/u', ' ', $term) ?? ''))), 0, 5);
+        if (!$words) {
+            return [];
+        }
+        $escape = fn (string $v) => str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $v);
+
+        $query = Product::where('store_id', $store->id)->where('is_active', true)->where('has_variants', false);
+        foreach ($words as $word) {
+            $like = '%' . $escape($word) . '%';
+            $query->where(fn ($q) => $q->whereRaw("name LIKE ? ESCAPE '!'", [$like])->orWhereRaw("sku LIKE ? ESCAPE '!'", [$escape($word) . '%']));
+        }
+
+        return $query->orderByDesc('sold_count')->orderBy('name')->limit(40)
+            ->get(['id', 'name', 'price', 'stock', 'track_stock', 'sale_mode'])
+            ->reject(fn (Product $p) => $p->isMadeToOrder($store))
+            ->map(fn (Product $p) => ['id' => $p->id, 'name' => $p->name, 'price' => (float) $p->price, 'stock' => $p->track_stock ? (int) $p->stock : null])
+            ->values()->all();
+    }
+
     /** The day in numbers for the "Hoy" screen. */
     public function summary(Store $store, array $report): array
     {

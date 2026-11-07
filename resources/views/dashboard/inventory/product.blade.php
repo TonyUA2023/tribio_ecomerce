@@ -110,7 +110,7 @@
 
     @if($unitsReady && $inCombos->isEmpty())
     {{-- Combo --}}
-    <div class="glass-card p-4 sm:p-6" x-data="{ open: {{ $isKit ? 'true' : 'false' }}, rows: @js($components->map(fn ($c) => ['product_id' => $c->component_product_id, 'quantity' => $c->quantity])->values()) }">
+    <div class="glass-card p-4 sm:p-6" x-data="comboForm(@js($components->map(fn ($c) => ['product_id' => $c->component_product_id, 'quantity' => $c->quantity, 'name' => $c->component?->name, 'stock' => $c->component?->stock])->values()), @js(route('dashboard.inventario.components', ['except' => $product->id])), {{ $isKit ? 'true' : 'false' }})">
         <button type="button" class="w-full flex items-center justify-between gap-3 text-left" @click="open = !open" :aria-expanded="open">
             <span>
                 <span class="text-white font-bold text-base block">🎁 Combo</span>
@@ -118,33 +118,74 @@
             </span>
             <span class="text-white/40 text-sm" x-text="open ? 'Cerrar' : 'Configurar'"></span>
         </button>
-        <form method="POST" action="{{ route('dashboard.inventario.kit.update', $product->id) }}" class="mt-4 space-y-3" x-show="open" x-cloak
-              @submit="$refs.componentsJson.value = JSON.stringify(rows.filter(r => r.product_id))">
+        <form method="POST" action="{{ route('dashboard.inventario.kit.update', $product->id) }}" class="mt-4 space-y-3" x-show="open" x-cloak @submit="sync()">
             @csrf @method('PUT')
             <input type="hidden" name="components_json" x-ref="componentsJson">
-            <template x-for="(row, index) in rows" :key="index">
+            <template x-for="(row, index) in rows" :key="row.key">
                 <div class="flex items-end gap-2">
-                    <div class="flex-1 min-w-0">
-                        <label class="input-label" :for="'kc-' + index">Producto</label>
-                        <select class="input-field" :id="'kc-' + index" x-model.number="row.product_id">
-                            <option value="">Elige…</option>
-                            @foreach($componentOptions as $option)
-                                <option value="{{ $option->id }}">{{ $option->name }} ({{ $option->stock }} en stock)</option>
-                            @endforeach
-                        </select>
+                    <div class="flex-1 min-w-0 pp-field" @click.outside="row.open = false">
+                        <label class="input-label" :for="'kc-' + row.key">Producto</label>
+                        <template x-if="row.product_id">
+                            <div class="pp-chosen">
+                                <span class="pp-chosen-text"><strong x-text="row.name"></strong><small x-text="row.stock + ' en stock'"></small></span>
+                                <button type="button" class="pp-change" @click="row.product_id = ''; row.name = ''">Cambiar</button>
+                            </div>
+                        </template>
+                        <template x-if="!row.product_id">
+                            <div class="pp-search">
+                                <input type="search" class="input-field" :id="'kc-' + row.key" name="combo_buscar_producto" placeholder="Escribe el nombre o el código…" autocomplete="off" spellcheck="false"
+                                       data-1p-ignore="true" data-lpignore="true" x-model="row.q" @focus="openList(row)" @input.debounce.200ms="find(row)" @keydown.escape="row.open = false"
+                                       @keydown.enter.prevent="pick(row, row.results[0])">
+                                <ul class="pp-list" x-show="row.open" x-cloak role="listbox">
+                                    <template x-for="item in row.results" :key="item.id">
+                                        <li role="option" @mousedown.prevent @click="pick(row, item)">
+                                            <span class="pp-item-main"><strong x-text="item.name"></strong><small x-text="item.sku ? 'Código ' + item.sku : 'Sin código'"></small></span>
+                                            <span class="pp-item-side"><b x-text="item.stock + ' en stock'"></b></span>
+                                        </li>
+                                    </template>
+                                    <li class="pp-note" x-show="!row.results.length" x-text="row.loading ? 'Buscando…' : 'Ningún producto coincide.'"></li>
+                                </ul>
+                            </div>
+                        </template>
                     </div>
                     <div class="w-24">
-                        <label class="input-label" :for="'kq-' + index">Cantidad</label>
-                        <input type="number" min="1" class="input-field" :id="'kq-' + index" x-model.number="row.quantity">
+                        <label class="input-label" :for="'kq-' + row.key">Cantidad</label>
+                        <input type="number" min="1" class="input-field" :id="'kq-' + row.key" x-model.number="row.quantity">
                     </div>
                     <button type="button" class="text-white/40 hover:text-red-300 text-lg leading-none pb-3" @click="rows.splice(index, 1)" aria-label="Quitar">×</button>
                 </div>
             </template>
-            <button type="button" class="btn-ghost text-xs" @click="rows.push({ product_id: '', quantity: 1 })">+ Agregar producto al combo</button>
+            <button type="button" class="btn-ghost text-xs" @click="add()">+ Agregar producto al combo</button>
             <p class="text-[11px] text-white/40">Solo productos con control de stock que no sean combos. Para dejar de ser combo, quita todos y guarda.</p>
             <button type="submit" class="btn-primary text-xs sm:text-sm">Guardar combo</button>
         </form>
     </div>
+    <script>
+    function comboForm(components, searchUrl, open) {
+        let seq = 0;
+        const blank = () => ({ key: ++seq, product_id: '', quantity: 1, name: '', stock: 0, q: '', results: [], open: false, loading: false, ctrl: null });
+        return {
+            open,
+            rows: components.map(c => ({ ...blank(), product_id: c.product_id, quantity: c.quantity, name: c.name || '', stock: c.stock ?? 0 })),
+            add() { this.rows.push(blank()); },
+            openList(row) { row.open = true; if (!row.results.length) this.find(row); },
+            // The server finds the products (a business can have thousands); only the last query's answer is shown.
+            find(row) {
+                row.open = true; row.loading = true;
+                row.ctrl?.abort(); row.ctrl = new AbortController();
+                fetch(searchUrl + '&q=' + encodeURIComponent(row.q.trim()), { headers: { Accept: 'application/json' }, signal: row.ctrl.signal })
+                    .then(r => r.ok ? r.json() : [])
+                    .then(items => { row.results = items; row.loading = false; })
+                    .catch(e => { if (e.name !== 'AbortError') row.loading = false; });
+            },
+            pick(row, item) {
+                if (!item) return;
+                Object.assign(row, { product_id: item.id, name: item.name, stock: item.stock, open: false, q: '', results: [] });
+            },
+            sync() { this.$refs.componentsJson.value = JSON.stringify(this.rows.filter(r => r.product_id).map(r => ({ product_id: r.product_id, quantity: r.quantity }))); },
+        };
+    }
+    </script>
     @endif
 
     @if($unitsReady)

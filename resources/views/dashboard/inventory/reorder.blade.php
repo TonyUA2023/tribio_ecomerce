@@ -44,7 +44,7 @@
         @csrf
         @foreach(['window', 'lead', 'cover'] as $key)<input type="hidden" name="{{ $key }}" value="{{ $params[$key] }}">@endforeach
         <div class="flex items-center justify-between gap-3 flex-wrap">
-            <h3 class="text-white font-bold text-base">Te conviene comprar</h3>
+            <h3 class="text-white font-bold text-base">Te conviene comprar <span class="text-white/50 text-xs font-normal">· {{ $suggestionsTotal }} {{ $suggestionsTotal === 1 ? 'producto' : 'productos' }}</span></h3>
             <p class="text-xs text-white/60">Costo estimado: <strong class="text-white" x-text="'S/ ' + Object.values(lines).filter(l => l.on).reduce((s, l) => s + l.qty * l.cost, 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })"></strong></p>
         </div>
         @if($errors->any())
@@ -73,6 +73,10 @@
         </div>
         @endforeach
 
+        @if($suggestionsTotal > count($suggestions))
+            <p class="text-xs text-white/60 text-center">Mostrando los {{ count($suggestions) }} más urgentes de {{ $suggestionsTotal }}. <a href="{{ route('dashboard.inventario.reorder', array_merge(\Illuminate\Support\Arr::only($params, ['window', 'lead', 'cover']), ['todo' => 1])) }}" class="underline text-tribio-cyan">Ver más</a></p>
+        @endif
+
         @if($canPurchase)
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end pt-2">
             <div>
@@ -94,8 +98,8 @@
     @if($stagnant !== [])
     <div class="glass-card p-4 sm:p-6">
         <div class="flex items-center justify-between gap-3">
-            <h3 class="text-white font-bold text-base">Sin ventas hace {{ $params['stale'] }} días</h3>
-            <p class="text-xs text-white/60">Dinero detenido: <strong class="text-white">{{ $money(collect($stagnant)->sum('value')) }}</strong></p>
+            <h3 class="text-white font-bold text-base">Sin ventas hace {{ $params['stale'] }} días <span class="text-white/50 text-xs font-normal">· {{ $stagnantTotal }} {{ $stagnantTotal === 1 ? 'producto' : 'productos' }}</span></h3>
+            <p class="text-xs text-white/60">Dinero detenido: <strong class="text-white">{{ $money($stagnantMoney) }}</strong></p>
         </div>
         <p class="text-xs text-white/50 mt-1">Ideal para una oferta, un combo o dejar de comprarlos.</p>
         <div class="space-y-2 mt-3">
@@ -106,6 +110,9 @@
             </a>
             @endforeach
         </div>
+        @if($stagnantTotal > count($stagnant))
+            <p class="text-xs text-white/60 text-center mt-3">Mostrando los {{ count($stagnant) }} con más dinero detenido de {{ $stagnantTotal }}. <a href="{{ route('dashboard.inventario.reorder', array_merge(\Illuminate\Support\Arr::only($params, ['window', 'lead', 'cover']), ['todo' => 1])) }}" class="underline text-tribio-cyan">Ver más</a></p>
+        @endif
     </div>
     @endif
 </div>

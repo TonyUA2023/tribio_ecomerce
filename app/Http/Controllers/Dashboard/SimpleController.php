@@ -31,7 +31,18 @@ class SimpleController extends Controller
             'products' => $this->simple->catalog($store),
             'today'    => $this->simple->today($store),
             'methods'  => SimpleSales::METHODS,
+            'more'     => $this->simple->hasMore($store),
         ]);
+    }
+
+    /** The search box of a business with more products than the screen carries. */
+    public function search(Request $request): JsonResponse
+    {
+        abort_unless($this->schema->ready(), 404);
+        $store = $request->user()->currentStore();
+        abort_unless($store, 404);
+
+        return response()->json($this->simple->search($store, mb_substr((string) $request->query('q'), 0, 80)));
     }
 
     /** One tap = one sale. The uuid comes from the phone, so a double tap or a retry never sells twice. */

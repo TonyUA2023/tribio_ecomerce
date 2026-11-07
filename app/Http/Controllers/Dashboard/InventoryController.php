@@ -45,6 +45,19 @@ class InventoryController extends Controller
         return view('dashboard.inventory.index', compact('store', 'products', 'stats', 'expiring'));
     }
 
+    /**
+     * Type-ahead for the products of a combo: tracked products that are not combos themselves, found on the server
+     * (a select with every product would carry thousands of options). `?except=` leaves out the combo being edited.
+     */
+    public function components(Request $request, InventorySchema $schema, \App\Services\Purchasing\PurchaseProductSearch $search)
+    {
+        abort_unless($schema->unitsReady(), 404);
+        $except = $request->integer('except');
+        $found = $search->search(Auth::user()->currentStore(), mb_substr((string) $request->query('q'), 0, 80));
+
+        return response()->json(array_values(array_filter($found, fn ($row) => $row['id'] !== $except)));
+    }
+
     public function product(Product $product, InventorySchema $schema, PurchasingSchema $purchasing, \App\Services\Crm\CrmSchema $crm)
     {
         $store = $this->getStore();
@@ -68,20 +81,17 @@ class InventoryController extends Controller
         $unitsReady = $schema->unitsReady();
         $isKit = false;
         $components = collect();
-        $componentOptions = collect();
         $inCombos = collect();
         if ($unitsReady) {
             $product->load(['units', 'components.component:id,name,stock,deleted_at']);
             $isKit = $product->components->isNotEmpty();
             $components = $product->components;
-            $componentOptions = $store->products()->where('track_stock', true)->whereDoesntHave('components')
-                ->whereKeyNot($product->id)->orderBy('name')->get(['id', 'name', 'stock']);
             // Combos this product is part of: it cannot be a combo itself.
             $inCombos = \App\Models\ProductComponent::where('component_product_id', $product->id)->with('kit:id,name')->get();
         }
 
         return view('dashboard.inventory.product', compact('store', 'product', 'movements', 'lotsReady', 'lots', 'purchases',
-            'unitsReady', 'isKit', 'components', 'componentOptions', 'inCombos')
+            'unitsReady', 'isKit', 'components', 'inCombos')
             + [
                 // Recompra (Fase 2c): pending reminders of this product.
                 'reorderReady'   => $crm->reorderReady(),

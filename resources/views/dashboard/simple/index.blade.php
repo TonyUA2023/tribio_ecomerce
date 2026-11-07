@@ -14,12 +14,12 @@
 @endsection
 
 @section('content')
-<div x-data="simpleSell(@js($products), @js(route('dashboard.simple.sell')), @js($today), 'tribio:simple:q:{{ $store->id }}')" x-init="start()" x-effect="document.body.classList.toggle('sm-lock', !!sheet)" class="sm-sell">
+<div x-data="simpleSell(@js($products), @js(route('dashboard.simple.sell')), @js($today), 'tribio:simple:q:{{ $store->id }}', @js($more ? route('dashboard.simple.search') : null))" x-init="start()" x-effect="document.body.classList.toggle('sm-lock', !!sheet)" class="sm-sell">
 
     <div class="sm-search">
         <x-dashboard-icon name="search"/>
         <label for="sm-q" class="sr-only">Buscar producto</label>
-        <input id="sm-q" type="search" name="simple_buscar" x-model="q" placeholder="Buscar producto…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" data-1p-ignore="true" data-lpignore="true">
+        <input id="sm-q" type="search" name="simple_buscar" x-model="q" @input.debounce.250ms="remoteSearch()" placeholder="Buscar producto…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" data-1p-ignore="true" data-lpignore="true">
     </div>
 
     <div class="sm-offline" x-show="queue.length" x-cloak role="status">
@@ -131,7 +131,7 @@
 </div>
 
 <script>
-function simpleSell(products, url, today, stateKey) {
+function simpleSell(products, url, today, stateKey, searchUrl) {
     const storeKey = stateKey.replace(':q:', ':queue:');
     const read = () => { try { return JSON.parse(localStorage.getItem(storeKey) || '[]'); } catch (e) { return []; } };
     const write = list => { try { localStorage.setItem(storeKey, JSON.stringify(list)); } catch (e) {} };
@@ -139,7 +139,7 @@ function simpleSell(products, url, today, stateKey) {
     const plain = text => String(text).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
     let seq = 0;
     return {
-        products, q: '', cart: [], sheet: null, keys: '', note: '', other: false, given: '', busy: false, error: '',
+        products, q: '', remote: [], remoteSeq: 0, remoteCtrl: null, cart: [], sheet: null, keys: '', note: '', other: false, given: '', busy: false, error: '',
         done: { total: 0, change: 0, offline: false }, saleId: null, queue: [], flushing: false, today,
         start() {
             this.queue = read();
@@ -150,7 +150,24 @@ function simpleSell(products, url, today, stateKey) {
         // ── catalogo
         matches() {
             const words = plain(this.q).split(/\s+/).filter(Boolean);
-            return words.length ? this.products.filter(p => { const n = plain(p.name); return words.every(w => n.includes(w)); }) : this.products;
+            if (!words.length) return this.products;
+            const local = this.products.filter(p => { const n = plain(p.name); return words.every(w => n.includes(w)); });
+            // More products than the screen carries: the ones found on the server join the list (no repeats).
+            if (!this.remote.length) return local;
+            const seen = new Set(local.map(p => p.id));
+            return local.concat(this.remote.filter(p => !seen.has(p.id)));
+        },
+        // Only the answer to the last thing typed is used.
+        async remoteSearch() {
+            const text = this.q.trim();
+            const seq = ++this.remoteSeq;
+            this.remoteCtrl?.abort();
+            if (!searchUrl || text.length < 2) { this.remote = []; return; }
+            this.remoteCtrl = new AbortController();
+            try {
+                const res = await fetch(searchUrl + '?q=' + encodeURIComponent(text), { headers: { Accept: 'application/json' }, signal: this.remoteCtrl.signal });
+                if (res.ok && seq === this.remoteSeq) this.remote = await res.json();
+            } catch (e) { /* offline or superseded: the products on the screen still answer */ }
         },
         visible() { return this.matches().slice(0, 120); },
         // ── pedido

@@ -310,6 +310,7 @@ Route::middleware(['auth', 'role:store_owner,super_admin', 'pos.kiosk', 'store.m
     Route::put('/configuracion/modulos', [\App\Http\Controllers\Dashboard\ModulesController::class, 'update'])->middleware('throttle:20,1')->name('modules.update');
     // Modo simple: vender desde el celular en dos toques, y ver el día.
     Route::get('/vender', [\App\Http\Controllers\Dashboard\SimpleController::class, 'index'])->name('simple.index');
+    Route::get('/vender/buscar', [\App\Http\Controllers\Dashboard\SimpleController::class, 'search'])->middleware('throttle:300,1')->name('simple.search');
     Route::post('/vender', [\App\Http\Controllers\Dashboard\SimpleController::class, 'sell'])->middleware('throttle:120,1')->name('simple.sell');
     Route::get('/hoy', [\App\Http\Controllers\Dashboard\SimpleController::class, 'today'])->name('simple.today');
     Route::get('/ventas', [\App\Http\Controllers\Dashboard\SalesController::class, 'index'])->name('ventas.index');
@@ -321,6 +322,7 @@ Route::middleware(['auth', 'role:store_owner,super_admin', 'pos.kiosk', 'store.m
     Route::patch('/inventario/conteos/{count}/linea', [\App\Http\Controllers\Dashboard\StockCountController::class, 'record'])->whereNumber('count')->middleware('throttle:240,1')->name('inventario.conteos.record');
     Route::post('/inventario/conteos/{count}/aplicar', [\App\Http\Controllers\Dashboard\StockCountController::class, 'apply'])->whereNumber('count')->name('inventario.conteos.apply');
     Route::post('/inventario/conteos/{count}/cancelar', [\App\Http\Controllers\Dashboard\StockCountController::class, 'cancel'])->whereNumber('count')->name('inventario.conteos.cancel');
+    Route::get('/inventario/componentes', [InventoryController::class, 'components'])->middleware('throttle:300,1')->name('inventario.components');
     Route::get('/inventario/{product}', [InventoryController::class, 'product'])->whereNumber('product')->name('inventario.product');
     Route::post('/inventario/{product}/ajuste', [InventoryController::class, 'adjust'])->whereNumber('product')->name('inventario.adjust');
     Route::post('/inventario/{product}/presentaciones', [\App\Http\Controllers\Dashboard\ProductStructureController::class, 'storeUnit'])->whereNumber('product')->name('inventario.units.store');
