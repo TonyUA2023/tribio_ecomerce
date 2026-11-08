@@ -134,7 +134,9 @@
             </div>
         </header>
         <main id="dashboard-content" class="dash-content" tabindex="-1">
+            @unless(View::hasSection('compact'))
             <div class="dash-page-heading"><div><p>Mi espacio / @yield('title', 'Dashboard')</p><h1>@yield('page_title', 'Dashboard')</h1></div><span class="dash-date">{{ now()->locale('es')->translatedFormat('d M, Y') }}</span></div>
+            @endunless
             @foreach(['success' => 'status', 'info' => 'status', 'error' => 'alert'] as $messageType => $messageRole)
                 @if(session($messageType))
                 <div class="dash-flash dash-flash-{{ $messageType }}" role="{{ $messageRole }}" x-data="{ show: true }" x-show="show">

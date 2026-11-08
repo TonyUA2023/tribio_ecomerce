@@ -100,6 +100,7 @@
             </div>
         </div>
 
+        @if($store->hasStorefront())
         {{-- PASO 2: Video --}}
         <div class="glass-card p-5 sm:p-6" x-data="{
             videoOpen: {{ $product->video_path ? 'true' : 'false' }},
@@ -221,6 +222,8 @@
             </div>
         </div>
 
+        @endif
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
             {{-- Columna principal --}}
             <div class="lg:col-span-2 space-y-5 sm:space-y-6">
@@ -232,6 +235,7 @@
                             <label class="input-label">Nombre del producto *</label>
                             <input type="text" name="name" x-model="productName" class="input-field" required placeholder="Ej: Zapatillas Nike Air">
                         </div>
+                        @if($store->hasStorefront())
                         <div>
                             <label class="input-label">Descripción corta</label>
                             <input type="text" name="short_description" class="input-field" value="{{ old('short_description', $product->short_description) }}" placeholder="Resumen rápido (máx 200 caracteres)" maxlength="200">
@@ -240,6 +244,7 @@
                             <label class="input-label">Descripción completa</label>
                             <textarea name="description" class="input-field" rows="5" placeholder="Describe los detalles de tu producto...">{{ old('description', $product->description) }}</textarea>
                         </div>
+                        @endif
                     </div>
                 </div>
 
@@ -354,8 +359,8 @@
                     <input type="hidden" name="compare_price_usd" id="field_compare_price_usd" value="{{ old('compare_price_usd', $product->compare_price_usd) }}">
 
                     <div class="border-t border-white/10 pt-4 mt-4">
-                        <label class="input-label">Código del producto origen (opcional)</label>
-                        <input type="text" name="origin_code" class="input-field" value="{{ old('origin_code', $product->origin_code) }}" placeholder="Ej: COD-ORI-99">
+                        <label class="input-label">Código del fabricante o del repuesto (opcional)</label>
+                        <input type="text" name="origin_code" class="input-field" value="{{ old('origin_code', $product->origin_code) }}" placeholder="Ej: 8471-HD, código del proveedor"> <p class="text-xs text-white/50 mt-1">También se busca y se escanea en la caja.</p>
                     </div>
                 </div>
 
@@ -380,11 +385,13 @@
                         <input type="checkbox" name="track_stock" value="1" class="w-4 h-4 accent-tribio-cyan" {{ old('track_stock', $product->track_stock) ? 'checked' : '' }}>
                         <span class="text-white/70 text-sm select-none">Controlar inventario (descontar stock en cada venta)</span>
                     </label>
+                    @if($store->hasStorefront())
                     <div>
                         <label class="input-label">Mensaje cuando el stock llega a 0 (opcional)</label>
                         <input type="text" name="out_of_stock_message" class="input-field" value="{{ old('out_of_stock_message', $product->out_of_stock_message) }}" placeholder="Ej: Pre-venta: Disponible en 15 días">
                         <p class="text-xs text-white/50 mt-1">Si lo llenas, el producto permitirá compras sin stock mostrando este mensaje en vez de "Agotado".</p>
                     </div>
+                    @endif
                 </div>
 
                 {{-- Variantes --}}
@@ -489,6 +496,7 @@
 
             {{-- Columna lateral --}}
             <div class="lg:col-span-1 space-y-5 sm:space-y-6">
+                @if($store->hasStorefront())
                 {{-- Estado y Visibilidad --}}
                 <div class="glass-card p-5 sm:p-6">
                     <h3 class="text-white font-bold mb-4 text-sm uppercase tracking-wider opacity-60">👁️ Estado y Visibilidad</h3>
@@ -505,6 +513,10 @@
                 </div>
 
                 @include('dashboard.products._ads', ['product' => $product])
+                @else
+                <input type="hidden" name="is_active" value="{{ $product->is_active ? 1 : 0 }}">
+                <input type="hidden" name="is_featured" value="{{ $product->is_featured ? 1 : 0 }}">
+                @endif
 
                 {{-- Organización --}}
                 <div class="glass-card p-5 sm:p-6" x-data="{

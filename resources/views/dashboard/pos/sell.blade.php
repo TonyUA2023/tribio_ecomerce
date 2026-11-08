@@ -4,7 +4,7 @@
 @push('head')
     <link rel="manifest" href="/pos-manifest.webmanifest">
     <meta name="theme-color" content="#0e7490">
-    <script defer src="/pos/offline.js?v=3"></script>
+    <script defer src="/pos/offline.js?v=4"></script>
 @endpush
 @section('content')
 @php $money = fn ($value) => 'S/ ' . number_format((float) $value, 2); @endphp

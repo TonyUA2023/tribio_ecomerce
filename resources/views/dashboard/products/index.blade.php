@@ -1,6 +1,7 @@
 @extends('layouts.dashboard')
 @section('title', 'Productos')
 @section('page_title', '📦 Productos')
+@section('compact', '1')
 @section('content')
 @php
     $keep = fn (array $over = []) => array_filter(array_merge(request()->except('page'), $over), fn ($v) => $v !== null && $v !== '');
@@ -20,7 +21,7 @@
     ]);
     $moreOpen = $f['precio_min'] !== null || $f['precio_max'] !== null || $f['calidad'] || $f['destacado'] || $f['por_pagina'] !== 25;
 @endphp
-<div class="pr-app w-full max-w-7xl mx-auto"
+<div class="pr-app w-full"
      x-data="{ cols: { code: true, category: true, brand: true, cost: false, margin: false, unit: false, sold: false }, pick: false,
                init() { try { Object.assign(this.cols, JSON.parse(localStorage.getItem('tribio.products.cols') || '{}')); } catch (e) {} this.$watch('cols', v => { try { localStorage.setItem('tribio.products.cols', JSON.stringify(v)); } catch (e) {} }); },
                go(e, url) { if (!e.target.closest('a, button, form, summary, [role=menu]')) location.href = url; } }"
@@ -30,9 +31,15 @@
     @if(session('error'))<div class="pr-flash is-bad" role="alert">{{ session('error') }}</div>@endif
 
     <header class="pr-head">
-        <div>
-            <h2>{{ number_format($counts['total']) }} {{ $counts['total'] === 1 ? 'producto' : 'productos' }}</h2>
-            <p>{{ $filtered ? 'Mostrando ' . number_format($products->total()) . ' con tus filtros' : 'Todo tu catálogo, con su código para vender escaneando.' }}</p>
+        <div class="pr-head-left">
+            <h2>{{ number_format($filtered ? $products->total() : $counts['total']) }} {{ ($filtered ? $products->total() : $counts['total']) === 1 ? 'producto' : 'productos' }}</h2>
+            <nav class="pr-quick" aria-label="Vistas rápidas">
+                <a href="{{ route('dashboard.productos.index') }}" class="{{ !$filtered ? 'is-active' : '' }}">Todos <b>{{ $counts['total'] }}</b></a>
+                <a href="{{ route('dashboard.productos.index', ['stock' => 'low']) }}" class="{{ $f['stock'] === 'low' && !$f['q'] ? 'is-active' : '' }} {{ $counts['low'] ? 'is-warn' : '' }}">Stock bajo <b>{{ $counts['low'] }}</b></a>
+                <a href="{{ route('dashboard.productos.index', ['stock' => 'out']) }}" class="{{ $f['stock'] === 'out' && !$f['q'] ? 'is-active' : '' }} {{ $counts['out'] ? 'is-bad' : '' }}">Sin stock <b>{{ $counts['out'] }}</b></a>
+                <a href="{{ route('dashboard.productos.index', ['calidad' => 'nocode']) }}" class="{{ $f['calidad'] === 'nocode' ? 'is-active' : '' }}" title="Sin código no se pueden vender escaneando">Sin código <b>{{ $counts['nocode'] }}</b></a>
+                <a href="{{ route('dashboard.productos.index', ['calidad' => 'nocost']) }}" class="{{ $f['calidad'] === 'nocost' ? 'is-active' : '' }}" title="Sin costo no se calcula la ganancia">Sin costo <b>{{ $counts['nocost'] }}</b></a>
+            </nav>
         </div>
         <div class="pr-head-actions">
             <a href="{{ route('dashboard.productos.export', request()->query()) }}" class="pr-btn" title="Descargar esta lista para Excel"><x-dashboard-icon name="list"/><span>Exportar</span></a>
@@ -41,45 +48,51 @@
         </div>
     </header>
 
-    {{-- Vistas rápidas con su cantidad --}}
-    <nav class="pr-quick" aria-label="Vistas rápidas">
-        <a href="{{ route('dashboard.productos.index') }}" class="{{ !$filtered ? 'is-active' : '' }}">Todos <b>{{ $counts['total'] }}</b></a>
-        <a href="{{ route('dashboard.productos.index', ['stock' => 'low']) }}" class="{{ $f['stock'] === 'low' && !$f['q'] ? 'is-active' : '' }} {{ $counts['low'] ? 'is-warn' : '' }}">Stock bajo <b>{{ $counts['low'] }}</b></a>
-        <a href="{{ route('dashboard.productos.index', ['stock' => 'out']) }}" class="{{ $f['stock'] === 'out' && !$f['q'] ? 'is-active' : '' }} {{ $counts['out'] ? 'is-bad' : '' }}">Sin stock <b>{{ $counts['out'] }}</b></a>
-        <a href="{{ route('dashboard.productos.index', ['calidad' => 'nocode']) }}" class="{{ $f['calidad'] === 'nocode' ? 'is-active' : '' }}" title="Sin código no se pueden vender escaneando">Sin código <b>{{ $counts['nocode'] }}</b></a>
-        <a href="{{ route('dashboard.productos.index', ['calidad' => 'nocost']) }}" class="{{ $f['calidad'] === 'nocost' ? 'is-active' : '' }}" title="Sin costo no se calcula la ganancia">Sin costo <b>{{ $counts['nocost'] }}</b></a>
-    </nav>
+
 
     {{-- Buscador y filtros --}}
     <form method="GET" action="{{ route('dashboard.productos.index') }}" class="pr-filters" role="search" x-data="{ open: matchMedia('(min-width: 900px)').matches }">
+        <div class="pr-top">
         <div class="pr-search">
             <x-dashboard-icon name="search"/>
             <label for="pr-q" class="sr-only">Buscar productos</label>
             <input id="pr-q" type="search" name="q" value="{{ $f['q'] }}" placeholder="Nombre, código, código de barras, marca o categoría" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" data-1p-ignore="true" data-lpignore="true">
             <button type="submit" class="pr-search-go">Buscar</button>
         </div>
+        <div class="pr-cols" @click.outside="pick = false" @keydown.escape.window="pick = false">
+            <button type="button" class="pr-btn" @click="pick = !pick" :aria-expanded="pick" aria-haspopup="true">Columnas</button>
+            <div class="pr-cols-list" x-show="pick" x-cloak>
+                <label><input type="checkbox" x-model="cols.code"> Código</label>
+                <label><input type="checkbox" x-model="cols.category"> Categoría</label>
+                <label><input type="checkbox" x-model="cols.brand"> Marca</label>
+                <label><input type="checkbox" x-model="cols.cost"> Costo</label>
+                <label><input type="checkbox" x-model="cols.margin"> Margen</label>
+                <label><input type="checkbox" x-model="cols.unit"> Unidad</label>
+                <label><input type="checkbox" x-model="cols.sold"> Vendidos</label>
+            </div>
+        </div>
+        </div>
         <button type="button" class="pr-fbtn" @click="open = !open" :aria-expanded="open">Filtros <span x-text="open ? '▴' : '▾'"></span>@if($chips)<b>{{ count($chips) }}</b>@endif</button>
         <div class="pr-panel" x-show="open" x-cloak>
         <div class="pr-selects">
             <label><span>Categoría</span>
                 <select name="categoria" onchange="this.form.requestSubmit()">
-                    <option value="">Todas</option>
+                    <option value="">Todas las categorías</option>
                     @foreach($categories->whereNull('parent_id') as $cat)
                         <option value="{{ $cat->id }}" @selected($f['categoria'] === $cat->id)>{{ $cat->name }}</option>
                         @foreach($categories->where('parent_id', $cat->id) as $child)<option value="{{ $child->id }}" @selected($f['categoria'] === $child->id)>— {{ $child->name }}</option>@endforeach
                     @endforeach
                 </select></label>
             <label><span>Marca</span>
-                <select name="marca" onchange="this.form.requestSubmit()"><option value="">Todas</option>@foreach($brands as $brand)<option value="{{ $brand->id }}" @selected($f['marca'] === $brand->id)>{{ $brand->name }}</option>@endforeach</select></label>
+                <select name="marca" onchange="this.form.requestSubmit()"><option value="">Todas las marcas</option>@foreach($brands as $brand)<option value="{{ $brand->id }}" @selected($f['marca'] === $brand->id)>{{ $brand->name }}</option>@endforeach</select></label>
             <label><span>Stock</span>
-                <select name="stock" onchange="this.form.requestSubmit()"><option value="">Todo</option>@foreach($stocks as $key => $label)<option value="{{ $key }}" @selected($f['stock'] === $key)>{{ $label }}</option>@endforeach</select></label>
+                <select name="stock" onchange="this.form.requestSubmit()"><option value="">Todo el stock</option>@foreach($stocks as $key => $label)<option value="{{ $key }}" @selected($f['stock'] === $key)>{{ $label }}</option>@endforeach</select></label>
             @if($storefront)
             <label><span>Estado</span>
-                <select name="estado" onchange="this.form.requestSubmit()"><option value="">Todos</option><option value="active" @selected($f['estado'] === 'active')>Activos</option><option value="inactive" @selected($f['estado'] === 'inactive')>Inactivos</option></select></label>
+                <select name="estado" onchange="this.form.requestSubmit()"><option value="">Todos los estados</option><option value="active" @selected($f['estado'] === 'active')>Activos</option><option value="inactive" @selected($f['estado'] === 'inactive')>Inactivos</option></select></label>
             @endif
             <label><span>Ordenar</span>
                 <select name="orden" onchange="this.form.requestSubmit()">@foreach($sorts as $key => $label)<option value="{{ $key }}" @selected($f['orden'] === $key)>{{ $label }}</option>@endforeach</select></label>
-        </div>
         </div>
         <details class="pr-more" @if($moreOpen) open @endif>
             <summary>Más filtros</summary>
@@ -95,28 +108,13 @@
             </div>
         </details>
         </div>
-    </form>
-
-    <div class="pr-bar">
         <div class="pr-chips" aria-label="Filtros activos">
             @foreach($chips as [$label, $key])
                 <a href="{{ route('dashboard.productos.index', $keep($key === 'precio' ? ['precio_min' => null, 'precio_max' => null] : [$key => null])) }}" class="pr-chip" title="Quitar este filtro">{{ trim($label) }} <span aria-hidden="true">✕</span></a>
             @endforeach
             @if($chips)<a href="{{ route('dashboard.productos.index') }}" class="pr-clear">Limpiar todo</a>@endif
         </div>
-        <div class="pr-cols" @click.outside="pick = false" @keydown.escape.window="pick = false">
-            <button type="button" class="pr-btn" @click="pick = !pick" :aria-expanded="pick" aria-haspopup="true">Columnas</button>
-            <div class="pr-cols-list" x-show="pick" x-cloak>
-                <label><input type="checkbox" x-model="cols.code"> Código</label>
-                <label><input type="checkbox" x-model="cols.category"> Categoría</label>
-                <label><input type="checkbox" x-model="cols.brand"> Marca</label>
-                <label><input type="checkbox" x-model="cols.cost"> Costo</label>
-                <label><input type="checkbox" x-model="cols.margin"> Margen</label>
-                <label><input type="checkbox" x-model="cols.unit"> Unidad</label>
-                <label><input type="checkbox" x-model="cols.sold"> Vendidos</label>
-            </div>
-        </div>
-    </div>
+    </form>
 
     @if($storefront && $homeVideoProducts->count() > 0)
     <details class="pr-videos">

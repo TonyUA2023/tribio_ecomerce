@@ -169,4 +169,24 @@ class ProductListTest extends TestCase
         $this->actingAs($user)->put(route('dashboard.categorias.update', $cat), ['name' => 'Pinturas y acabados', 'is_active' => '1', 'is_featured' => '1', 'show_in_header' => '1'])->assertSessionHasNoErrors();
         $this->assertSame([true, true, 'Pinturas y acabados'], [$cat->fresh()->is_featured, $cat->fresh()->show_in_header, $cat->fresh()->name]);
     }
+
+    public function test_registering_a_product_in_a_pos_only_business_is_short_and_the_manufacturer_code_is_searchable(): void
+    {
+        [$user, $store] = $this->owner(Store::MODE_BOTH);
+        $both = $this->actingAs($user)->get(route('dashboard.productos.create'))->assertOk();
+        $both->assertSee('Estado y Visibilidad')->assertSee('Descripción completa')->assertSee('Video corto');
+
+        $store->update(['mode' => Store::MODE_POS]);
+        $page = $this->actingAs($user)->get(route('dashboard.productos.create'))->assertOk();
+        $page->assertDontSee('Estado y Visibilidad')->assertDontSee('Descripción completa')->assertDontSee('Video corto')->assertDontSee('Mensaje cuando el stock llega a 0')
+            ->assertSee('name="is_active" value="1"', false)->assertSee('Código del fabricante o del repuesto')->assertSee('SKU / Código')->assertSee('Nombre del producto');
+
+        $product = $this->product($store, 'Filtro de aceite tractor', ['sku' => 'FIL-1', 'origin_code' => 'RE504836']);
+        $this->actingAs($user)->get(route('dashboard.productos.edit', $product))->assertOk()->assertDontSee('Estado y Visibilidad')->assertSee('name="is_active" value="1"', false);
+
+        // The register finds it by the manufacturer's code, typed or scanned.
+        $catalog = app(\App\Services\Pos\PosCatalog::class);
+        $this->assertSame([$product->id], array_column($catalog->search($store, 'RE5048')['products'], 'id'));
+        $this->assertSame($product->id, $catalog->search($store, 'RE504836')['exact']['product_id']);
+    }
 }

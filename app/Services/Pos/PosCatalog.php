@@ -30,7 +30,7 @@ class PosCatalog
         $exact = $term !== '' ? $this->exact($store, $term) : null;
 
         $products = Product::where('store_id', $store->id)->where('is_active', true)
-            ->when($term !== '', fn ($q) => $q->where(fn ($q) => $q->where('name', 'like', "%{$term}%")->orWhere('sku', 'like', "{$term}%")))
+            ->when($term !== '', fn ($q) => $q->where(fn ($q) => $q->where('name', 'like', "%{$term}%")->orWhere('sku', 'like', "{$term}%")->orWhere('origin_code', 'like', "{$term}%")))
             ->when($term === '', fn ($q) => $q->orderByDesc('sold_count'))
             ->orderBy('name')->limit(self::LIMIT)->get();
         if ($exact && !$products->contains('id', $exact['product_id'])) {
@@ -76,6 +76,7 @@ class PosCatalog
             'id'          => $product->id,
             'name'        => $product->name,
             'sku'         => $product->sku,
+            'origin_code' => $product->origin_code,
             'price'       => (float) $product->price,
             'image'       => $product->image_path ? $product->image_url : null,
             'stock'       => (int) $product->stock,
@@ -107,7 +108,8 @@ class PosCatalog
             return ['product_id' => $variant->product_id, 'variant_id' => $variant->id, 'unit_id' => null];
         }
 
-        $product = Product::where('store_id', $store->id)->where('is_active', true)->where('sku', $code)->first();
+        $product = Product::where('store_id', $store->id)->where('is_active', true)->where('sku', $code)->first()
+            ?? Product::where('store_id', $store->id)->where('is_active', true)->where('origin_code', $code)->first(); // código del fabricante / repuesto
 
         return $product ? ['product_id' => $product->id, 'variant_id' => null, 'unit_id' => null] : null;
     }

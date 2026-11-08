@@ -58,9 +58,9 @@
                 const variant = p.variants.find(v => v.sku && v.sku.toLowerCase() === q);
                 if (unit) { exact = { product_id: p.id, variant_id: null, unit_id: unit.id }; break; }
                 if (variant) { exact = { product_id: p.id, variant_id: variant.id, unit_id: null }; break; }
-                if (p.sku && p.sku.toLowerCase() === q) { exact = { product_id: p.id, variant_id: null, unit_id: null }; break; }
+                if ((p.sku && p.sku.toLowerCase() === q) || (p.origin_code && p.origin_code.toLowerCase() === q)) { exact = { product_id: p.id, variant_id: null, unit_id: null }; break; }
             }
-            const found = products.filter(p => p.name.toLowerCase().includes(q) || (p.sku || '').toLowerCase().startsWith(q));
+            const found = products.filter(p => p.name.toLowerCase().includes(q) || (p.sku || '').toLowerCase().startsWith(q) || (p.origin_code || '').toLowerCase().startsWith(q));
             if (exact && !found.some(p => p.id === exact.product_id)) found.unshift(products.find(p => p.id === exact.product_id));
             return { exact, products: found.slice(0, 20), size: products.length };
         },

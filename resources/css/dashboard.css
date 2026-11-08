@@ -1456,3 +1456,31 @@ body.sm-lock .sm-scroll { overflow: hidden; }
 /* Columnas que el dueño oculta (se recuerdan en este equipo) */
 .pr-app.hide-code [data-col=code], .pr-app.hide-category [data-col=category], .pr-app.hide-brand [data-col=brand], .pr-app.hide-cost [data-col=cost],
 .pr-app.hide-margin [data-col=margin], .pr-app.hide-unit [data-col=unit], .pr-app.hide-sold [data-col=sold] { display: none; }
+
+/* Productos: compacto, buscador pegado a la tabla, ancho completo */
+.pr-app { gap: 8px; }
+.pr-head { align-items: center; }
+.pr-head-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-width: 0; }
+.pr-head-left h2 { white-space: nowrap; }
+.pr-top { display: flex; align-items: center; gap: 8px; }
+.pr-top .pr-search { flex: 1; min-width: 0; }
+.pr-top .pr-cols { display: none; }
+.pr-selects label span, .pr-more-body label > span:first-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.pr-selects label { gap: 0; }
+.pr-chips { padding-top: 2px; }
+.pr-filters { gap: 8px; padding: 8px; }
+@media (min-width: 900px) {
+    .dash-content:has(.pr-app) { padding-top: 14px; }
+    .pr-top .pr-cols { display: block; }
+    .pr-filters { flex-direction: row; flex-wrap: wrap; align-items: center; border-radius: 14px 14px 0 0; border-bottom: 0; margin-bottom: -8px; }
+    .pr-top { flex: 1 1 340px; }
+    .pr-panel { display: contents; }
+    .pr-selects { display: flex; gap: 8px; flex: 0 1 auto; }
+    .pr-selects label { min-width: 150px; }
+    .pr-more { position: relative; }
+    .pr-more[open] .pr-more-body { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; width: 520px; max-width: 90vw; padding: 12px; background: white; border: 1px solid var(--dash-line); border-radius: 12px; box-shadow: 0 14px 34px #20354d2b; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pr-chips { flex: 1 1 100%; }
+    .pr-chips:empty { display: none; }
+    .pr-table-wrap { border-radius: 0 0 14px 14px; border-top-color: var(--dash-line); }
+    .pr-table th { position: sticky; top: 0; z-index: 2; }
+}

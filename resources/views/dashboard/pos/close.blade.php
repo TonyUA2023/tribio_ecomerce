@@ -1,7 +1,7 @@
 @extends('layouts.dashboard')
 @section('title', 'Cerrar caja')
 @section('page_title', '🧾 Cerrar ' . $session->register->name)
-@push('head')<script defer src="/pos/offline.js?v=3"></script>@endpush
+@push('head')<script defer src="/pos/offline.js?v=4"></script>@endpush
 @section('content')
 @php $money = fn ($value) => 'S/ ' . number_format((float) $value, 2); @endphp
 <div class="w-full max-w-3xl mx-auto space-y-5" x-data="{ counted: @js(old('counted_cash', '')), expected: {{ $summary['expected_cash'] }}, waiting: 0 }"
