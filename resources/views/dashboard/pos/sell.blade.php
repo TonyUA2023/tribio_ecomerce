@@ -94,7 +94,7 @@
         </div>
         <div>
             <label class="input-label" for="cash-amount">Monto (S/)</label>
-            <input id="cash-amount" name="amount" type="number" step="0.10" min="0.01" class="input-field" required>
+            <input id="cash-amount" name="amount" type="number" step="0.01" min="0.01" class="input-field" required>
         </div>
         <div>
             <label class="input-label" for="cash-reason">Motivo</label>
@@ -211,7 +211,7 @@
                                         <button type="button" @click="line.quantity++" aria-label="Más">+</button>
                                     </div>
                                     <label class="pos-line-price"><span>S/</span>
-                                        <input type="number" step="0.10" min="0" :value="price(line).toFixed(2)"
+                                        <input type="number" step="0.01" min="0" :value="price(line).toFixed(2)"
                                                @change="line.price = $event.target.value === '' ? null : Number($event.target.value)" aria-label="Precio">
                                     </label>
                                     <span class="pos-line-total" x-text="money(price(line) * line.quantity)"></span>
@@ -279,7 +279,7 @@
                         </div>
                         <div class="flex items-center justify-between gap-2">
                             <label for="pos-discount" class="text-xs text-white/60">Descuento (S/)</label>
-                            <input id="pos-discount" type="number" step="0.10" min="0" class="input-field !py-1 !w-28 text-right" x-model.number="discount">
+                            <input id="pos-discount" type="number" step="0.01" min="0" class="input-field !py-1 !w-28 text-right" x-model.number="discount">
                         </div>
                             </div>{{-- /pos-details-body --}}
                         </div>{{-- /pos-details --}}
@@ -302,7 +302,7 @@
                         <template x-for="(label, method) in methods" :key="method">
                             <div class="flex items-center gap-2">
                                 <span class="text-xs text-white/70 w-24" x-text="label"></span>
-                                <input type="number" step="0.10" min="0" class="input-field !py-1 flex-1 text-right" x-model="pay[method]" :aria-label="'Monto en ' + label">
+                                <input type="number" step="0.01" min="0" class="input-field !py-1 flex-1 text-right" x-model="pay[method]" :aria-label="'Monto en ' + label">
                                 <button type="button" class="btn-ghost !py-0.5 !px-2 text-[11px]" @click="fill(method)">Todo</button>
                             </div>
                         </template>

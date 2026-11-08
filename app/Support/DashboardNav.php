@@ -141,6 +141,7 @@ class DashboardNav
         $items[] = self::item('dashboard.clientes.index', 'users', 'Clientes');
         $items[] = self::item('dashboard.productos.index', 'box', 'Productos', 'Productos y stock');
         $items[] = self::item('dashboard.categorias.index', 'folder', 'Categorías');
+        $items[] = self::item('dashboard.marcas.index', 'tag', 'Marcas');
         $items[] = self::item('dashboard.inventario.index', 'inventory', 'Inventario');
         $items[] = self::item('dashboard.compras.index', 'truck', 'Compras');
         $items[] = self::item('dashboard.ganancias.index', 'trend', 'Ganancias y pérdidas', 'Mi negocio');

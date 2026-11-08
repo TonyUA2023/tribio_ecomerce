@@ -52,7 +52,7 @@
                     <form method="POST" action="{{ route('dashboard.pos.registers.open', $register->id) }}" class="space-y-2">
                         @csrf
                         <label class="input-label" for="float-{{ $register->id }}">Efectivo para dar vuelto (S/)</label>
-                        <input id="float-{{ $register->id }}" name="opening_float" type="number" step="0.10" min="0" class="input-field" value="{{ old('opening_float', '0.00') }}" required>
+                        <input id="float-{{ $register->id }}" name="opening_float" type="number" step="0.01" min="0" class="input-field" value="{{ old('opening_float', '0.00') }}" required>
                         <button type="submit" class="btn-primary w-full">Abrir caja</button>
                     </form>
                 @endif

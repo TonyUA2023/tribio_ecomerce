@@ -43,7 +43,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
                 <div>
                     <label class="input-label" for="collect-amount">Monto (S/)</label>
-                    <input id="collect-amount" name="amount" type="number" step="0.10" min="0.10" max="{{ $owed }}" class="input-field" value="{{ old('amount', $overdue > 0 ? $overdue : '') }}" required>
+                    <input id="collect-amount" name="amount" type="number" step="0.01" min="0.01" max="{{ $owed }}" class="input-field" value="{{ old('amount', $overdue > 0 ? $overdue : '') }}" required>
                 </div>
                 <div>
                     <label class="input-label" for="collect-method">Cómo pagó</label>

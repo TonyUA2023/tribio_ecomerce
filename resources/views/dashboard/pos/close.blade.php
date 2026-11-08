@@ -62,7 +62,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
             <div>
                 <label class="input-label" for="counted-cash">Efectivo contado (S/)</label>
-                <input id="counted-cash" name="counted_cash" type="number" step="0.10" min="0" class="input-field !text-lg" x-model="counted" required autofocus>
+                <input id="counted-cash" name="counted_cash" type="number" step="0.01" min="0" class="input-field !text-lg" x-model="counted" required autofocus>
             </div>
             <p class="text-sm font-semibold" x-show="counted !== ''"
                :class="Math.abs(counted - expected) < 0.005 ? 'text-emerald-300' : 'text-red-300'"
