@@ -100,6 +100,9 @@ class CustomerIdentityService
             ]);
         }
 
+        // The caller just checked the e-mail with a one-time code.
+        $user->forceFill(['email_verified_at' => now()])->save();
+
         Order::whereNull('user_id')
             ->where('customer_email', $user->email)
             ->update(['user_id' => $user->id]);

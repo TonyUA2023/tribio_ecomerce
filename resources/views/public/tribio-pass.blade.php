@@ -20,6 +20,28 @@
         </div>
         @endif
 
+        {{-- Businesses this account works in: the main way in --}}
+        @if(($workspaces ?? collect())->isNotEmpty())
+        <div class="max-w-2xl mx-auto mb-8 space-y-3" aria-label="Tus negocios">
+            @foreach($workspaces as $workspace)
+                @php $ws = $workspace['store']; @endphp
+                <form method="POST" action="{{ route('tribio-pass.enter', $ws->id) }}">
+                    @csrf
+                    <button type="submit" class="w-full flex items-center gap-4 text-left bg-slate-900 hover:bg-slate-800 text-white rounded-3xl p-5 sm:p-6 shadow-lg transition">
+                        <span class="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+                            @if($ws->logo_path)<img src="{{ $ws->logo_url }}" alt="" class="w-full h-full object-cover">@else<span class="text-2xl">🏪</span>@endif
+                        </span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block text-[10px] font-black uppercase tracking-widest text-sky-300">{{ $workspace['role'] === 'owner' ? 'Tu negocio' : ($workspace['role'] === 'admin' ? 'Administrador' : 'Vendedor') }}</span>
+                            <span class="block text-lg sm:text-xl font-extrabold truncate">Ingresar a {{ $ws->name }}</span>
+                        </span>
+                        <span class="text-2xl flex-shrink-0" aria-hidden="true">→</span>
+                    </button>
+                </form>
+            @endforeach
+        </div>
+        @endif
+
         {{-- Loading --}}
         <template x-if="checking">
             <div class="text-center py-16 text-slate-400 text-sm">Cargando tu Tribio Pass…</div>

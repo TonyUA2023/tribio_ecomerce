@@ -19,6 +19,12 @@ class DashboardController extends Controller
                 ->with('info', 'Configura tu tienda para comenzar.');
         }
 
+        // A seller has no summary of the business: they go straight to what they were given.
+        $team = app(\App\Services\Team\TeamAccess::class);
+        if ($team->roleIn(Auth::user(), $store) === \App\Models\StoreMember::SELLER) {
+            return redirect()->route($team->landing(Auth::user(), $store));
+        }
+
         // Modo simple: the first thing is always the selling screen.
         if (\App\Models\Store::modesReady() && $store->isSimple()) {
             return redirect()->route('dashboard.simple.index');
@@ -133,12 +139,12 @@ class DashboardController extends Controller
 
     /**
      * Switches which of the account's own stores the dashboard operates on. Route-model
-     * binding alone doesn't prove ownership, so it's checked explicitly — otherwise any
+     * binding alone doesn't prove access (owner or team member), so it's checked explicitly — otherwise any
      * logged-in store owner could switch another account's dashboard to their store id.
      */
     public function switchStore(\App\Models\Store $store)
     {
-        abort_unless(Auth::user()->stores()->whereKey($store->id)->exists(), 403);
+        abort_unless(app(\App\Services\Team\TeamAccess::class)->roleIn(Auth::user(), $store) !== null, 403);
 
         Auth::user()->switchToStore($store);
 

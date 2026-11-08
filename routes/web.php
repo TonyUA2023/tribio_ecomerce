@@ -45,6 +45,7 @@ Route::post('/webhooks/whatsapp/{key}', [\App\Http\Controllers\Webhooks\Whatsapp
 
 // ────────── TRIBIO PASS (portal unificado comprador + negocio) ──────────
 Route::get('/tribio-pass', [\App\Http\Controllers\TribioPassController::class, 'index'])->name('tribio-pass');
+Route::post('/tribio-pass/entrar/{store}', [\App\Http\Controllers\TribioPassController::class, 'enter'])->middleware(['auth', 'throttle:30,1'])->name('tribio-pass.enter');
 // "Calificar mi compra" desde Mis Compras (sesión web; el móvil usa POST /api/customer/reviews).
 // Fuera de customer/* a propósito: ese prefijo está exento de CSRF y esto escribe contenido público.
 Route::post('/tribio-pass/resenas', [\App\Http\Controllers\CustomerReviewController::class, 'store'])->middleware(['auth', 'throttle:20,1'])->name('tribio-pass.reviews.store');
@@ -75,10 +76,18 @@ Route::prefix('auth/google')->name('auth.google.')->group(function () {
 // ═══════════════════════════════════════════════════════════════
 //  DASHBOARD - VENDEDOR
 // ═══════════════════════════════════════════════════════════════
-Route::middleware(['auth', 'role:store_owner,super_admin', 'pos.kiosk', 'store.modules'])->prefix('dashboard')->name('dashboard.')->group(function () {
+Route::middleware(['auth', 'role:store_owner,super_admin', 'store.member', 'pos.kiosk', 'store.modules'])->prefix('dashboard')->name('dashboard.')->group(function () {
 
     Route::get('/', [DashboardController::class, 'index'])->name('index');
     Route::post('/tienda/cambiar/{store}', [DashboardController::class, 'switchStore'])->name('store.switch');
+
+    // Equipo: trabajadores con su propio Tribio Pass y los módulos que se les abren.
+    Route::controller(\App\Http\Controllers\Dashboard\TeamController::class)->prefix('/equipo')->name('team.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->middleware('throttle:30,1')->name('store');
+        Route::put('/{member}', 'update')->whereNumber('member')->middleware('throttle:60,1')->name('update');
+        Route::delete('/{member}', 'destroy')->whereNumber('member')->middleware('throttle:30,1')->name('destroy');
+    });
 
     // Configuración de la tienda
     Route::get('/tienda/configuracion', [StoreSettingsController::class, 'edit'])->name('store.edit');

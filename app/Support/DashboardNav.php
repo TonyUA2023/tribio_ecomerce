@@ -29,8 +29,19 @@ class DashboardNav
         if ($store && !$store->hasCrm()) {
             $items = self::without($items, ['dashboard.whatsapp.index']);
         }
-        if ($store && Store::modesReady()) {
+        $user = auth()->user();
+        $team = app(\App\Services\Team\TeamAccess::class);
+        $manages = !$store || !$user || $team->manages($user, $store);
+        if ($store && Store::modesReady() && $manages) {
             $items[] = self::item('dashboard.modules.edit', 'settings', 'Módulos del negocio', 'Configuración');
+        }
+        if ($store && $manages && \App\Services\Team\TeamAccess::ready()) {
+            $items[] = self::item('dashboard.team.index', 'users', 'Equipo', 'Configuración', ['match' => ['dashboard.team.*']]);
+        }
+        // Team members only see what they may open (the group header moves on to the next item that stays).
+        if ($store && $user && !$manages) {
+            $hidden = array_column(array_filter($items, fn (array $item) => $item['route'] === 'dashboard.index' || !$team->allows($user, $store, $item['route'])), 'route');
+            $items = self::without($items, $hidden);
         }
 
         return array_map(fn (array $item) => $item + ['match' => [], 'except' => []], $items);

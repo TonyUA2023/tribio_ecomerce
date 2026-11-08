@@ -7,7 +7,9 @@
     <title>@yield('title', 'Dashboard') — Tribio</title>
     @php
         $dashboardStore = Auth::user()->currentStore();
-        $dashboardStores = Auth::user()->stores;
+        $dashboardStores = app(\App\Services\Team\TeamAccess::class)->workspaces(Auth::user())->pluck('store');
+        $dashboardManages = !$dashboardStore || app(\App\Services\Team\TeamAccess::class)->manages(Auth::user(), $dashboardStore);
+        $dashboardCanSearch = !$dashboardStore || app(\App\Services\Team\TeamAccess::class)->allows(Auth::user(), $dashboardStore, 'dashboard.productos.index');
     @endphp
     <link rel="icon" href="{{ $dashboardStore && $dashboardStore->logo_path ? $dashboardStore->logo_url : asset('favicon.ico') }}">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -70,7 +72,7 @@
             </div>
         </div>
         @elseif($dashboardStore)
-        <a href="{{ route('dashboard.store.edit') }}" class="dash-store-switch" title="Configurar {{ $dashboardStore->name }}">
+        <a href="{{ $dashboardManages ? route('dashboard.store.edit') : route('tribio-pass') }}" class="dash-store-switch" title="{{ $dashboardManages ? 'Configurar ' . $dashboardStore->name : 'Mi Tribio Pass' }}">
             <span class="dash-store-avatar">
                 @if($dashboardStore->logo_path)<img src="{{ $dashboardStore->logo_url }}" alt="">@else<x-dashboard-icon name="store"/>@endif
             </span>
@@ -113,12 +115,15 @@
     <div class="dash-main" :inert="mobileOpen">
         <header class="dash-topbar">
             <button type="button" class="dash-icon-button" x-ref="menuToggle" @click="toggleMenu()" aria-label="Alternar navegación" aria-controls="dashboard-navigation" :aria-expanded="desktop ? !collapsed : mobileOpen"><x-dashboard-icon name="menu"/></button>
+            @if($dashboardCanSearch)
             <form method="GET" action="{{ route('dashboard.productos.index') }}" class="dash-search" role="search">
                 <label for="dashboard-search" class="sr-only">Buscar productos en mi tienda</label>
                 <x-dashboard-icon name="search"/>
                 <input id="dashboard-search" name="search" type="search" placeholder="Buscar en tus productos…" value="{{ request()->routeIs('dashboard.productos.index') ? request('search') : '' }}">
                 <button type="submit" aria-label="Buscar productos"><x-dashboard-icon name="chevron"/></button>
             </form>
+            @else<span class="flex-1"></span>
+            @endif
             <div class="dash-account" x-data="{ open: false }" @keydown.escape.stop="open = false; $refs.accountToggle.focus()">
                 <button type="button" x-ref="accountToggle" @click="open = !open" :aria-expanded="open" aria-controls="dashboard-account" class="dash-account-button" aria-label="Menú de mi cuenta">
                     <span class="dash-avatar">{{ mb_substr(Auth::user()->name, 0, 1) }}</span>
@@ -126,8 +131,11 @@
                     <x-dashboard-icon name="chevron" class="dash-account-chevron"/>
                 </button>
                 <div id="dashboard-account" x-cloak x-show="open" @click.outside="open = false" class="dash-account-menu">
+                    @if($dashboardManages)
                     <a href="{{ route('dashboard.modules.edit') }}">Módulos del negocio</a>
                     <a href="{{ route('dashboard.store.edit') }}">Configurar tienda</a>
+                    @endif
+                    <a href="{{ route('tribio-pass') }}">Mi Tribio Pass</a>
                     <a href="{{ route('dashboard.password.edit') }}">Correo y contraseña</a>
                     <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit">Cerrar sesión</button></form>
                 </div>

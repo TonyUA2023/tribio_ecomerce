@@ -81,14 +81,32 @@ class User extends Authenticatable
      */
     public function currentStore(): ?Store
     {
+        $team = \App\Services\Team\TeamAccess::ready();
+
         if ($this->current_store_id) {
             $store = $this->stores()->find($this->current_store_id);
             if ($store) {
                 return $store;
             }
+            // Remembered a business where this account is a team member.
+            if ($team && ($found = app(\App\Services\Team\TeamAccess::class)->workspaces($this)->first(fn ($w) => $w['store']->id === (int) $this->current_store_id))) {
+                return $found['store'];
+            }
         }
 
-        return $this->stores()->oldest()->first();
+        $own = $this->stores()->oldest()->first();
+        if ($own || !$team) {
+            return $own;
+        }
+
+        return app(\App\Services\Team\TeamAccess::class)->workspaces($this)->first()['store'] ?? null;
+    }
+
+    /** Is this account in a team (works in a business it does not own)? */
+    public function isTeamMember(): bool
+    {
+        return \App\Services\Team\TeamAccess::ready()
+            && StoreMember::where('user_id', $this->id)->where('is_active', true)->exists();
     }
 
     /**

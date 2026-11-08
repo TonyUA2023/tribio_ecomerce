@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Store;
+use App\Services\Team\TeamAccess;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -21,9 +23,27 @@ class TribioPassController extends Controller
             return redirect()->route('admin.dashboard');
         }
 
+        $team = app(TeamAccess::class);
+        if ($user) {
+            $team->claimInvites($user);
+        }
+
         return view('public.tribio-pass', [
+            // Every business this account works in (its own and the ones it was let into): the first thing it sees.
+            'workspaces'  => $user ? $team->workspaces($user) : collect(),
             'hasStore'    => $user?->hasStore() ?? false,
             'googleReady' => filled(config('services.google.client_id')),
         ]);
+    }
+
+    /** "Ingresar a {empresa}": opens the business dashboard (a seller lands on what they may use). */
+    public function enter(Store $store)
+    {
+        $user = Auth::user();
+        abort_unless(app(TeamAccess::class)->roleIn($user, $store) !== null, 403);
+
+        $user->switchToStore($store);
+
+        return redirect()->route('dashboard.index');
     }
 }

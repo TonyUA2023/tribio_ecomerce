@@ -23,7 +23,7 @@ class RoleMiddleware
         // Tribio Pass unification: any account that owns a store reaches the business
         // dashboard even if its legacy `role` is still `cliente` (e.g. a buyer who just
         // subscribed to a plan without going through a separate store_owner signup).
-        if (in_array('store_owner', $roles, true) && $user->hasStore()) {
+        if (in_array('store_owner', $roles, true) && ($user->hasStore() || $user->isTeamMember())) {
             return $next($request);
         }
 

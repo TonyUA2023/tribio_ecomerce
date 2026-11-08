@@ -31,6 +31,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Whoever signs in with an e-mail the owner invited to a team is linked to that business.
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Auth\Events\Login::class, function ($event) {
+            try {
+                app(\App\Services\Team\TeamAccess::class)->claimInvites($event->user);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        });
+
         Order::observe(OrderObserver::class);
         ProductReview::observe(ProductReviewObserver::class);
 
