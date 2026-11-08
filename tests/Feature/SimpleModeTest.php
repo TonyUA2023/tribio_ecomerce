@@ -67,6 +67,17 @@ class SimpleModeTest extends TestCase
             ->assertSee('Cómo voy hoy')->assertDontSee('Zonas de envío');
     }
 
+    public function test_wholesale_prices_reach_the_phone_and_the_sale_charges_them(): void
+    {
+        [$user, $store] = $this->owner();
+        $soda = $this->product($store, 'Gaseosa 500 ml', 3.5, ['price_tiers' => [['min_qty' => 6, 'price' => 3.0]]]);
+
+        $catalog = app(\App\Services\Pos\SimpleSales::class)->catalog($store);
+        $this->assertSame([['min_qty' => 6, 'price' => 3.0]], $catalog[0]['tiers']);
+
+        $this->sell($user, [['product_id' => $soda->id, 'quantity' => 6]], 'cash', ['tendered' => 20])->assertOk()->assertJson(['total' => 18.0, 'change' => 2.0]);
+    }
+
     public function test_one_cash_sale_moves_stock_pays_and_gives_change(): void
     {
         [$user, $store] = $this->owner();

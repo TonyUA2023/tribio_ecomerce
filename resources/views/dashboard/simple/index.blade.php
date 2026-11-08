@@ -62,13 +62,13 @@
         <ul class="sm-lines">
             <template x-for="line in cart" :key="line.key">
                 <li>
-                    <span class="sm-line-name"><strong x-text="line.name"></strong><small x-text="money(line.price) + ' c/u'"></small></span>
+                    <span class="sm-line-name"><strong x-text="line.name"></strong><small x-text="money(unit(line)) + ' c/u' + (unit(line) < line.price ? ' · precio por mayor' : '')"></small></span>
                     <span class="sm-stepper">
                         <button type="button" @click="step(line, -1)" aria-label="Quitar uno">−</button>
                         <b x-text="line.qty"></b>
                         <button type="button" @click="step(line, 1)" aria-label="Agregar uno">＋</button>
                     </span>
-                    <span class="sm-line-total" x-text="money(line.price * line.qty)"></span>
+                    <span class="sm-line-total" x-text="money(unit(line) * line.qty)"></span>
                 </li>
             </template>
         </ul>
@@ -174,7 +174,7 @@ function simpleSell(products, url, today, stateKey, searchUrl) {
         qtyOf(id) { return this.cart.filter(l => l.id === id).reduce((n, l) => n + l.qty, 0); },
         add(p) {
             const line = this.cart.find(l => l.id === p.id);
-            line ? line.qty++ : this.cart.push({ key: ++seq, id: p.id, name: p.name, price: p.price, qty: 1 });
+            line ? line.qty++ : this.cart.push({ key: ++seq, id: p.id, name: p.name, price: p.price, tiers: p.tiers || [], qty: 1 });
             navigator.vibrate?.(8);
         },
         step(line, by) {
@@ -184,7 +184,8 @@ function simpleSell(products, url, today, stateKey, searchUrl) {
         },
         clear() { this.cart = []; this.sheet = null; },
         count() { return this.cart.reduce((n, l) => n + l.qty, 0); },
-        total() { return Math.round(this.cart.reduce((sum, l) => sum + l.price * l.qty, 0) * 100) / 100; },
+        unit(l) { const t = (l.tiers || []).filter(t => l.qty >= t.min_qty).pop(); return t ? Math.min(l.price, t.price) : l.price; },
+        total() { return Math.round(this.cart.reduce((sum, l) => sum + this.unit(l) * l.qty, 0) * 100) / 100; },
         money(value) { return 'S/ ' + Number(value || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
         close() { if (!this.busy) { this.sheet = null; this.error = ''; } },
         // ── monto libre

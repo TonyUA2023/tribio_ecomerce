@@ -7,6 +7,7 @@ use App\Models\OrderPayment;
 use App\Models\Product;
 use App\Models\RegisterSession;
 use App\Models\Store;
+use App\Services\Pricing\WholesalePricing;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -100,10 +101,19 @@ class SimpleSales
     {
         return Product::where('store_id', $store->id)->where('is_active', true)->where('has_variants', false)
             ->orderByDesc('sold_count')->orderBy('name')->limit(self::CATALOG_LIMIT)
-            ->get(['id', 'name', 'price', 'stock', 'track_stock', 'sale_mode'])
+            ->get(array_merge(['id', 'name', 'price', 'stock', 'track_stock', 'sale_mode'], WholesalePricing::ready() ? ['price_tiers'] : []))
             ->reject(fn (Product $p) => $p->isMadeToOrder($store))
-            ->map(fn (Product $p) => ['id' => $p->id, 'name' => $p->name, 'price' => (float) $p->price, 'stock' => $p->track_stock ? (int) $p->stock : null])
+            ->map(fn (Product $p) => $this->tile($p))
             ->values()->all();
+    }
+
+    /** One tile of the selling screen; `tiers` are the wholesale prices (quantity → unit price). */
+    private function tile(Product $p): array
+    {
+        return [
+            'id' => $p->id, 'name' => $p->name, 'price' => (float) $p->price, 'stock' => $p->track_stock ? (int) $p->stock : null,
+            'tiers' => WholesalePricing::ready() ? WholesalePricing::tiers($p) : [],
+        ];
     }
 
     /** Is there more on sale than the screen carries? Then the search box also asks the server. */
@@ -133,9 +143,9 @@ class SimpleSales
         }
 
         return $query->orderByDesc('sold_count')->orderBy('name')->limit(40)
-            ->get(['id', 'name', 'price', 'stock', 'track_stock', 'sale_mode'])
+            ->get(array_merge(['id', 'name', 'price', 'stock', 'track_stock', 'sale_mode'], WholesalePricing::ready() ? ['price_tiers'] : []))
             ->reject(fn (Product $p) => $p->isMadeToOrder($store))
-            ->map(fn (Product $p) => ['id' => $p->id, 'name' => $p->name, 'price' => (float) $p->price, 'stock' => $p->track_stock ? (int) $p->stock : null])
+            ->map(fn (Product $p) => $this->tile($p))
             ->values()->all();
     }
 
