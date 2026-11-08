@@ -179,7 +179,7 @@ class ProductListTest extends TestCase
         $store->update(['mode' => Store::MODE_POS]);
         $page = $this->actingAs($user)->get(route('dashboard.productos.create'))->assertOk();
         $page->assertDontSee('Estado y Visibilidad')->assertDontSee('Descripción completa')->assertDontSee('Video corto')->assertDontSee('Mensaje cuando el stock llega a 0')
-            ->assertSee('name="is_active" value="1"', false)->assertSee('Código del fabricante o del repuesto')->assertSee('SKU / Código')->assertSee('Nombre del producto');
+            ->assertSee('name="is_active" value="1"', false)->assertSee('Código del fabricante / repuesto')->assertSee('SKU / Código')->assertSee('Nombre del producto');
 
         $product = $this->product($store, 'Filtro de aceite tractor', ['sku' => 'FIL-1', 'origin_code' => 'RE504836']);
         $this->actingAs($user)->get(route('dashboard.productos.edit', $product))->assertOk()->assertDontSee('Estado y Visibilidad')->assertSee('name="is_active" value="1"', false);
@@ -204,5 +204,16 @@ class ProductListTest extends TestCase
         $this->assertSame(['Rodamiento 6204'], $this->names($this->actingAs($user)->get(route('dashboard.productos.index', ['q' => 'estante b']))));
         $this->actingAs($user)->get(route('dashboard.productos.edit', $product))->assertSee('Pasillo 3, estante B');
         $this->assertStringContainsString('Pasillo 3', $this->actingAs($user)->get(route('dashboard.productos.export'))->streamedContent());
+    }
+
+    public function test_the_product_form_has_cost_unit_and_minimum_stock_up_front(): void
+    {
+        [$user, $store] = $this->owner(Store::MODE_POS);
+        $this->actingAs($user)->get(route('dashboard.productos.create'))->assertOk()->assertSee('name="cost_price"', false)->assertSee('name="unit"', false)->assertSee('name="low_stock_alert"', false);
+
+        $this->actingAs($user)->post(route('dashboard.productos.store'), ['name' => 'Cable 12 AWG', 'price' => 3.5, 'cost_price' => 2.1, 'unit' => 'metro', 'low_stock_alert' => 20, 'stock' => 100, 'track_stock' => '1'])->assertSessionHasNoErrors();
+        $p = Product::where('name', 'Cable 12 AWG')->firstOrFail();
+        $this->assertEquals([2.1, 'metro', 20], [(float) $p->cost_price, $p->unit, $p->low_stock_alert]);
+        $this->actingAs($user)->get(route('dashboard.productos.edit', $p))->assertOk()->assertSee('value="metro"', false)->assertSee('value="2.10"', false);
     }
 }

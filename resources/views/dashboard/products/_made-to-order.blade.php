@@ -13,7 +13,7 @@
         'sizes' => \App\Support\BusinessProfile::forStore($store)->sizes(),
     ];
 @endphp
-<div class="glass-card p-5 sm:p-6" x-data="madeToOrderBuilder(@js($mtoConfig))">
+<div class="glass-card p-4 sm:p-5" x-data="madeToOrderBuilder(@js($mtoConfig))">
     <h3 class="text-white font-bold mb-1 text-sm uppercase tracking-wider opacity-60 flex items-center gap-2">🧵 Venta por encargo</h3>
     <p class="text-xs text-white/50 mb-4">Para lo que haces a pedido (bordados, estampados, regalos personalizados): no descuenta stock y el comprador te deja sus datos al comprar.</p>
 

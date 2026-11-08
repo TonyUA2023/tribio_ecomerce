@@ -8,7 +8,7 @@
         : ($product ? \App\Services\Pricing\WholesalePricing::tiers($product) : []);
     $wholesaleMin = old('min_quantity', $product ? ($product->getAttributes()['min_quantity'] ?? null) : null);
 @endphp
-<div class="glass-card p-5 sm:p-6" x-data="{
+<div class="glass-card p-4 sm:p-5" x-data="{
         rows: @js(array_values($wholesaleTiers)),
         basePrice() { const input = document.querySelector('[name=price]'); return parseFloat(input ? input.value : 0) || 0; },
         saving(row) { const b = this.basePrice(); const p = parseFloat(row.price); return b > 0 && p > 0 && p < b ? Math.round((1 - p / b) * 100) : null; },

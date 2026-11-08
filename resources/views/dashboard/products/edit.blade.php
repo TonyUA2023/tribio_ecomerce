@@ -41,7 +41,7 @@
         'stock' => (int)$v->stock, 'is_active' => (bool)$v->is_active,
     ])->values();
 @endphp
-<div class="w-full max-w-6xl mx-auto space-y-5 sm:space-y-6">
+<div class="w-full space-y-4">
     <form id="product-form" method="POST" action="{{ route('dashboard.productos.update', $product) }}" enctype="multipart/form-data" class="space-y-5 sm:space-y-6" x-data="{ productName: '{{ old('name', $product->name) }}' }">
         @csrf
         @method('PUT')
@@ -70,7 +70,9 @@
         @endif
 
         {{-- PASO 1: Fotos — lo primero, para todos los tamaños de pantalla --}}
-        <div id="product-images" class="glass-card p-5 sm:p-6" tabindex="-1">
+        <details id="product-images" class="glass-card p-4 sm:p-5" tabindex="-1" {{ $store->hasStorefront() && !$product->image_path ? 'open' : '' }}>
+            <summary class="cursor-pointer text-white font-bold text-sm uppercase tracking-wider opacity-80 min-h-[36px] flex items-center gap-2">📸 Fotos del producto <span class="text-white/40 normal-case font-normal text-xs tracking-normal">(opcional · toca para abrir)</span></summary>
+            <div class="mt-4">
             <h3 class="text-white font-bold text-sm uppercase tracking-wider opacity-60 mb-1 flex items-center gap-2">📸 Fotos del producto</h3>
             <p class="text-xs text-white/50 mb-5">Una buena foto principal es lo primero que ven tus clientes.</p>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6">
@@ -99,10 +101,11 @@
                 </div>
             </div>
         </div>
+        </details>
 
         @if($store->hasStorefront())
         {{-- PASO 2: Video --}}
-        <div class="glass-card p-5 sm:p-6" x-data="{
+        <div class="glass-card p-4 sm:p-5" x-data="{
             videoOpen: {{ $product->video_path ? 'true' : 'false' }},
             hasVideo: {{ $product->video_path ? 'true' : 'false' }}, removeVideo: false,
             videoPreview: null, videoError: null, videoSizeText: null,
@@ -224,11 +227,11 @@
 
         @endif
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_420px] gap-4">
             {{-- Columna principal --}}
-            <div class="lg:col-span-2 space-y-5 sm:space-y-6">
+            <div class="space-y-4 min-w-0">
                 {{-- Información General --}}
-                <div class="glass-card p-5 sm:p-6">
+                <div class="glass-card p-4 sm:p-5">
                     <h3 class="text-white font-bold mb-4 text-sm uppercase tracking-wider opacity-60">📝 Información General</h3>
                     <div class="space-y-4">
                         <div>
@@ -249,7 +252,7 @@
                 </div>
 
                 {{-- Precio --}}
-                <div class="glass-card p-5 sm:p-6" x-data="{
+                <div class="glass-card p-4 sm:p-5" x-data="{
                     penPrice: '{{ old('price', $product->price) }}',
                     comparePenPrice: '{{ old('compare_price', $product->compare_price) }}',
                     rates: {{ json_encode($exchangeRates) }},
@@ -357,11 +360,6 @@
 
                     <input type="hidden" name="price_usd" id="field_price_usd" value="{{ old('price_usd', $product->price_usd) }}">
                     <input type="hidden" name="compare_price_usd" id="field_compare_price_usd" value="{{ old('compare_price_usd', $product->compare_price_usd) }}">
-
-                    <div class="border-t border-white/10 pt-4 mt-4">
-                        <label class="input-label">Código del fabricante o del repuesto (opcional)</label>
-                        <input type="text" name="origin_code" class="input-field" value="{{ old('origin_code', $product->origin_code) }}" placeholder="Ej: 8471-HD, código del proveedor"> <p class="text-xs text-white/50 mt-1">También se busca y se escanea en la caja.</p>
-                    </div>
                 </div>
 
                 {{-- Venta por encargo (solo tiendas que la activaron en Mi Tienda) --}}
@@ -369,20 +367,37 @@
                 @includeWhen(\App\Services\Pricing\WholesalePricing::ready(), 'dashboard.products._wholesale', ['product' => $product])
 
                 {{-- Inventario --}}
-                <div class="glass-card p-5 sm:p-6">
+                <div class="glass-card p-4 sm:p-5">
                     <h3 class="text-white font-bold mb-4 text-sm uppercase tracking-wider opacity-60">📦 Inventario y Stock</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 mb-4">
                         <div>
                             <label class="input-label">SKU / Código</label>
                             <input type="text" name="sku" class="input-field" value="{{ old('sku', $product->sku) }}" placeholder="Ej: ZAP-001">
                         </div>
-                        <div class="sm:col-span-2">
-                            <label class="input-label">Ubicación en el almacén (opcional)</label>
+                        <div>
+                            <label class="input-label">Código del fabricante / repuesto</label>
+                            <input type="text" name="origin_code" class="input-field" value="{{ old('origin_code', $product->origin_code) }}" placeholder="Ej: 8471-HD (se busca y escanea en caja)">
+                        </div>
+                        <div>
+                            <label class="input-label">Ubicación en el almacén</label>
                             <input type="text" name="location" class="input-field" maxlength="80" value="{{ old('location', $product->location) }}" placeholder="Ej: Pasillo 3, estante B, nivel 2">
                         </div>
                         <div>
                             <label class="input-label">Stock</label>
                             <input type="number" name="stock" class="input-field" value="{{ old('stock', $product->stock) }}" min="0">
+                        </div>
+                        <div>
+                            <label class="input-label">Costo (S/)</label>
+                            <input type="number" name="cost_price" step="0.01" min="0" inputmode="decimal" class="input-field" value="{{ old('cost_price', $product->cost_price) }}" placeholder="Lo que te cuesta">
+                        </div>
+                        <div>
+                            <label class="input-label">Unidad</label>
+                            <input type="text" name="unit" list="unit-options" maxlength="20" class="input-field" value="{{ old('unit', $product->unit) }}">
+                            <datalist id="unit-options"><option value="unidad"><option value="kg"><option value="metro"><option value="caja"><option value="saco"><option value="bolsa"><option value="litro"><option value="galón"><option value="par"><option value="rollo"></datalist>
+                        </div>
+                        <div>
+                            <label class="input-label">Stock mínimo (alerta)</label>
+                            <input type="number" name="low_stock_alert" min="0" class="input-field" value="{{ old('low_stock_alert', $product->low_stock_alert) }}">
                         </div>
                     </div>
                     <label class="flex items-center gap-3 mb-4 cursor-pointer">
@@ -399,7 +414,7 @@
                 </div>
 
                 {{-- Variantes --}}
-                <div class="glass-card p-5 sm:p-6" x-data="{
+                <div class="glass-card p-4 sm:p-5" x-data="{
                     hasVariants: {{ $product->has_variants ? 'true' : 'false' }},
                     options: {{ Js::from($initialOptions) }},
                     variants: {{ Js::from($initialVariants) }},
@@ -499,10 +514,10 @@
             </div>
 
             {{-- Columna lateral --}}
-            <div class="lg:col-span-1 space-y-5 sm:space-y-6">
+            <div class="space-y-4 min-w-0">
                 @if($store->hasStorefront())
                 {{-- Estado y Visibilidad --}}
-                <div class="glass-card p-5 sm:p-6">
+                <div class="glass-card p-4 sm:p-5">
                     <h3 class="text-white font-bold mb-4 text-sm uppercase tracking-wider opacity-60">👁️ Estado y Visibilidad</h3>
                     <div class="space-y-3">
                         <label class="flex items-center gap-3 cursor-pointer">
@@ -523,7 +538,7 @@
                 @endif
 
                 {{-- Organización --}}
-                <div class="glass-card p-5 sm:p-6" x-data="{
+                <div class="glass-card p-4 sm:p-5" x-data="{
                     search: '',
                     selected: @js(old('categories', $product->categories->isNotEmpty() ? $product->categories->pluck('id')->toArray() : ($product->category_id ? [(int)$product->category_id] : []))),
                     primary: @js(old('category_id', $product->category_id)),
