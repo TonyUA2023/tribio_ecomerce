@@ -15,9 +15,9 @@
             'gives' => ['Caja / Vender', 'Ventas', 'Por cobrar', 'Comprobantes y SUNAT', 'Sedes y cajas'],
         ],
         'crm' => [
-            'icon' => 'users', 'title' => 'CRM · Clientes', 'ask' => 'Usar el CRM',
-            'text' => 'Una ficha por cliente con su historial, seguimientos y oportunidades, y la bandeja de WhatsApp.',
-            'gives' => ['Clientes', 'Seguimientos', 'Oportunidades', 'WhatsApp'],
+            'icon' => 'users', 'title' => 'CRM · Seguimiento de clientes', 'ask' => 'Usar el CRM',
+            'text' => 'Seguimientos, oportunidades, plantillas de mensajes y la bandeja de WhatsApp. Tu lista de clientes siempre está disponible.',
+            'gives' => ['Seguimientos', 'Oportunidades', 'Plantillas', 'WhatsApp'],
         ],
     ];
 @endphp
@@ -55,7 +55,7 @@
                     @foreach($module['gives'] as $item)<span class="mod-chip">{{ $item }}</span>@endforeach
                 </div>
                 <p class="mod-off" x-show="!{{ $key }}" x-cloak>
-                    @if($key === 'store')No tendrás página pública ni pedidos en línea.@elseif($key === 'pos')Sin caja ni ventas de mostrador.@else Sin fichas de clientes ni WhatsApp; el punto de venta sigue funcionando igual.@endif
+                    @if($key === 'store')No tendrás página pública ni pedidos en línea.@elseif($key === 'pos')Sin caja ni ventas de mostrador.@else Sin seguimientos, oportunidades ni WhatsApp; tus clientes y el punto de venta siguen igual.@endif
                 </p>
 
                 @if($key === 'pos')

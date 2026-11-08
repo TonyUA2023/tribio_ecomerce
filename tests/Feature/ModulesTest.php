@@ -130,9 +130,11 @@ class ModulesTest extends TestCase
         $this->assertFalse($store->fresh()->hasCrm());
 
         $menu = $this->nav($user);
-        $this->assertStringNotContainsString('href="' . route('dashboard.clientes.index') . '"', $menu);
+        $this->assertStringContainsString('href="' . route('dashboard.clientes.index') . '"', $menu, 'the customer list never goes away');
         $this->assertStringNotContainsString('href="' . route('dashboard.whatsapp.index') . '"', $menu);
-        $this->actingAs($user)->get(route('dashboard.clientes.index'))->assertRedirect(route('dashboard.index'))->assertSessionHas('info');
+        $this->actingAs($user)->get(route('dashboard.clientes.index'))->assertOk();
+        $this->actingAs($user)->get(route('dashboard.clientes.tasks.index'))->assertRedirect(route('dashboard.index'))->assertSessionHas('info');
+        $this->actingAs($user)->get(route('dashboard.clientes.deals.index'))->assertRedirect(route('dashboard.index'));
         $this->actingAs($user)->get(route('dashboard.whatsapp.index'))->assertRedirect(route('dashboard.index'));
 
         // The register keeps working, even selling on credit to someone who is named (the customer is remembered quietly).
@@ -162,7 +164,7 @@ class ModulesTest extends TestCase
         $menu = $this->nav($user);
         $this->assertStringContainsString('Ganancias y pérdidas', $menu);
         $this->assertStringContainsString('Configuración', $menu);
-        $this->assertMatchesRegularExpression('~Clientes y reportes.{0,400}Ganancias y pérdidas~s', $menu, 'the section header moved on to the item that follows');
-        $this->assertStringNotContainsString('href="' . route('dashboard.clientes.index') . '"', $menu);
+        $this->assertMatchesRegularExpression('~Clientes y reportes.{0,1200}Ganancias y pérdidas~s', $menu, 'the section keeps its header, customers included');
+        $this->assertStringNotContainsString('href="' . route('dashboard.whatsapp.index') . '"', $menu);
     }
 }

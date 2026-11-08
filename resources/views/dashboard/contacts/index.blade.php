@@ -6,6 +6,7 @@
     use App\Http\Controllers\Dashboard\ContactController;
     use App\Models\Contact;
     $keep = fn (array $extra = []) => array_filter($extra + ['buscar' => $search ?? null, 'orden' => ($sort ?? null) === 'gasto' ? 'gasto' : null, 'etiqueta' => ($tag ?? '') ?: null]);
+    $crm = (bool) auth()->user()->currentStore()?->hasCrm();
 @endphp
 <div class="cl-app">
 
@@ -23,6 +24,7 @@
         @if($profile)
         <div class="cl-head-actions">
             <a href="{{ route('dashboard.clientes.create') }}" class="btn-primary">+ Nuevo</a>
+            @if($crm)
             <div class="cl-menu" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
                 <button type="button" class="pos-chip" @click="open = !open" :aria-expanded="open" aria-haspopup="menu">Más<x-dashboard-icon name="chevron" class="cl-caret"/></button>
                 <div class="cl-menu-list" x-show="open" x-cloak role="menu">
@@ -31,11 +33,12 @@
                     <a href="{{ route('dashboard.clientes.tasks.index') }}" role="menuitem">Seguimientos @if($dueTasks > 0)<span class="badge badge-gold">{{ $dueTasks }}</span>@endif</a>
                 </div>
             </div>
+            @endif
         </div>
         @endif
     </header>
 
-    @if($profile && $dueTasks > 0)
+    @if($profile && $crm && $dueTasks > 0)
         <a href="{{ route('dashboard.clientes.tasks.index') }}" class="cl-alert">
             <span><strong>{{ $dueTasks }}</strong> {{ $dueTasks === 1 ? 'seguimiento para hoy' : 'seguimientos para hoy' }}</span><x-dashboard-icon name="chevron"/>
         </a>

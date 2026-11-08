@@ -7,6 +7,8 @@
     use App\Models\ContactEvent;
     $money = fn ($value) => 'S/ ' . number_format((float) $value, 2);
     $phoneDigits = preg_replace('/\D+/', '', (string) $contact->phone);
+    $crm = (bool) auth()->user()->currentStore()?->hasCrm();
+    if (!$crm) { $chat = null; $apiReady = false; }
 @endphp
 <div class="cl-app cl-show">
 
@@ -42,7 +44,7 @@
                 <button type="submit" class="btn-secondary" title="Escribirle desde tu número conectado, con una plantilla aprobada">💬 Chat</button>
             </form>
         @endif
-        @if($contact->whatsapp_url && $profile)
+        @if($contact->whatsapp_url && $profile && $crm)
             <div class="cl-menu" x-data="{ open: false }" @keydown.escape="open = false">
                 <button type="button" class="btn-primary" @click="open = !open" :aria-expanded="open" aria-haspopup="true">WhatsApp ▾</button>
                 <div class="cl-menu-list is-wide" x-show="open" x-cloak @click.outside="open = false">
@@ -74,7 +76,7 @@
         <div class="cl-note"><small>Nota fija</small><p>{{ $contact->notes }}</p></div>
     @endif
 
-    @if($profile)
+    @if($profile && $crm)
     {{-- Seguimientos --}}
     <section class="cl-section" x-data="{ open: false }" aria-labelledby="cl-tasks">
         <div class="cl-section-head">

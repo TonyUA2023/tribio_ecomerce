@@ -26,8 +26,8 @@ class StoreModuleGuard
         'dashboard.pos.*', 'dashboard.quotes.*', 'dashboard.returns.*', 'dashboard.receivables.*', 'dashboard.price-lists.*', 'dashboard.ventas.*', 'dashboard.simple.*',
     ];
 
-    /** Tools of the CRM (Configuración → Módulos can switch it off). */
-    public const CRM_ONLY = ['dashboard.clientes.*', 'dashboard.whatsapp.*'];
+    /** Advanced CRM (follow-ups, pipeline, templates, WhatsApp): Configuración → Módulos can switch it off. The customer list itself never goes away. */
+    public const CRM_ONLY = ['dashboard.clientes.tasks.*', 'dashboard.clientes.deals.*', 'dashboard.clientes.templates.*', 'dashboard.clientes.whatsapp', 'dashboard.whatsapp.*'];
 
     public function handle(Request $request, Closure $next): Response
     {

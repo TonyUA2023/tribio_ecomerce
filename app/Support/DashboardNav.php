@@ -25,9 +25,9 @@ class DashboardNav
             default                         => self::full($store, $pos),
         };
 
-        // CRM switched off in Configuración → Módulos: its entries disappear (the header moves to what follows).
+        // CRM switched off in Configuración → Módulos: WhatsApp disappears (customers stay) (the header moves to what follows).
         if ($store && !$store->hasCrm()) {
-            $items = self::without($items, ['dashboard.clientes.index', 'dashboard.whatsapp.index']);
+            $items = self::without($items, ['dashboard.whatsapp.index']);
         }
         if ($store && Store::modesReady()) {
             $items[] = self::item('dashboard.modules.edit', 'settings', 'Módulos del negocio', 'Configuración');
@@ -149,6 +149,7 @@ class DashboardNav
             $items[] = self::item('dashboard.simple.today', 'trend', 'Cómo voy hoy', null, ['match' => ['dashboard.simple.today']]);
             $items[] = self::item('dashboard.ventas.index', 'receipt', 'Mis ventas');
         }
+        $items[] = self::item('dashboard.clientes.index', 'users', 'Mis clientes', 'Mis clientes', ['match' => ['dashboard.clientes.*']]);
         $items[] = self::item('dashboard.productos.rapido', 'plus', 'Agregar productos', 'Mis productos', ['match' => ['dashboard.productos.rapido*']]);
         $items[] = self::item('dashboard.productos.index', 'box', 'Lista de productos', null, ['except' => ['dashboard.productos.rapido*']]);
         $items[] = self::item('dashboard.inventario.index', 'inventory', 'Stock');
