@@ -1454,7 +1454,7 @@ body.sm-lock .sm-scroll { overflow: hidden; }
 }
 @media (min-width: 900px) and (max-width: 1180px) { .pr-name { min-width: 190px; } }
 /* Columnas que el dueño oculta (se recuerdan en este equipo) */
-.pr-app.hide-code [data-col=code], .pr-app.hide-category [data-col=category], .pr-app.hide-brand [data-col=brand], .pr-app.hide-cost [data-col=cost],
+.pr-app.hide-code [data-col=code], .pr-app.hide-category [data-col=category], .pr-app.hide-brand [data-col=brand], .pr-app.hide-location [data-col=location], .pr-app.hide-cost [data-col=cost],
 .pr-app.hide-margin [data-col=margin], .pr-app.hide-unit [data-col=unit], .pr-app.hide-sold [data-col=sold] { display: none; }
 
 /* Productos: compacto, buscador pegado a la tabla, ancho completo */

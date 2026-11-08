@@ -22,7 +22,7 @@
     $moreOpen = $f['precio_min'] !== null || $f['precio_max'] !== null || $f['calidad'] || $f['destacado'] || $f['por_pagina'] !== 25;
 @endphp
 <div class="pr-app w-full"
-     x-data="{ cols: { code: true, category: true, brand: true, cost: false, margin: false, unit: false, sold: false }, pick: false,
+     x-data="{ cols: { code: true, category: true, brand: true, location: true, cost: false, margin: false, unit: false, sold: false }, pick: false,
                init() { try { Object.assign(this.cols, JSON.parse(localStorage.getItem('tribio.products.cols') || '{}')); } catch (e) {} this.$watch('cols', v => { try { localStorage.setItem('tribio.products.cols', JSON.stringify(v)); } catch (e) {} }); },
                go(e, url) { if (!e.target.closest('a, button, form, summary, [role=menu]')) location.href = url; } }"
      :class="Object.entries(cols).filter(([, on]) => !on).map(([k]) => 'hide-' + k).join(' ')">
@@ -56,7 +56,7 @@
         <div class="pr-search">
             <x-dashboard-icon name="search"/>
             <label for="pr-q" class="sr-only">Buscar productos</label>
-            <input id="pr-q" type="search" name="q" value="{{ $f['q'] }}" placeholder="Nombre, código, código de barras, marca o categoría" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" data-1p-ignore="true" data-lpignore="true">
+            <input id="pr-q" type="search" name="q" value="{{ $f['q'] }}" placeholder="Nombre, código, código de barras, marca, categoría o ubicación" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" data-1p-ignore="true" data-lpignore="true">
             <button type="submit" class="pr-search-go">Buscar</button>
         </div>
         <div class="pr-cols" @click.outside="pick = false" @keydown.escape.window="pick = false">
@@ -65,6 +65,7 @@
                 <label><input type="checkbox" x-model="cols.code"> Código</label>
                 <label><input type="checkbox" x-model="cols.category"> Categoría</label>
                 <label><input type="checkbox" x-model="cols.brand"> Marca</label>
+                <label><input type="checkbox" x-model="cols.location"> Ubicación</label>
                 <label><input type="checkbox" x-model="cols.cost"> Costo</label>
                 <label><input type="checkbox" x-model="cols.margin"> Margen</label>
                 <label><input type="checkbox" x-model="cols.unit"> Unidad</label>
@@ -149,6 +150,7 @@
                 <th data-col="code">Código</th>
                 <th data-col="category">Categoría</th>
                 <th data-col="brand">Marca</th>
+                <th data-col="location">Ubicación</th>
                 <th class="r">Precio</th>
                 <th class="r" data-col="cost">Costo</th>
                 <th class="r" data-col="margin">Margen</th>
@@ -170,6 +172,7 @@
                     <td data-col="code" class="pr-code">@if($product->sku){{ $product->sku }}@else<a href="{{ $edit }}" class="pr-missing">Sin código</a>@endif</td>
                     <td data-col="category">{{ $catName($product) ?? '—' }}@if($extraCats($product) > 0) <span class="pr-more-n" title="{{ $product->categories->pluck('name')->implode(', ') }}">+{{ $extraCats($product) }}</span>@endif</td>
                     <td data-col="brand">{{ $product->brand?->name ?? '—' }}</td>
+                    <td data-col="location">{{ $product->location ?: '—' }}</td>
                     <td class="r pr-price">{{ $money($product->price) }}</td>
                     <td class="r" data-col="cost">{{ $product->cost_price ? $money($product->cost_price) : '—' }}</td>
                     <td class="r" data-col="margin">{{ $margin !== null ? number_format($margin, 0) . ' %' : '—' }}</td>
@@ -193,7 +196,7 @@
                     <span class="pr-thumb">@if($product->image_path)<img src="{{ $product->image_url }}" alt="" loading="lazy">@else<x-dashboard-icon name="box"/>@endif</span>
                     <span class="pr-card-text">
                         <strong>{{ $product->name }}</strong>
-                        <small>@if($product->sku)<code>{{ $product->sku }}</code>@else<span class="pr-missing">Sin código</span>@endif @if($catName($product)) · {{ $catName($product) }}@endif @if($product->brand) · {{ $product->brand->name }}@endif</small>
+                        <small>@if($product->sku)<code>{{ $product->sku }}</code>@else<span class="pr-missing">Sin código</span>@endif @if($catName($product)) · {{ $catName($product) }}@endif @if($product->brand) · {{ $product->brand->name }}@endif @if($product->location) · 📍 {{ $product->location }}@endif</small>
                         @if($storefront && ($product->is_featured || !$product->is_active))<small>@if($product->is_featured)<span class="pr-tag">Destacado</span>@endif @unless($product->is_active)<span class="pr-state">Inactivo</span>@endunless</small>@endif
                     </span>
                     <span class="pr-card-side"><b>{{ $money($product->price) }}</b>@include('dashboard.products._stock', ['product' => $product])</span>

@@ -58,12 +58,12 @@ class ProductController extends Controller
         return response()->streamDownload(function () use ($query, $storefront) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM: Excel opens the accents right
-            fputcsv($out, array_merge(['Código', 'Código de origen', 'Producto', 'Categoría', 'Marca', 'Unidad', 'Costo', 'Precio', 'Margen %', 'Stock', 'Stock mínimo'], $storefront ? ['Estado'] : []));
+            fputcsv($out, array_merge(['Código', 'Código de origen', 'Producto', 'Categoría', 'Marca', 'Ubicación', 'Unidad', 'Costo', 'Precio', 'Margen %', 'Stock', 'Stock mínimo'], $storefront ? ['Estado'] : []));
             $query->chunk(500, function ($rows) use ($out, $storefront) {
                 foreach ($rows as $p) {
                     $margin = (float) $p->price > 0 && (float) $p->cost_price > 0 ? round(((float) $p->price - (float) $p->cost_price) * 100 / (float) $p->price, 1) : '';
                     fputcsv($out, array_merge([
-                        $p->sku, $p->origin_code, $p->name, ($p->category ?? $p->categories->first())?->name, $p->brand?->name, $p->unit,
+                        $p->sku, $p->origin_code, $p->name, ($p->category ?? $p->categories->first())?->name, $p->brand?->name, $p->location, $p->unit,
                         $p->cost_price !== null ? number_format((float) $p->cost_price, 2, '.', '') : '', number_format((float) $p->price, 2, '.', ''), $margin,
                         $p->track_stock ? $p->stock : 'sin control', $p->track_stock ? $p->low_stock_alert : '',
                     ], $storefront ? [$p->is_active ? 'Activo' : 'Inactivo'] : []));

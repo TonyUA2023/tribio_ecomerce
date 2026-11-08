@@ -376,6 +376,10 @@
                             <label class="input-label">SKU / Código</label>
                             <input type="text" name="sku" class="input-field" value="{{ old('sku', $product->sku) }}" placeholder="Ej: ZAP-001">
                         </div>
+                        <div class="sm:col-span-2">
+                            <label class="input-label">Ubicación en el almacén (opcional)</label>
+                            <input type="text" name="location" class="input-field" maxlength="80" value="{{ old('location', $product->location) }}" placeholder="Ej: Pasillo 3, estante B, nivel 2">
+                        </div>
                         <div>
                             <label class="input-label">Stock</label>
                             <input type="number" name="stock" class="input-field" value="{{ old('stock', $product->stock) }}" min="0">

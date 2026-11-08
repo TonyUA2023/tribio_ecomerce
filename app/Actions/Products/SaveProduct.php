@@ -47,6 +47,7 @@ class SaveProduct
             'short_description' => 'nullable|string|max:200',
             'sku'               => 'nullable|string|max:50',
             'origin_code'       => 'nullable|string|max:100',
+            'location'          => 'nullable|string|max:80',
             'category_id'       => ['nullable', 'integer', Rule::exists('categories', 'id')->where('store_id', $store->id)],
             // A JSON string (mobile multipart) or an array (web form): parsed in categoryIds().
             'categories'        => 'nullable',

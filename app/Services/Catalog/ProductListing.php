@@ -66,6 +66,7 @@ class ProductListing
             $query->where(fn ($w) => $w->whereRaw("name LIKE ? ESCAPE '!'", [$like])
                 ->orWhereRaw("sku LIKE ? ESCAPE '!'", [$like])
                 ->orWhereRaw("origin_code LIKE ? ESCAPE '!'", [$like])
+                ->orWhereRaw("location LIKE ? ESCAPE '!'", [$like])
                 ->orWhereHas('units', fn ($u) => $u->where('barcode', $word))
                 ->orWhereHas('brand', fn ($b) => $b->whereRaw("name LIKE ? ESCAPE '!'", [$like]))
                 ->orWhereHas('category', fn ($c) => $c->whereRaw("name LIKE ? ESCAPE '!'", [$like])));

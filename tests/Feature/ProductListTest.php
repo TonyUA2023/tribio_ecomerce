@@ -189,4 +189,20 @@ class ProductListTest extends TestCase
         $this->assertSame([$product->id], array_column($catalog->search($store, 'RE5048')['products'], 'id'));
         $this->assertSame($product->id, $catalog->search($store, 'RE504836')['exact']['product_id']);
     }
+
+    public function test_the_location_in_the_warehouse_is_saved_listed_searched_and_exported(): void
+    {
+        [$user, $store] = $this->owner(Store::MODE_POS);
+        $this->actingAs($user)->get(route('dashboard.productos.create'))->assertOk()->assertSee('Ubicación en el almacén');
+
+        $this->actingAs($user)->post(route('dashboard.productos.store'), ['name' => 'Rodamiento 6204', 'price' => 12, 'sku' => 'ROD-1', 'stock' => 5, 'location' => 'Pasillo 3, estante B', 'is_active' => '1'])->assertSessionHasNoErrors();
+        $product = Product::where('name', 'Rodamiento 6204')->firstOrFail();
+        $this->assertSame('Pasillo 3, estante B', $product->location);
+        $this->product($store, 'Cadena 428', ['location' => 'Pasillo 1']);
+
+        $page = $this->actingAs($user)->get(route('dashboard.productos.index'))->assertOk()->assertSee('Ubicación')->assertSee('Pasillo 3, estante B');
+        $this->assertSame(['Rodamiento 6204'], $this->names($this->actingAs($user)->get(route('dashboard.productos.index', ['q' => 'estante b']))));
+        $this->actingAs($user)->get(route('dashboard.productos.edit', $product))->assertSee('Pasillo 3, estante B');
+        $this->assertStringContainsString('Pasillo 3', $this->actingAs($user)->get(route('dashboard.productos.export'))->streamedContent());
+    }
 }
