@@ -175,11 +175,13 @@ class ProductListTest extends TestCase
         [$user, $store] = $this->owner(Store::MODE_BOTH);
         $both = $this->actingAs($user)->get(route('dashboard.productos.create'))->assertOk();
         $both->assertSee('Estado y Visibilidad')->assertSee('Descripción completa')->assertSee('Video corto');
+        $both->assertSee('Precio anterior / tachado')->assertSee('name="track_stock" value="1"', false)->assertDontSee('Controlar inventario');
 
         $store->update(['mode' => Store::MODE_POS]);
         $page = $this->actingAs($user)->get(route('dashboard.productos.create'))->assertOk();
         $page->assertDontSee('Estado y Visibilidad')->assertDontSee('Descripción completa')->assertDontSee('Video corto')->assertDontSee('Mensaje cuando el stock llega a 0')
             ->assertSee('name="is_active" value="1"', false)->assertSee('Código del fabricante / repuesto')->assertSee('SKU / Código')->assertSee('Nombre del producto');
+        $page->assertDontSee('Precio anterior')->assertDontSee('Personalizar precio por país')->assertDontSee('Se calcula automáticamente')->assertDontSee('Precios por mayor')->assertSee('name="track_stock" value="1"', false);
 
         $product = $this->product($store, 'Filtro de aceite tractor', ['sku' => 'FIL-1', 'origin_code' => 'RE504836']);
         $this->actingAs($user)->get(route('dashboard.productos.edit', $product))->assertOk()->assertDontSee('Estado y Visibilidad')->assertSee('name="is_active" value="1"', false);

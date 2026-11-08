@@ -234,6 +234,7 @@
                                 <input type="number" name="price" x-model="penPrice" class="input-field text-right font-bold" style="padding-left: 2.75rem !important;" step="0.01" min="0" required placeholder="0.00">
                             </div>
                         </div>
+@if($store->hasStorefront())
                         <div>
                             <label class="input-label">Precio anterior / tachado (opcional)</label>
                             <div class="relative">
@@ -242,10 +243,11 @@
                             </div>
                         </div>
                     </div>
+@endif
 
                     @include('dashboard.products._fee-simulator')
 
-                    @if(!empty($currenciesMap))
+                    @if($store->hasStorefront() && !empty($currenciesMap))
                     <div class="border-t border-white/10 pt-4 mt-4">
                         <template x-if="!showCustomPricing">
                             <div>
@@ -304,7 +306,7 @@
 
                 {{-- Venta por encargo (solo tiendas que la activaron en Mi Tienda) --}}
                 @includeWhen($store->made_to_order_enabled, 'dashboard.products._made-to-order', ['product' => null])
-                @includeWhen(\App\Services\Pricing\WholesalePricing::ready(), 'dashboard.products._wholesale', ['product' => null])
+                @includeWhen($store->hasStorefront() && \App\Services\Pricing\WholesalePricing::ready(), 'dashboard.products._wholesale', ['product' => null])
 
                 {{-- Inventario --}}
                 <div class="glass-card p-4 sm:p-5">
@@ -340,10 +342,7 @@
                             <input type="number" name="low_stock_alert" min="0" class="input-field" value="{{ old('low_stock_alert', 5) }}">
                         </div>
                     </div>
-                    <label class="flex items-center gap-3 mb-4 cursor-pointer">
-                        <input type="checkbox" name="track_stock" value="1" class="w-4 h-4 accent-tribio-cyan" {{ old('track_stock') ? 'checked' : '' }}>
-                        <span class="text-white/70 text-sm select-none">Controlar inventario (descontar stock en cada venta)</span>
-                    </label>
+                    <input type="hidden" name="track_stock" value="1">
                     @if($store->hasStorefront())
                     <div>
                         <label class="input-label">Mensaje cuando el stock llega a 0 (opcional)</label>
