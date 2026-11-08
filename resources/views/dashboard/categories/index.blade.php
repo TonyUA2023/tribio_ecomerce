@@ -103,11 +103,13 @@
         <div>
             <h2 class="text-white font-bold text-lg">{{ $categories->count() }} categorías</h2>
             <div class="flex flex-wrap items-center gap-2 mt-1">
+                @if($store->hasStorefront())
                 <span class="text-xs font-semibold px-2.5 py-1 rounded-full border transition-all"
                       :class="headerCount >= 5 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-tribio-purple/20 text-tribio-cyan border-tribio-purple/30'">
                     📌 En encabezado: <strong x-text="headerCount"></strong> / 5
                 </span>
-                <span class="text-xs text-white/50">Administra tus categorías destacadas y fotos</span>
+                @endif
+                <span class="text-xs text-white/50">{{ $store->hasStorefront() ? 'Administra tus categorías destacadas y fotos' : 'Ordena tus productos por familias: así los filtras y reportas más rápido.' }}</span>
             </div>
         </div>
         <a href="{{ route('dashboard.categorias.create') }}" class="btn-primary self-start sm:self-auto">+ Nueva Categoría</a>
@@ -130,6 +132,7 @@
                     <div class="flex items-center gap-2 flex-wrap">
                         <span class="text-white font-bold text-sm">{{ $cat->name }}</span>
                         
+                        @if($store->hasStorefront())
                         {{-- Badges --}}
                         <span x-show="categoriesFeatured[{{ $cat->id }}]" 
                               class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
@@ -139,6 +142,7 @@
                               class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                             📌 En encabezado
                         </span>
+                        @endif
                     </div>
                     <p class="text-white/40 text-xs mt-0.5">
                         {{ $cat->active_products_count }} productos activos
@@ -148,6 +152,7 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2 self-end sm:self-auto">
+                @if($store->hasStorefront())
                 {{-- Botón Destacada (Inicio) --}}
                 <button type="button" 
                         @click="toggleFeatured({{ $cat->id }}, '{{ addslashes($cat->name) }}')" 
@@ -171,6 +176,8 @@
                                 : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:text-white')">
                     <span x-text="categoriesHeader[{{ $cat->id }}] ? '✓ Encabezado' : '+ Encabezado'"></span>
                 </button>
+
+                @endif
 
                 <a href="{{ route('dashboard.categorias.edit', $cat) }}" class="btn-ghost py-1.5 px-3 text-xs">Editar</a>
                 

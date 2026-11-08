@@ -2,154 +2,209 @@
 @section('title', 'Productos')
 @section('page_title', '📦 Productos')
 @section('content')
-<div class="flex items-center justify-between mb-6">
-    <h2 class="text-white font-bold text-lg">{{ $products->total() }} productos</h2>
-    <div class="flex items-center gap-2 flex-wrap">
-        <a href="{{ route('dashboard.productos.rapido') }}" class="btn-primary">⚡ Alta rápida</a>
-        <a href="{{ route('dashboard.productos.create') }}" class="btn-secondary">+ Producto completo</a>
-    </div>
-</div>
+@php
+    $keep = fn (array $over = []) => array_filter(array_merge(request()->except('page'), $over), fn ($v) => $v !== null && $v !== '');
+    $money = fn ($v) => 'S/ ' . number_format((float) $v, 2);
+    $catName = fn ($p) => ($p->category ?? $p->categories->first())?->name;
+    $extraCats = fn ($p) => max(0, $p->categories->count() - ($p->category ? ($p->categories->contains('id', $p->category_id) ? 1 : 0) : 1));
+    // The active filters, each with the link that removes it.
+    $chips = array_filter([
+        $f['q'] !== '' ? ['«' . $f['q'] . '»', 'q'] : null,
+        $f['categoria'] ? ['Categoría: ' . ($categories->firstWhere('id', $f['categoria'])?->name ?? '—'), 'categoria'] : null,
+        $f['marca'] ? ['Marca: ' . ($brands->firstWhere('id', $f['marca'])?->name ?? '—'), 'marca'] : null,
+        $f['stock'] ? [$stocks[$f['stock']], 'stock'] : null,
+        $f['estado'] ? [$f['estado'] === 'active' ? 'Activos' : 'Inactivos', 'estado'] : null,
+        $f['destacado'] ? ['Destacados', 'destacado'] : null,
+        $f['calidad'] ? [$qualities[$f['calidad']], 'calidad'] : null,
+        ($f['precio_min'] !== null || $f['precio_max'] !== null) ? ['Precio ' . ($f['precio_min'] !== null ? 'desde ' . $money($f['precio_min']) : '') . ' ' . ($f['precio_max'] !== null ? 'hasta ' . $money($f['precio_max']) : ''), 'precio'] : null,
+    ]);
+    $moreOpen = $f['precio_min'] !== null || $f['precio_max'] !== null || $f['calidad'] || $f['destacado'] || $f['por_pagina'] !== 25;
+@endphp
+<div class="pr-app w-full max-w-7xl mx-auto"
+     x-data="{ cols: { code: true, category: true, brand: true, cost: false, margin: false, unit: false, sold: false }, pick: false,
+               init() { try { Object.assign(this.cols, JSON.parse(localStorage.getItem('tribio.products.cols') || '{}')); } catch (e) {} this.$watch('cols', v => { try { localStorage.setItem('tribio.products.cols', JSON.stringify(v)); } catch (e) {} }); },
+               go(e, url) { if (!e.target.closest('a, button, form, summary, [role=menu]')) location.href = url; } }"
+     :class="Object.entries(cols).filter(([, on]) => !on).map(([k]) => 'hide-' + k).join(' ')">
 
-{{-- Widget de Videos Destacados en el Home (Máximo 3) --}}
-@if(isset($homeVideoProducts) && $homeVideoProducts->count() > 0)
-<div class="mb-6 p-4 rounded-2xl bg-slate-50 border border-slate-200">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-        <div class="flex items-center gap-2">
-            <span class="text-base">🎬</span>
-            <h3 class="text-white font-bold text-sm">Videos Destacados en el Home</h3>
-            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full {{ $homeVideoProducts->count() >= 3 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' }}">
-                {{ $homeVideoProducts->count() }}/3 Cupos Asignados
-            </span>
+    @if(session('success'))<div class="pr-flash is-ok" role="status">{{ session('success') }}</div>@endif
+    @if(session('error'))<div class="pr-flash is-bad" role="alert">{{ session('error') }}</div>@endif
+
+    <header class="pr-head">
+        <div>
+            <h2>{{ number_format($counts['total']) }} {{ $counts['total'] === 1 ? 'producto' : 'productos' }}</h2>
+            <p>{{ $filtered ? 'Mostrando ' . number_format($products->total()) . ' con tus filtros' : 'Todo tu catálogo, con su código para vender escaneando.' }}</p>
         </div>
-        <p class="text-xs text-slate-400">Se muestran en una sola fila después del Hero.</p>
-    </div>
+        <div class="pr-head-actions">
+            <a href="{{ route('dashboard.productos.export', request()->query()) }}" class="pr-btn" title="Descargar esta lista para Excel"><x-dashboard-icon name="list"/><span>Exportar</span></a>
+            <a href="{{ route('dashboard.productos.create') }}" class="pr-btn"><x-dashboard-icon name="plus"/><span>Producto completo</span></a>
+            <a href="{{ route('dashboard.productos.rapido') }}" class="pr-btn is-primary"><x-dashboard-icon name="plus"/><span>Alta rápida</span></a>
+        </div>
+    </header>
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        @foreach($homeVideoProducts as $idx => $hProd)
-        <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10">
-            <div class="flex items-center gap-2.5 overflow-hidden">
-                <div class="relative w-10 h-10 rounded-lg overflow-hidden bg-black flex-shrink-0">
-                    <video src="{{ $hProd->video_url }}" class="w-full h-full object-cover" muted playsinline></video>
-                </div>
-                <div class="truncate">
-                    <p class="text-xs font-bold text-white truncate">{{ $hProd->name }}</p>
-                    <p class="text-[10px] text-[#C8A68B] font-semibold">Slot {{ $idx + 1 }} • S/. {{ number_format($hProd->price, 2) }}</p>
-                </div>
+    {{-- Vistas rápidas con su cantidad --}}
+    <nav class="pr-quick" aria-label="Vistas rápidas">
+        <a href="{{ route('dashboard.productos.index') }}" class="{{ !$filtered ? 'is-active' : '' }}">Todos <b>{{ $counts['total'] }}</b></a>
+        <a href="{{ route('dashboard.productos.index', ['stock' => 'low']) }}" class="{{ $f['stock'] === 'low' && !$f['q'] ? 'is-active' : '' }} {{ $counts['low'] ? 'is-warn' : '' }}">Stock bajo <b>{{ $counts['low'] }}</b></a>
+        <a href="{{ route('dashboard.productos.index', ['stock' => 'out']) }}" class="{{ $f['stock'] === 'out' && !$f['q'] ? 'is-active' : '' }} {{ $counts['out'] ? 'is-bad' : '' }}">Sin stock <b>{{ $counts['out'] }}</b></a>
+        <a href="{{ route('dashboard.productos.index', ['calidad' => 'nocode']) }}" class="{{ $f['calidad'] === 'nocode' ? 'is-active' : '' }}" title="Sin código no se pueden vender escaneando">Sin código <b>{{ $counts['nocode'] }}</b></a>
+        <a href="{{ route('dashboard.productos.index', ['calidad' => 'nocost']) }}" class="{{ $f['calidad'] === 'nocost' ? 'is-active' : '' }}" title="Sin costo no se calcula la ganancia">Sin costo <b>{{ $counts['nocost'] }}</b></a>
+    </nav>
+
+    {{-- Buscador y filtros --}}
+    <form method="GET" action="{{ route('dashboard.productos.index') }}" class="pr-filters" role="search" x-data="{ open: matchMedia('(min-width: 900px)').matches }">
+        <div class="pr-search">
+            <x-dashboard-icon name="search"/>
+            <label for="pr-q" class="sr-only">Buscar productos</label>
+            <input id="pr-q" type="search" name="q" value="{{ $f['q'] }}" placeholder="Nombre, código, código de barras, marca o categoría" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" data-1p-ignore="true" data-lpignore="true">
+            <button type="submit" class="pr-search-go">Buscar</button>
+        </div>
+        <button type="button" class="pr-fbtn" @click="open = !open" :aria-expanded="open">Filtros <span x-text="open ? '▴' : '▾'"></span>@if($chips)<b>{{ count($chips) }}</b>@endif</button>
+        <div class="pr-panel" x-show="open" x-cloak>
+        <div class="pr-selects">
+            <label><span>Categoría</span>
+                <select name="categoria" onchange="this.form.requestSubmit()">
+                    <option value="">Todas</option>
+                    @foreach($categories->whereNull('parent_id') as $cat)
+                        <option value="{{ $cat->id }}" @selected($f['categoria'] === $cat->id)>{{ $cat->name }}</option>
+                        @foreach($categories->where('parent_id', $cat->id) as $child)<option value="{{ $child->id }}" @selected($f['categoria'] === $child->id)>— {{ $child->name }}</option>@endforeach
+                    @endforeach
+                </select></label>
+            <label><span>Marca</span>
+                <select name="marca" onchange="this.form.requestSubmit()"><option value="">Todas</option>@foreach($brands as $brand)<option value="{{ $brand->id }}" @selected($f['marca'] === $brand->id)>{{ $brand->name }}</option>@endforeach</select></label>
+            <label><span>Stock</span>
+                <select name="stock" onchange="this.form.requestSubmit()"><option value="">Todo</option>@foreach($stocks as $key => $label)<option value="{{ $key }}" @selected($f['stock'] === $key)>{{ $label }}</option>@endforeach</select></label>
+            @if($storefront)
+            <label><span>Estado</span>
+                <select name="estado" onchange="this.form.requestSubmit()"><option value="">Todos</option><option value="active" @selected($f['estado'] === 'active')>Activos</option><option value="inactive" @selected($f['estado'] === 'inactive')>Inactivos</option></select></label>
+            @endif
+            <label><span>Ordenar</span>
+                <select name="orden" onchange="this.form.requestSubmit()">@foreach($sorts as $key => $label)<option value="{{ $key }}" @selected($f['orden'] === $key)>{{ $label }}</option>@endforeach</select></label>
+        </div>
+        </div>
+        <details class="pr-more" @if($moreOpen) open @endif>
+            <summary>Más filtros</summary>
+            <div class="pr-more-body">
+                <label><span>Precio desde (S/)</span><input type="number" name="precio_min" step="0.01" min="0" inputmode="decimal" value="{{ $f['precio_min'] }}"></label>
+                <label><span>Precio hasta (S/)</span><input type="number" name="precio_max" step="0.01" min="0" inputmode="decimal" value="{{ $f['precio_max'] }}"></label>
+                <label><span>Datos que faltan</span>
+                    <select name="calidad"><option value="">—</option>@foreach($qualities as $key => $label)<option value="{{ $key }}" @selected($f['calidad'] === $key)>{{ $label }}</option>@endforeach</select></label>
+                <label><span>Por página</span>
+                    <select name="por_pagina">@foreach([25, 50, 100] as $n)<option value="{{ $n }}" @selected($f['por_pagina'] === $n)>{{ $n }}</option>@endforeach</select></label>
+                @if($storefront)<label class="pr-check"><input type="checkbox" name="destacado" value="1" @checked($f['destacado'])> Solo destacados</label>@endif
+                <button type="submit" class="pr-btn is-primary">Aplicar</button>
             </div>
-            <form action="{{ route('dashboard.productos.toggle-home-video', $hProd->id) }}" method="POST" class="ml-2 flex-shrink-0">
-                @csrf
-                <button type="submit" class="text-[10px] px-2 py-1 rounded bg-white/10 hover:bg-red-500/20 text-slate-300 hover:text-red-300 font-bold transition cursor-pointer" title="Quitar de la portada">
-                    ✕ Quitar
-                </button>
-            </form>
+        </details>
         </div>
-        @endforeach
+    </form>
 
-        @for($i = $homeVideoProducts->count(); $i < 3; $i++)
-        <div class="p-2.5 rounded-xl border border-dashed border-white/15 bg-white/[0.02] flex items-center justify-center text-center">
-            <span class="text-xs text-white/40 italic">Slot {{ $i + 1 }} disponible</span>
+    <div class="pr-bar">
+        <div class="pr-chips" aria-label="Filtros activos">
+            @foreach($chips as [$label, $key])
+                <a href="{{ route('dashboard.productos.index', $keep($key === 'precio' ? ['precio_min' => null, 'precio_max' => null] : [$key => null])) }}" class="pr-chip" title="Quitar este filtro">{{ trim($label) }} <span aria-hidden="true">✕</span></a>
+            @endforeach
+            @if($chips)<a href="{{ route('dashboard.productos.index') }}" class="pr-clear">Limpiar todo</a>@endif
         </div>
-        @endfor
+        <div class="pr-cols" @click.outside="pick = false" @keydown.escape.window="pick = false">
+            <button type="button" class="pr-btn" @click="pick = !pick" :aria-expanded="pick" aria-haspopup="true">Columnas</button>
+            <div class="pr-cols-list" x-show="pick" x-cloak>
+                <label><input type="checkbox" x-model="cols.code"> Código</label>
+                <label><input type="checkbox" x-model="cols.category"> Categoría</label>
+                <label><input type="checkbox" x-model="cols.brand"> Marca</label>
+                <label><input type="checkbox" x-model="cols.cost"> Costo</label>
+                <label><input type="checkbox" x-model="cols.margin"> Margen</label>
+                <label><input type="checkbox" x-model="cols.unit"> Unidad</label>
+                <label><input type="checkbox" x-model="cols.sold"> Vendidos</label>
+            </div>
+        </div>
     </div>
-</div>
-@endif
 
-<div class="glass-card overflow-hidden">
+    @if($storefront && $homeVideoProducts->count() > 0)
+    <details class="pr-videos">
+        <summary>🎬 Videos destacados en la portada <b>{{ $homeVideoProducts->count() }}/3</b></summary>
+        <div class="pr-videos-body">
+            @foreach($homeVideoProducts as $idx => $hProd)
+                <form action="{{ route('dashboard.productos.toggle-home-video', $hProd->id) }}" method="POST">@csrf
+                    <span>{{ $hProd->name }}</span><button type="submit" class="pr-link-danger">Quitar</button></form>
+            @endforeach
+        </div>
+    </details>
+    @endif
+
     @if($products->isEmpty())
-    <div class="text-center py-16">
-        <p class="text-5xl mb-4">📦</p>
-        <p class="text-white font-bold">Sin productos aún</p>
-        <a href="{{ route('dashboard.productos.create') }}" class="btn-primary mt-4">+ Agregar producto</a>
-    </div>
+        <div class="pr-empty">
+            @if($filtered)
+                <strong>Ningún producto coincide</strong>
+                <p>Prueba con otra palabra o quita algún filtro.</p>
+                <a href="{{ route('dashboard.productos.index') }}" class="pr-btn is-primary">Limpiar filtros</a>
+            @else
+                <strong>Aún no tienes productos</strong>
+                <p>Cárgalos en minutos: pega desde Excel o escanea sus códigos.</p>
+                <a href="{{ route('dashboard.productos.rapido') }}" class="pr-btn is-primary">Alta rápida</a>
+            @endif
+        </div>
     @else
-    <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-            <thead><tr class="border-b" style="border-color: rgba(255,255,255,0.08);">
-                <th class="text-left py-3 px-4 text-white/50">Producto</th>
-                <th class="text-left py-3 px-4 text-white/50">Precio</th>
-                <th class="text-left py-3 px-4 text-white/50">Stock</th>
-                <th class="text-left py-3 px-4 text-white/50">Estado</th>
-                <th class="text-right py-3 px-4 text-white/50">Acciones</th>
+    {{-- Escritorio: tabla --}}
+    <div class="pr-table-wrap">
+        <table class="pr-table">
+            <thead><tr>
+                <th>Producto</th>
+                <th data-col="code">Código</th>
+                <th data-col="category">Categoría</th>
+                <th data-col="brand">Marca</th>
+                <th class="r">Precio</th>
+                <th class="r" data-col="cost">Costo</th>
+                <th class="r" data-col="margin">Margen</th>
+                <th class="r">Stock</th>
+                <th data-col="unit">Unidad</th>
+                <th class="r" data-col="sold">Vendidos</th>
+                @if($storefront)<th>Estado</th>@endif
+                <th><span class="sr-only">Acciones</span></th>
             </tr></thead>
             <tbody>
-                @foreach($products as $product)
-                <tr class="border-b hover:bg-white/3 transition-colors" style="border-color: rgba(255,255,255,0.04);">
-                    <td class="py-3 px-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg bg-tribio-purple/20 flex items-center justify-center overflow-hidden flex-shrink-0">
-                                @if($product->image_path) <img src="{{ $product->image_url }}" class="w-full h-full object-cover">
-                                @else <span class="text-lg">📦</span> @endif
-                            </div>
-                            <div>
-                                <p class="text-white font-medium">{{ $product->name }}</p>
-                                @if($product->categories && $product->categories->count() > 0)
-                                    <div class="flex items-center gap-1 mt-0.5 flex-wrap">
-                                        <span class="text-white/60 text-xs">{{ $product->categories->first()->icon ?? '' }} {{ $product->categories->first()->name }}</span>
-                                        @if($product->categories->count() > 1)
-                                            <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-sky-400 font-bold cursor-default" title="{{ $product->categories->pluck('name')->implode(', ') }}">
-                                                +{{ $product->categories->count() - 1 }}
-                                            </span>
-                                        @endif
-                                    </div>
-                                @elseif($product->category)
-                                    <p class="text-white/40 text-xs">{{ $product->category->name }}</p>
-                                @else
-                                    <p class="text-white/20 text-xs italic">Sin categoría</p>
-                                @endif
-                            </div>
-                        </div>
+            @foreach($products as $product)
+                @php $edit = route('dashboard.productos.edit', $product); $margin = (float) $product->price > 0 && (float) $product->cost_price > 0 ? ((float) $product->price - (float) $product->cost_price) * 100 / (float) $product->price : null; @endphp
+                <tr @click="go($event, '{{ $edit }}')">
+                    <td class="pr-name">
+                        <span class="pr-thumb">@if($product->image_path)<img src="{{ $product->image_url }}" alt="" loading="lazy">@else<x-dashboard-icon name="box"/>@endif</span>
+                        <span class="pr-name-text"><a href="{{ $edit }}">{{ $product->name }}</a>
+                            @if($storefront && $product->is_featured)<span class="pr-tag"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 3 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8 6.2 20.9l1.1-6.5L2.6 9.8l6.5-.9z"/></svg>Destacado</span>@endif</span>
                     </td>
-                    <td class="py-3 px-4">
-                        <p class="text-tribio-gold font-bold">S/. {{ number_format($product->price, 2) }}</p>
-                        @if($product->compare_price) <p class="text-white/30 text-xs line-through">S/. {{ number_format($product->compare_price, 2) }}</p> @endif
-                    </td>
-                    <td class="py-3 px-4">
-                        @if($product->track_stock)
-                            <span class="{{ $product->stock === 0 ? 'badge badge-red' : ($product->isLowStock() ? 'badge badge-gold' : 'badge badge-green') }}">{{ $product->stock }}</span>
-                        @else
-                            <span class="text-white/40 text-xs">Sin control</span>
-                        @endif
-                    </td>
-                    <td class="py-3 px-4">
-                        <div class="flex items-center gap-1.5 flex-wrap">
-                            <span class="badge {{ $product->is_active ? 'badge-green' : 'badge-gray' }}">{{ $product->is_active ? 'Activo' : 'Inactivo' }}</span>
-                            @if($product->is_featured) <span class="badge badge-gold">⭐</span> @endif
-                            @if($product->video_path)
-                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded {{ $product->show_video_on_home ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-purple-500/20 text-purple-300 border border-purple-500/30' }}" title="{{ $product->show_video_on_home ? 'Video activo en el Home' : 'Tiene video' }}">
-                                    <span>🎬</span>
-                                    <span>{{ $product->show_video_on_home ? 'Home' : 'Video' }}</span>
-                                </span>
-                            @endif
-                        </div>
-                    </td>
-                    <td class="py-3 px-4 text-right">
-                        <div class="flex items-center justify-end gap-2">
-                            @if($product->video_path)
-                            <form action="{{ route('dashboard.productos.toggle-home-video', $product->id) }}" method="POST" class="inline">
-                                @csrf
-                                <button type="submit" class="btn-ghost py-1 px-2 text-xs font-bold transition {{ $product->show_video_on_home ? 'text-amber-400 border-amber-400/30 bg-amber-400/10' : 'text-slate-400 hover:text-white' }}" title="{{ $product->show_video_on_home ? 'Quitar del Home' : 'Destacar video en el Home' }}">
-                                    <span>🎬</span>
-                                    <span class="hidden sm:inline text-[11px]">{{ $product->show_video_on_home ? 'En Home' : '+ Home' }}</span>
-                                </button>
-                            </form>
-                            @endif
-                            @if($product->is_active && $store->status === 'active')
-                            @php $__pUrl = rtrim($store->url, '/') . '/producto/' . $product->slug; @endphp
-                            <a href="https://wa.me/?text={{ rawurlencode($product->name . ' — S/ ' . number_format($product->price, 2) . "\n" . $__pUrl) }}" target="_blank" rel="noopener" class="btn-ghost py-1 px-3 text-xs" title="Compartir este producto por WhatsApp">Compartir</a>
-                            @endif
-                            <a href="{{ route('dashboard.productos.edit', $product) }}" class="btn-ghost py-1 px-3 text-xs">Editar</a>
-                            <form method="POST" action="{{ route('dashboard.productos.destroy', $product) }}" onsubmit="return confirm('¿Eliminar este producto?')">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="btn-ghost py-1 px-3 text-xs text-red-400 border-red-400/20 hover:bg-red-400/10">Eliminar</button>
-                            </form>
-                        </div>
-                    </td>
+                    <td data-col="code" class="pr-code">@if($product->sku){{ $product->sku }}@else<a href="{{ $edit }}" class="pr-missing">Sin código</a>@endif</td>
+                    <td data-col="category">{{ $catName($product) ?? '—' }}@if($extraCats($product) > 0) <span class="pr-more-n" title="{{ $product->categories->pluck('name')->implode(', ') }}">+{{ $extraCats($product) }}</span>@endif</td>
+                    <td data-col="brand">{{ $product->brand?->name ?? '—' }}</td>
+                    <td class="r pr-price">{{ $money($product->price) }}</td>
+                    <td class="r" data-col="cost">{{ $product->cost_price ? $money($product->cost_price) : '—' }}</td>
+                    <td class="r" data-col="margin">{{ $margin !== null ? number_format($margin, 0) . ' %' : '—' }}</td>
+                    <td class="r">@include('dashboard.products._stock', ['product' => $product])</td>
+                    <td data-col="unit">{{ $product->unit }}</td>
+                    <td class="r" data-col="sold">{{ number_format((int) $product->sold_count) }}</td>
+                    @if($storefront)<td><span class="pr-state {{ $product->is_active ? 'is-on' : '' }}">{{ $product->is_active ? 'Activo' : 'Inactivo' }}</span></td>@endif
+                    <td class="pr-act">@include('dashboard.products._menu', ['product' => $product, 'edit' => $edit])</td>
                 </tr>
-                @endforeach
+            @endforeach
             </tbody>
         </table>
     </div>
-    <div class="p-4">{{ $products->links() }}</div>
+
+    {{-- Celular: tarjetas --}}
+    <ul class="pr-cards">
+        @foreach($products as $product)
+            @php $edit = route('dashboard.productos.edit', $product); @endphp
+            <li class="pr-card">
+                <a href="{{ $edit }}" class="pr-card-main">
+                    <span class="pr-thumb">@if($product->image_path)<img src="{{ $product->image_url }}" alt="" loading="lazy">@else<x-dashboard-icon name="box"/>@endif</span>
+                    <span class="pr-card-text">
+                        <strong>{{ $product->name }}</strong>
+                        <small>@if($product->sku)<code>{{ $product->sku }}</code>@else<span class="pr-missing">Sin código</span>@endif @if($catName($product)) · {{ $catName($product) }}@endif @if($product->brand) · {{ $product->brand->name }}@endif</small>
+                        @if($storefront && ($product->is_featured || !$product->is_active))<small>@if($product->is_featured)<span class="pr-tag">Destacado</span>@endif @unless($product->is_active)<span class="pr-state">Inactivo</span>@endunless</small>@endif
+                    </span>
+                    <span class="pr-card-side"><b>{{ $money($product->price) }}</b>@include('dashboard.products._stock', ['product' => $product])</span>
+                </a>
+                @include('dashboard.products._menu', ['product' => $product, 'edit' => $edit])
+            </li>
+        @endforeach
+    </ul>
+    <div class="pr-pager">{{ $products->links() }}</div>
     @endif
 </div>
 @endsection

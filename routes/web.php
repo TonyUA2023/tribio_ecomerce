@@ -137,6 +137,7 @@ Route::middleware(['auth', 'role:store_owner,super_admin', 'pos.kiosk', 'store.m
     Route::get('/productos/simulador-comisiones', \App\Http\Controllers\Dashboard\FeeSimulatorController::class)->name('productos.fee-simulator');
     Route::get('/productos/rapido', [\App\Http\Controllers\Dashboard\QuickProductController::class, 'create'])->name('productos.rapido');
     Route::post('/productos/rapido', [\App\Http\Controllers\Dashboard\QuickProductController::class, 'store'])->middleware('throttle:30,1')->name('productos.rapido.store');
+    Route::get('/productos/exportar', [ProductController::class, 'export'])->middleware('throttle:20,1')->name('productos.export');
     Route::resource('productos', ProductController::class)->parameters(['productos' => 'product']);
     Route::post('/productos/{product}/toggle-home-video', [ProductController::class, 'toggleHomeVideo'])->name('productos.toggle-home-video');
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Actions\Products\SaveProduct;
 use App\Models\Product;
 use App\Models\InventoryMovement;
+use App\Services\Catalog\ProductListing;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -18,34 +19,58 @@ class ProductController extends Controller
         return Auth::user()->currentStore();
     }
 
-    public function index(Request $request)
+    public function index(Request $request, ProductListing $listing)
     {
         $store = $this->getStore();
+        $f = $listing->filters($request->query(), $store);
 
-        $products = $store->products()
-            ->with(['categories', 'category'])
-            ->when($request->search, fn($q) => $q->where('name', 'like', "%{$request->search}%"))
-            ->when($request->category, function($q) use ($request) {
-                $catId = $request->category;
-                $q->where(function($sub) use ($catId) {
-                    $sub->where('category_id', $catId)
-                        ->orWhereHas('categories', fn($sq) => $sq->where('categories.id', $catId));
-                });
-            })
-            ->when($request->status === 'active', fn($q) => $q->where('is_active', true))
-            ->when($request->status === 'inactive', fn($q) => $q->where('is_active', false))
-            ->when($request->stock === 'low', fn($q) => $q->where('track_stock', true)->whereColumn('stock', '<=', 'low_stock_alert')->where('stock', '>', 0))
-            ->when($request->stock === 'out', fn($q) => $q->where('track_stock', true)->where('stock', 0))
-            ->orderBy('sort_order')
-            ->paginate(20);
+        $products = $listing->query($store, $f)
+            ->with(['category:id,name,icon', 'categories:id,name,icon', 'brand:id,name'])
+            ->paginate($f['por_pagina'])->withQueryString();
 
-        $categories = $store->categories;
-        $homeVideoProducts = $store->products()
-            ->whereNotNull('video_path')
-            ->where('show_video_on_home', true)
-            ->get();
+        return view('dashboard.products.index', [
+            'store'      => $store,
+            'products'   => $products,
+            'f'          => $f,
+            'filtered'   => $listing->isFiltered($f),
+            'counts'     => $listing->counts($store),
+            'categories' => $store->categories()->orderBy('name')->get(['id', 'name', 'icon', 'parent_id']),
+            'brands'     => $store->brands()->orderBy('name')->get(['id', 'name']),
+            'sorts'      => ProductListing::SORTS,
+            'stocks'     => ProductListing::STOCK,
+            'qualities'  => ProductListing::QUALITY,
+            'storefront' => $store->hasStorefront(),
+            'homeVideoProducts' => $store->hasStorefront()
+                ? $store->products()->whereNotNull('video_path')->where('show_video_on_home', true)->get()
+                : collect(),
+        ]);
+    }
 
-        return view('dashboard.products.index', compact('store', 'products', 'categories', 'homeVideoProducts'));
+    /** The list as it is filtered on screen, for Excel: code, name, category, brand, cost, price, margin and stock. */
+    public function export(Request $request, ProductListing $listing)
+    {
+        $store = $this->getStore();
+        $f = $listing->filters($request->query(), $store);
+        $query = $listing->query($store, $f)->with(['category:id,name', 'categories:id,name', 'brand:id,name']);
+
+        $storefront = $store->hasStorefront();
+
+        return response()->streamDownload(function () use ($query, $storefront) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM: Excel opens the accents right
+            fputcsv($out, array_merge(['Código', 'Código de origen', 'Producto', 'Categoría', 'Marca', 'Unidad', 'Costo', 'Precio', 'Margen %', 'Stock', 'Stock mínimo'], $storefront ? ['Estado'] : []));
+            $query->chunk(500, function ($rows) use ($out, $storefront) {
+                foreach ($rows as $p) {
+                    $margin = (float) $p->price > 0 && (float) $p->cost_price > 0 ? round(((float) $p->price - (float) $p->cost_price) * 100 / (float) $p->price, 1) : '';
+                    fputcsv($out, array_merge([
+                        $p->sku, $p->origin_code, $p->name, ($p->category ?? $p->categories->first())?->name, $p->brand?->name, $p->unit,
+                        $p->cost_price !== null ? number_format((float) $p->cost_price, 2, '.', '') : '', number_format((float) $p->price, 2, '.', ''), $margin,
+                        $p->track_stock ? $p->stock : 'sin control', $p->track_stock ? $p->low_stock_alert : '',
+                    ], $storefront ? [$p->is_active ? 'Activo' : 'Inactivo'] : []));
+                }
+            });
+            fclose($out);
+        }, 'productos-' . now('America/Lima')->format('Y-m-d') . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     public function create()

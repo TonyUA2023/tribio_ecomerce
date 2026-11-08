@@ -92,6 +92,7 @@
             </div>
         </div>
 
+        @if($store->hasStorefront())
         {{-- Foto de la Categoría --}}
         <div class="glass-card p-6 space-y-4">
             <div>
@@ -103,10 +104,13 @@
             <p class="text-xs text-slate-500">Recomendado: una foto vertical o cuadrada de al menos 400 × 500 píxeles.</p>
         </div>
 
+        @endif
+
         {{-- Visibilidad y Opciones --}}
         <div class="glass-card p-6 space-y-3">
-            <h3 class="text-white font-bold text-sm uppercase tracking-wider opacity-60 mb-2">Visibilidad en la Tienda</h3>
+            <h3 class="text-white font-bold text-sm uppercase tracking-wider opacity-60 mb-2">{{ $store->hasStorefront() ? 'Visibilidad en la Tienda' : 'Opciones' }}</h3>
             
+            @if($store->hasStorefront())
             <label class="flex items-start gap-3 cursor-pointer p-2.5 rounded-xl hover:bg-white/5 transition">
                 <input type="checkbox" name="is_featured" value="1" {{ old('is_featured', $category->is_featured) ? 'checked' : '' }} class="mt-0.5 accent-tribio-purple w-4 h-4 rounded">
                 <div>
@@ -126,6 +130,11 @@
                     <p class="text-xs text-white/50 mt-0.5">Aparece en la barra de navegación superior (máximo 5 categorías para un diseño estético).</p>
                 </div>
             </label>
+
+            @else
+            <input type="hidden" name="is_featured" value="{{ $category->is_featured ? 1 : 0 }}">
+            <input type="hidden" name="show_in_header" value="{{ $category->show_in_header ? 1 : 0 }}">
+            @endif
 
             <label class="flex items-start gap-3 cursor-pointer p-2.5 rounded-xl hover:bg-white/5 transition">
                 <input type="checkbox" name="is_active" value="1" {{ old('is_active', $category->is_active) ? 'checked' : '' }} class="mt-0.5 accent-tribio-purple w-4 h-4 rounded">
