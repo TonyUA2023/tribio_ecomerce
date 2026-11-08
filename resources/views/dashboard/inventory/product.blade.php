@@ -2,7 +2,7 @@
 @section('title', 'Inventario: ' . $product->name)
 @section('page_title', '📦 Inventario')
 @section('content')
-<div class="w-full max-w-5xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
 
     <div class="glass-card px-3.5 sm:px-5 py-2.5 sm:py-3 flex items-center gap-3">
         <a href="{{ route('dashboard.inventario.index') }}" class="btn-ghost !px-2.5 !py-2 flex-shrink-0" aria-label="Volver a Inventario" title="Volver a Inventario">←</a>

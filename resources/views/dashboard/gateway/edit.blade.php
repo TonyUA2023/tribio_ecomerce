@@ -1,7 +1,7 @@
 @extends('layouts.dashboard')
 @section('title','Pasarela de Pago') @section('page_title','💳 Pasarela de Pago')
 @section('content')
-<div class="w-full max-w-5xl mx-auto space-y-5 sm:space-y-6">
+<div class="w-full max-w-[1600px] mx-auto space-y-5 sm:space-y-6">
     <form id="payment-gateway-form" method="POST" enctype="multipart/form-data" action="{{ route('dashboard.gateway.update') }}" class="space-y-5 sm:space-y-6" x-data="{
         checkoutMode: '{{ old('checkout_mode', $store?->checkout_mode ?? 'whatsapp') }}',
         gateway: '{{ old('payment_gateway', $store?->payment_gateway ?? '') }}',

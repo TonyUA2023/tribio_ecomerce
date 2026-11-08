@@ -6,7 +6,7 @@
     $money = fn ($value) => 'S/ ' . number_format((float) $value, 2);
     $lima = fn ($at) => $at?->copy()->setTimezone('America/Lima')->locale('es');
 @endphp
-<div class="w-full max-w-5xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <p class="text-sm text-white/60">Cada apertura y cierre de caja, con lo vendido y si el efectivo cuadró.</p>
         <a href="{{ route('dashboard.pos.index', ['cajas' => 1]) }}" class="text-xs text-tribio-cyan underline">← Caja</a>

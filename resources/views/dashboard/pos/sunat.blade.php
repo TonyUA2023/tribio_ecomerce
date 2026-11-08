@@ -3,7 +3,7 @@
 @section('page_title', '🧾 Facturación electrónica')
 @section('content')
 @php $ready = $problems === []; @endphp
-<div class="w-full max-w-4xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
     @include('dashboard.pos._documents-tabs', ['current' => 'sunat'])
 
     @if($errors->any())

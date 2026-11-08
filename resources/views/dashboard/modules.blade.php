@@ -21,7 +21,7 @@
         ],
     ];
 @endphp
-<div class="mod-app w-full max-w-4xl mx-auto"
+<div class="mod-app w-full max-w-[1600px] mx-auto"
      x-data="{ store: @js($state['store']), pos: @js($state['pos']), crm: @js($state['crm']), simple: @js($state['simple']), was: @js($state),
                get none() { return !this.store && !this.pos; },
                turnsOff() { return ['store', 'pos', 'crm'].filter(k => this.was[k] && !this[k]); },

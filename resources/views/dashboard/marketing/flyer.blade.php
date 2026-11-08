@@ -28,7 +28,7 @@
     .flyer-tier span:first-child { font-family: Arial, sans-serif; font-weight: 700; font-size: 38px; }
 </style>
 
-<div class="w-full max-w-6xl mx-auto" x-data="flyerStudio(@js($products), @js($brand), @js($selected), @js($formats), @js(route('dashboard.marketing.content.flyer.store')))">
+<div class="w-full max-w-[1600px] mx-auto" x-data="flyerStudio(@js($products), @js($brand), @js($selected), @js($formats), @js(route('dashboard.marketing.content.flyer.store')))">
 
     {{-- Barra de acciones fija --}}
     <div class="sticky top-0 z-20 -mx-1 sm:mx-0 mb-4">

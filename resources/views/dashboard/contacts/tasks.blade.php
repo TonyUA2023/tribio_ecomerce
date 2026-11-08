@@ -2,7 +2,7 @@
 @section('title', 'Seguimientos')
 @section('page_title', '👥 Seguimientos')
 @section('content')
-<div class="w-full max-w-3xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
 
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <p class="text-sm text-white/60">A quién escribir o llamar, y cuándo. Lo vencido primero.</p>

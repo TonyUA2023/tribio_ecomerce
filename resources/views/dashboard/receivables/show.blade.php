@@ -7,7 +7,7 @@
     $states = ['paid' => ['Pagada', 'badge-green'], 'overdue' => ['Vencida', 'badge-red'], 'due' => ['Vence hoy', 'badge-gold'], 'upcoming' => ['Por vencer', 'badge-gray']];
     $mySession = $sessions->firstWhere('opened_by', auth()->id()) ?? $sessions->first();
 @endphp
-<div class="w-full max-w-5xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <div class="flex items-center gap-3 text-xs flex-wrap">
             <a href="{{ route('dashboard.receivables.index') }}" class="text-tribio-cyan underline">← Por cobrar</a>

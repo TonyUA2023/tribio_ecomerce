@@ -2,7 +2,7 @@
 @section('title', 'WhatsApp')
 @section('page_title', '💬 Plantillas de Meta')
 @section('content')
-<div class="w-full max-w-4xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <p class="text-sm text-white/60 max-w-2xl">Para escribir primero a un cliente, o cuando pasaron más de 24 h desde su último mensaje, WhatsApp solo deja enviar plantillas aprobadas por Meta. Cada mensaje de plantilla lo cobra Meta según su categoría.</p>
         <a href="{{ route('dashboard.whatsapp.index') }}" class="text-xs text-tribio-cyan underline">← Chats</a>

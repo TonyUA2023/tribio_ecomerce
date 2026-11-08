@@ -2,7 +2,7 @@
 @section('title', 'Conteo físico')
 @section('page_title', '🧮 Conteo físico')
 @section('content')
-<div class="w-full max-w-4xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
 
 @unless($ready)
     <div class="glass-card p-4 sm:p-5">

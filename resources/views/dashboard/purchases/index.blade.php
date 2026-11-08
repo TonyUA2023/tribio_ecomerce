@@ -8,7 +8,7 @@
     $chipOn   = 'bg-tribio-cyan/10 border-tribio-cyan/40 text-tribio-cyan';
     $chipOff  = 'bg-white/5 border-white/10 text-white/60 hover:border-white/20';
 @endphp
-<div class="w-full max-w-5xl mx-auto">
+<div class="w-full max-w-[1600px] mx-auto">
 
 @unless($ready)
     <div class="glass-card p-4 sm:p-5">

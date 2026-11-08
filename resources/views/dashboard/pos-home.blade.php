@@ -9,7 +9,7 @@
     $pending = collect($steps)->where('done', false)->count();
     $cash = collect($registers)->sum('cash');
 @endphp
-<div class="hm-app w-full max-w-6xl mx-auto space-y-5">
+<div class="hm-app w-full max-w-[1600px] mx-auto space-y-5">
     <div class="hm-actions">
         @if($posReady)<a href="{{ route('dashboard.pos.index') }}" class="hm-action is-primary"><x-dashboard-icon name="pos"/><span><strong>Nueva venta</strong><small>Abrir la caja y cobrar</small></span></a>@endif
         <a href="{{ route('dashboard.productos.rapido') }}" class="hm-action"><x-dashboard-icon name="plus"/><span><strong>Agregar productos</strong><small>Tabla rápida · pega desde Excel</small></span></a>

@@ -7,7 +7,7 @@
     use App\Services\AiMarketing\CopyGenerator;
     $usedPercent = $allowance > 0 ? min(100, round(($allowance - $remaining) * 100 / $allowance)) : 100;
 @endphp
-<div class="w-full max-w-5xl mx-auto space-y-5 sm:space-y-6">
+<div class="w-full max-w-[1600px] mx-auto space-y-5 sm:space-y-6">
 
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <p class="text-sm text-white/60 max-w-2xl">Textos para tus redes escritos con IA en la voz de tu marca, y flyers listos para publicar. Los precios siempre salen de tus productos, nunca los inventa la IA.</p>

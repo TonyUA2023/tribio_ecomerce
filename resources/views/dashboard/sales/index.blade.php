@@ -11,7 +11,7 @@
     $periodLabel = $period ? ($periods[$period] ?? '') : ($from && $to ? ($from->isSameDay($to) ? $from->locale('es')->isoFormat('D MMM YYYY') : $from->locale('es')->isoFormat('D MMM') . ' – ' . $to->locale('es')->isoFormat('D MMM YYYY')) : '');
     $day = null;
 @endphp
-<div class="sl-app w-full max-w-4xl mx-auto">
+<div class="sl-app w-full max-w-[1600px] mx-auto">
     @if(session('success'))<div class="sl-flash is-ok" role="status">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="sl-flash is-bad" role="alert">{{ session('error') }}</div>@endif
     <div class="sl-head">

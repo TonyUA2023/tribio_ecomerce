@@ -2,7 +2,7 @@
 @section('title', 'Listas de precios')
 @section('page_title', '🏷️ Listas de precios')
 @section('content')
-<div class="w-full max-w-5xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <p class="text-sm text-white/60 max-w-2xl">Precio por menor, por mayor y para distribuidores. En la caja se usa la lista del cliente según su tipo (en su ficha); si un precio por cantidad es más bajo, gana ese.</p>
         <a href="{{ route('dashboard.pos.index', ['cajas' => 1]) }}" class="text-xs text-tribio-cyan underline">← Caja</a>

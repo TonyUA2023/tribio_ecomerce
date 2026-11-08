@@ -2,7 +2,7 @@
 @section('title', 'Alta rápida')
 @section('page_title', '⚡ Alta rápida de productos')
 @section('content')
-<div class="qa-app w-full max-w-6xl mx-auto space-y-4"
+<div class="qa-app w-full max-w-[1600px] mx-auto space-y-4"
      x-data="quickAdd({ saveUrl: @js(route('dashboard.productos.rapido.store')), maxRows: {{ (int) $maxRows }} })"
      @keydown.ctrl.enter.window.prevent="save()" @keydown.meta.enter.window.prevent="save()">
 

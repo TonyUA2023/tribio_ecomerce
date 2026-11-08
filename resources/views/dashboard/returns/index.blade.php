@@ -3,7 +3,7 @@
 @section('page_title', '↩️ Devoluciones')
 @section('content')
 @php $money = fn ($value) => 'S/ ' . number_format((float) $value, 2); @endphp
-<div class="w-full max-w-4xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <p class="text-sm text-white/60 max-w-2xl">Cuando un cliente devuelve algo de una venta de caja: el producto vuelve al stock (si está en buen estado) y le devuelves el dinero, o se descuenta de lo que te debe.</p>
         <a href="{{ route('dashboard.pos.index') }}" class="text-xs text-tribio-cyan underline">← Caja</a>

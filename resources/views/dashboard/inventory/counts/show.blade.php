@@ -15,7 +15,7 @@
         'state'          => null,
     ])->values();
 @endphp
-<div class="w-full max-w-3xl mx-auto space-y-4"
+<div class="w-full max-w-[1600px] mx-auto space-y-4"
      x-data="countSheet(@js($rows), @js(route('dashboard.inventario.conteos.record', $count->id)), {{ $count->blind ? 'true' : 'false' }}, {{ $count->isOpen() ? 'true' : 'false' }})">
 
     {{-- Barra fija: progreso --}}

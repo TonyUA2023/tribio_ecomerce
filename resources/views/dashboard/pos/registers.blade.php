@@ -3,7 +3,7 @@
 @section('page_title', '🧾 Caja')
 @section('content')
 @php $money = fn ($value) => 'S/ ' . number_format((float) $value, 2); @endphp
-<div class="w-full max-w-4xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
     <p class="text-sm text-white/60 max-w-2xl">Vende en tu local: abre la caja con el sencillo que tienes, cobra en efectivo, Yape, Plin o tarjeta, y al final del día cuenta el efectivo para cuadrar.</p>
 
     <nav class="pos-shortcuts" aria-label="Accesos de la caja">

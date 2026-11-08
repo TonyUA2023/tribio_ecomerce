@@ -3,7 +3,7 @@
 @section('page_title', '💬 ' . $conversation->display_name)
 @section('content')
 @php $closesAt = $conversation->windowClosesAt(); @endphp
-<div class="w-full max-w-3xl mx-auto space-y-4"
+<div class="w-full max-w-[1600px] mx-auto space-y-4"
      x-data="chatPoll(@js(route('dashboard.whatsapp.poll', $conversation->id)), {{ (int) $messages->last()?->id }}, @js($conversation->windowOpen()))">
 
     <div class="flex items-center justify-between gap-3 flex-wrap">

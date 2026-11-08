@@ -6,7 +6,7 @@
     $hasCustomDomain = $store->custom_domain && str_contains($store->custom_domain, '.');
     $tokenMask = $saved?->maskedToken();
 @endphp
-<div class="w-full max-w-5xl mx-auto space-y-5 sm:space-y-6">
+<div class="w-full max-w-[1600px] mx-auto space-y-5 sm:space-y-6">
     <form method="POST" action="{{ route('dashboard.marketing.meta.update') }}" class="space-y-5 sm:space-y-6" x-data="{ showToken: false, copied: false }">
         @csrf
         @method('PUT')

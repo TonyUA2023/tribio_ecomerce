@@ -2,7 +2,7 @@
 @section('title', 'Nueva difusión')
 @section('page_title', '📣 Nueva difusión')
 @section('content')
-<div class="w-full max-w-5xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <p class="text-sm text-white/60 max-w-2xl">Elige la plantilla y a quién enviarla. El costo se calcula mientras eliges; nada sale hasta que pulses «Enviar».</p>
         <a href="{{ route('dashboard.whatsapp.broadcasts.index') }}" class="text-xs text-tribio-cyan underline">← Difusiones</a>

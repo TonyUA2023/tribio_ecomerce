@@ -5,7 +5,7 @@
 @php
     $initialLines = old('items_json') ? json_decode(old('items_json'), true) : $lines;
 @endphp
-<div class="w-full max-w-4xl mx-auto"
+<div class="w-full max-w-[1600px] mx-auto"
      x-data="purchaseForm(@js($products), @js(route('dashboard.compras.products')), @js($initialLines ?: []), {{ (float) old('extra_costs', $order->extra_costs ?? 0) }})">
 
     <form method="POST" action="{{ $order->exists ? route('dashboard.compras.update', $order->id) : route('dashboard.compras.store') }}" class="space-y-5" @submit="sync()">

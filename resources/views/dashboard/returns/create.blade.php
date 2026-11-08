@@ -8,7 +8,7 @@
     $mySession = $sessions->firstWhere('opened_by', auth()->id()) ?? $sessions->first();
     $unitPrices = $order->items->mapWithKeys(fn ($item) => [$item->id => round((float) $item->subtotal / max(1, (int) $item->quantity) * $share, 4)]);
 @endphp
-<div class="w-full max-w-4xl mx-auto space-y-5"
+<div class="w-full max-w-[1600px] mx-auto space-y-5"
      x-data="{ qty: {}, prices: @js($unitPrices), owed: {{ (float) $order->balance_due }},
                get total() { return Object.entries(this.qty).reduce((sum, [id, q]) => sum + Math.round((this.prices[id] || 0) * (Number(q) || 0) * 100) / 100, 0); },
                get debt() { return Math.min(this.total, this.owed); },

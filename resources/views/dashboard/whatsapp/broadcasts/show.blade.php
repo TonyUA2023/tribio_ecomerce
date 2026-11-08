@@ -8,7 +8,7 @@
     $date = fn ($at) => $at?->copy()->setTimezone($tz)->locale('es')->isoFormat('D [de] MMMM, H:mm');
     $percent = fn ($part) => $stats['sent'] > 0 ? round($part * 100 / $stats['sent']) . '%' : '—';
 @endphp
-<div class="w-full max-w-5xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <div class="flex items-center gap-2 flex-wrap">
             <span class="badge {{ $broadcast->status_badge }}">{{ $broadcast->status_label }}</span>

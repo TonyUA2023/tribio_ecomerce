@@ -3,7 +3,7 @@
 @section('page_title', '💬 Conexión de WhatsApp')
 @section('content')
 @php $connected = $connection && $connection->status !== 'disconnected'; @endphp
-<div class="w-full max-w-3xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
     <a href="{{ route('dashboard.whatsapp.index') }}" class="text-xs text-tribio-cyan underline">← Chats</a>
 
     @if(!$ready)

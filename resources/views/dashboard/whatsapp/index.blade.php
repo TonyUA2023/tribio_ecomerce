@@ -2,7 +2,7 @@
 @section('title', 'WhatsApp')
 @section('page_title', '💬 WhatsApp')
 @section('content')
-<div class="w-full max-w-4xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
 
     @if(!$ready)
         <div class="glass-card p-6 text-center">

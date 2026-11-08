@@ -3,7 +3,7 @@
 @section('page_title', '📝 Proformas')
 @section('content')
 @php $money = fn ($value) => 'S/ ' . number_format((float) $value, 2); @endphp
-<div class="w-full max-w-5xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <p class="text-sm text-white/60 max-w-2xl">Cotizaciones que armaste en la caja con «Guardar como proforma». Cuando el cliente acepte, cóbrala en la caja con los mismos precios.</p>
         <a href="{{ route('dashboard.pos.index') }}" class="text-xs text-tribio-cyan underline">← Caja</a>

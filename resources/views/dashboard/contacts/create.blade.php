@@ -2,7 +2,7 @@
 @section('title', 'Nuevo cliente')
 @section('page_title', '👥 Clientes')
 @section('content')
-<div class="w-full max-w-3xl mx-auto">
+<div class="w-full max-w-[1600px] mx-auto">
     <form method="POST" action="{{ route('dashboard.clientes.store') }}" class="space-y-5">
         @csrf
         <div class="sticky top-0 z-20 -mx-1 sm:mx-0">

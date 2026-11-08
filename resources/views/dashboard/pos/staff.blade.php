@@ -2,7 +2,7 @@
 @section('title', 'Personal de caja')
 @section('page_title', '👥 Personal de caja')
 @section('content')
-<div class="w-full max-w-4xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <p class="text-sm text-white/60 max-w-2xl">Las personas que atienden la caja entran con su PIN, sin usar tu cuenta. Cada venta, cobro y devolución queda con su nombre.</p>
         <a href="{{ route('dashboard.pos.index', ['cajas' => 1]) }}" class="text-xs text-tribio-cyan underline">← Caja</a>

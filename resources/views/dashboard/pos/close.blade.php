@@ -4,7 +4,7 @@
 @push('head')<script defer src="/pos/offline.js?v=4"></script>@endpush
 @section('content')
 @php $money = fn ($value) => 'S/ ' . number_format((float) $value, 2); @endphp
-<div class="w-full max-w-3xl mx-auto space-y-5" x-data="{ counted: @js(old('counted_cash', '')), expected: {{ $summary['expected_cash'] }}, waiting: 0 }"
+<div class="w-full max-w-[1600px] mx-auto space-y-5" x-data="{ counted: @js(old('counted_cash', '')), expected: {{ $summary['expected_cash'] }}, waiting: 0 }"
      x-init="window.addEventListener('load', async () => { if (window.TribioPosOffline) waiting = (await window.TribioPosOffline.queue()).filter(i => i.session === {{ $session->id }} && !i.error).length; })">
     <div class="glass-card p-4" role="alert" x-show="waiting > 0" x-cloak>
         <p class="text-sm text-amber-200" x-text="'Este equipo tiene ' + waiting + (waiting === 1 ? ' venta' : ' ventas') + ' sin conexión que aún no se enviaron. Vuelve a la caja con internet para enviarlas antes de cerrar.'"></p>

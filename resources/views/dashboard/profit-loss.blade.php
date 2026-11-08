@@ -10,7 +10,7 @@
     $docLabels = ['nota_venta' => 'Notas de venta', 'boleta' => 'Boletas de venta', 'factura' => 'Facturas', 'tienda' => 'Pedidos de la tienda online'];
     $methodLabels = \App\Services\Pos\PosSaleService::METHODS;
 @endphp
-<div class="pl-app w-full max-w-6xl mx-auto space-y-5">
+<div class="pl-app w-full max-w-[1600px] mx-auto space-y-5">
     <div class="space-y-3">
         <p class="text-sm text-white/60 max-w-3xl">Lo que vendiste, lo que te costó, lo que gastaste y lo que realmente te queda. Los días son de hora de Lima.</p>
         <div class="flex items-center gap-2 flex-wrap">

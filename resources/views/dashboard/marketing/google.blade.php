@@ -2,7 +2,7 @@
 @section('title', 'Marketing · Google')
 @section('page_title', '📣 Marketing')
 @section('content')
-<div class="w-full max-w-5xl mx-auto space-y-5 sm:space-y-6">
+<div class="w-full max-w-[1600px] mx-auto space-y-5 sm:space-y-6">
     <form method="POST" action="{{ route('dashboard.marketing.google.update') }}" class="space-y-5 sm:space-y-6"
           x-data="{ copied: false, mode: @js(old('shopping_mode', $integration->shopping_mode ?? 'off')) }">
         @csrf

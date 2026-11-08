@@ -3,7 +3,7 @@
 @section('page_title', '🔁 Reposición')
 @section('content')
 @php $money = fn ($value) => 'S/ ' . number_format((float) $value, 2); @endphp
-<div class="w-full max-w-4xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
 
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <p class="text-sm text-white/60 max-w-2xl">Qué comprar antes de quedarte sin stock, según lo que vendiste en los últimos {{ $params['window'] }} días. Pedimos para cubrir {{ $params['lead'] }} días de entrega más {{ $params['cover'] }} días de venta.</p>

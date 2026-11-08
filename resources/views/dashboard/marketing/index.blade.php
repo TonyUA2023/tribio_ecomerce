@@ -6,7 +6,7 @@
     $pixelOn = $integration?->hasPixel();
     $capiOn = $integration?->hasConversionsApi();
 @endphp
-<div class="w-full max-w-5xl mx-auto space-y-5 sm:space-y-6">
+<div class="w-full max-w-[1600px] mx-auto space-y-5 sm:space-y-6">
 
     <p class="text-sm text-white/60">Conecta tu tienda con las plataformas de anuncios: tus productos aparecen solos en tus campañas y ves cuántas ventas te traen.</p>
 

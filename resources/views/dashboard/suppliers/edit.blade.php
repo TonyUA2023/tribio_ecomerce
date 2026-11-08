@@ -2,7 +2,7 @@
 @section('title', $supplier->name . ' — Proveedores')
 @section('page_title', '🧾 Proveedores')
 @section('content')
-<div class="w-full max-w-4xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
 
     <form method="POST" action="{{ route('dashboard.proveedores.update', $supplier->id) }}" class="space-y-5">
         @csrf @method('PUT')

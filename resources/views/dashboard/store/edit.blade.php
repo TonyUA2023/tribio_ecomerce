@@ -11,7 +11,7 @@
         || old('hero_subtitle', $store?->hero_subtitle)
         || !empty(old('distributors', $store->distributors ?? []));
 @endphp
-<div class="w-full max-w-5xl mx-auto space-y-5 sm:space-y-6">
+<div class="w-full max-w-[1600px] mx-auto space-y-5 sm:space-y-6">
     <form id="store-settings-form" method="POST" action="{{ route('dashboard.store.update') }}" class="space-y-5 sm:space-y-6" x-data="{
         storeName: '{{ old('name', $store?->name) }}',
         advancedOpen: {{ $hasAdvancedData ? 'true' : 'false' }},

@@ -6,7 +6,7 @@
     $tabs = ['por_enviar' => 'Por enviar', 'problemas' => 'Con problemas', 'enviados' => 'Enviados', 'internos' => 'Internos'];
     $lima = fn ($date) => $date->copy()->setTimezone('America/Lima');
 @endphp
-<div class="w-full max-w-4xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
     @include('dashboard.pos._documents-tabs', ['current' => 'electronic'])
 
     @if(session('success'))<div class="glass-card p-3 text-xs text-emerald-300" role="status">{{ session('success') }}</div>@endif

@@ -6,7 +6,7 @@
     $money = fn ($value) => 'S/ ' . number_format((float) $value, 2);
     $lima = fn ($at) => $at?->copy()->setTimezone('America/Lima')->locale('es');
 @endphp
-<div class="w-full max-w-5xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <p class="text-xs text-white/60">
             Abierta el {{ $lima($session->opened_at)->isoFormat('D [de] MMMM, H:mm') }}{{ $session->opener ? ' por ' . $session->opener->name : '' }}

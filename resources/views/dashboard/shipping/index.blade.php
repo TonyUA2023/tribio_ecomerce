@@ -4,7 +4,7 @@
 @section('page_title', '🚚 Costos de Envío Internacional')
 
 @section('content')
-<div class="w-full max-w-5xl mx-auto space-y-6">
+<div class="w-full max-w-[1600px] mx-auto space-y-6">
 
     @if(session('success'))
         <div class="p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 font-medium">

@@ -2,7 +2,7 @@
 @section('title', 'Datos y comprobantes')
 @section('page_title', '🧾 Datos y comprobantes')
 @section('content')
-<div class="w-full max-w-4xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <p class="text-sm text-white/60 max-w-2xl">Elige en la caja si vendes con <strong>nota de venta</strong>, <strong>boleta de venta</strong> o <strong>factura</strong>. Cada una lleva su serie y su número correlativo.</p>
         <a href="{{ route('dashboard.pos.index', ['cajas' => 1]) }}" class="pos-chip"><x-dashboard-icon name="back"/>Caja</a>

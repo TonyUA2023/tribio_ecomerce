@@ -6,7 +6,7 @@
     use App\Models\Deal;
     $money = fn ($value) => 'S/ ' . number_format((float) $value, 2);
 @endphp
-<div class="w-full max-w-6xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
 
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <p class="text-sm text-white/60 max-w-2xl">Negocios en curso: un pedido grande, una empresa que pidió cotización, un distribuidor que evalúa unirse. Muévelos de etapa hasta ganarlos.</p>

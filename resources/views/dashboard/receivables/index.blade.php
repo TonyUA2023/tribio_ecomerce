@@ -3,7 +3,7 @@
 @section('page_title', '💰 Por cobrar')
 @section('content')
 @php $money = fn ($value) => 'S/ ' . number_format((float) $value, 2); @endphp
-<div class="w-full max-w-5xl mx-auto space-y-5">
+<div class="w-full max-w-[1600px] mx-auto space-y-5">
     <p class="text-sm text-white/60 max-w-2xl">Lo que tus clientes te deben por ventas al crédito (fiado). Cobra desde aquí o desde la caja, y recuérdales por WhatsApp.</p>
 
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
