@@ -37,7 +37,11 @@ class CreateStoreOwner extends Command
         {--set=* : Any other template setting as path=value, e.g. --set="hero.items.0.title=Jeans" (toggles take 0/1; an empty value clears an optional text)}
         {--tagline= : Short slogan shown by the storefront}
         {--description= : Store description (About / SEO)}
-        {--whatsapp= : WhatsApp number with country code, e.g. 51999888777}';
+        {--whatsapp= : WhatsApp number with country code, e.g. 51999888777}
+        {--ruc= : RUC of the business (11 digits)}
+        {--legal-name= : Razón social as registered at SUNAT}
+        {--address= : Fiscal address}
+        {--city= : City}';
 
     protected $description = 'Create a store_owner account plus an active store for a new business';
 
@@ -102,13 +106,19 @@ class CreateStoreOwner extends Command
             }
         }
 
+        $ruc = $this->option('ruc') ? preg_replace('/\D/', '', (string) $this->option('ruc')) : null;
+        if ($ruc !== null && strlen($ruc) !== 11) {
+            $this->error('The RUC needs 11 digits.');
+            return self::FAILURE;
+        }
+
         $password = $this->option('password') ?: Str::password(14, symbols: false);
         if (strlen($password) < 8) {
             $this->error('The password needs at least 8 characters.');
             return self::FAILURE;
         }
 
-        $store = DB::transaction(function () use ($email, $storeName, $slug, $plan, $category, $password, $template, $mode) {
+        $store = DB::transaction(function () use ($email, $storeName, $slug, $plan, $category, $password, $template, $mode, $ruc) {
             $user = User::create([
                 'name'     => $this->option('name') ?: $storeName,
                 'email'    => $email,
@@ -120,6 +130,10 @@ class CreateStoreOwner extends Command
             $brand = array_filter([
                 'tagline'         => $this->option('tagline'),
                 'description'     => $this->option('description'),
+                'ruc'             => $ruc,
+                'legal_name'      => $this->option('legal-name'),
+                'address'         => $this->option('address'),
+                'city'            => $this->option('city'),
                 'whatsapp_phone'  => $this->option('whatsapp') ? preg_replace('/\D/', '', (string) $this->option('whatsapp')) : null,
                 'accent_color'    => $this->option('primary'),
                 'secondary_color' => $this->option('secondary'),

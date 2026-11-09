@@ -32,6 +32,22 @@ class CreateStoreOwnerCommandTest extends TestCase
         $this->assertSame('moda', $store->category);
     }
 
+    public function test_saves_the_ruc_legal_name_and_address_and_the_owner_signs_in_with_google_by_email(): void
+    {
+        $this->artisan('tribio:create-owner', ['email' => 'jorge@gmail.com', 'store_name' => 'El Yunque', '--name' => 'Jorge Luis Ñahui', '--category' => 'otros', '--template' => 'industrial-light',
+            '--ruc' => '20600552083', '--legal-name' => 'Representaciones Generales El Yunque Eirl', '--address' => 'Av. Manchego Muchos N° 369'])->assertSuccessful();
+
+        $store = Store::where('slug', 'el-yunque')->firstOrFail();
+        $this->assertSame(['20600552083', 'Representaciones Generales El Yunque Eirl', 'Av. Manchego Muchos N° 369', 'industrial-light'], [$store->ruc, $store->legal_name, $store->address, $store->template_name]);
+
+        // Google sign-in with that e-mail lands on the same owner (no second account).
+        $user = app(\App\Services\CustomerIdentityService::class)->findOrCreateFromGoogle('g-1', 'jorge@gmail.com', 'Jorge', null);
+        $this->assertSame($store->user_id, $user->id);
+        $this->assertSame('Jorge Luis Ñahui', $user->name);
+
+        $this->artisan('tribio:create-owner', ['email' => 'otro@gmail.com', 'store_name' => 'Otra', '--ruc' => '123'])->assertFailed();
+    }
+
     public function test_refuses_an_existing_email_without_changing_anything(): void
     {
         User::factory()->create(['email' => 'nintai@example.test']);
