@@ -58,6 +58,14 @@ class TeamAccessTest extends TestCase
         $this->actingAs($owner)->post(route('dashboard.team.store'), ['email' => 'ana@gmail.com', 'role' => 'seller'])->assertSessionHasErrors('email');
     }
 
+    public function test_a_google_sign_up_with_a_very_long_photo_url_still_creates_the_account(): void
+    {
+        $url = 'https://lh3.googleusercontent.com/a-/' . str_repeat('A', 400);
+        $user = app(\App\Services\CustomerIdentityService::class)->findOrCreateFromGoogle('g-long', 'isai@gmail.com', 'Isai Sedano', $url);
+
+        $this->assertSame(['isai@gmail.com', 'g-long'], [$user->email, $user->google_id]);
+    }
+
     public function test_an_unverified_account_does_not_claim_an_invitation(): void
     {
         [$owner, $store] = $this->business();

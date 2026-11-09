@@ -136,7 +136,8 @@ class CustomerIdentityService
             'google_id' => $googleId,
             'password'  => Hash::make(Str::random(40)),
             'role'      => User::ROLE_CLIENTE,
-            'avatar'    => $avatar,
+            // Google photo links can be longer than the column (255): a missing photo must never block the sign-in.
+            'avatar'    => $avatar && mb_strlen($avatar) <= 255 ? $avatar : null,
         ]);
 
         // email_verified_at isn't mass-assignable (by design, elsewhere in the app) —
