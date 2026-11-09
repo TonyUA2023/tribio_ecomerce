@@ -27,7 +27,7 @@ class CreateStoreOwner extends Command
         {--slug= : Store slug (defaults to the slugified store name)}
         {--category=moda : Rubro key from config/tribio.php business_categories}
         {--plan=basic : Plan key from config/tribio.php plans}
-        {--mode=both : Account type: both (POS + online store), pos (POS system only, no public store) or online (online store only)}
+        {--mode=pos : Account type: pos (sales system only, no public store: the default), both (POS + online store), online (online store only) or simple}
         {--days=30 : Days until the plan expires}
         {--password= : Password to set (generated and printed when omitted)}
         {--template= : Storefront template key from config/storefront.php (defaults to the platform default)}

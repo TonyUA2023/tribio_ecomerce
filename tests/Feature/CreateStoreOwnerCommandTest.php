@@ -60,7 +60,7 @@ class CreateStoreOwnerCommandTest extends TestCase
     {
         $this->artisan('tribio:create-owner', [
             'email' => 'rahhver@example.test', 'store_name' => 'Rahhver Jeans', '--password' => 'Temporal2026x',
-            '--template' => 'urban-style', '--primary' => '#1F4E8C', '--secondary' => '#111111', '--font' => 'playfair',
+            '--mode' => 'both', '--template' => 'urban-style', '--primary' => '#1F4E8C', '--secondary' => '#111111', '--font' => 'playfair',
             '--tagline' => 'Jeans para toda la familia', '--whatsapp' => '51 900 000 000',
             '--set' => ['promo.enabled=0', 'hero.items.0.title=Jeans para toda la familia', 'hero.items.0.highlight='],
         ])->assertSuccessful();

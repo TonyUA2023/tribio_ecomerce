@@ -37,48 +37,44 @@
     <a href="#dashboard-content" class="dash-skip">Saltar al contenido</a>
     <div class="dash-scrim" @click="closeMenu()" aria-hidden="true"></div>
     <aside id="dashboard-navigation" class="dash-sidebar" x-ref="navigation" @keydown.tab="trapNavigation($event)" aria-label="Navegación de la tienda">
+        {{-- The company comes first (logo and name); the Tribio mark lives in the header. --}}
         <div class="dash-brand-row">
-            <a href="{{ route('dashboard.index') }}" class="dash-brand" aria-label="Tribio, inicio">
-                <span class="dash-brand-mark">t<span>.</span></span><span class="dash-nav-label">tribio<span class="dash-brand-dot">.</span></span>
-            </a>
-            <button type="button" class="dash-icon-button dash-close" x-ref="closeNavigation" @click="closeMenu()" aria-label="Cerrar navegación"><x-dashboard-icon name="close"/></button>
-        </div>
-        @if($dashboardStore && $dashboardStores->count() > 1)
-        <div class="dash-store-switch-wrap" x-data="{ storeMenuOpen: false }" @click.outside="storeMenuOpen = false">
-            <button type="button" class="dash-store-switch w-full" @click="storeMenuOpen = !storeMenuOpen" :aria-expanded="storeMenuOpen" title="Cambiar de tienda">
-                <span class="dash-store-avatar">
-                    @if($dashboardStore->logo_path)<img src="{{ $dashboardStore->logo_url }}" alt="">@else<x-dashboard-icon name="store"/>@endif
-                </span>
-                <span class="dash-nav-label min-w-0"><strong>{{ $dashboardStore->name }}</strong><small>{{ $dashboardStores->count() }} tiendas · cambiar</small></span>
-            </button>
-            <div x-show="storeMenuOpen" x-cloak x-transition class="dash-store-switch-menu">
-                @foreach($dashboardStores as $ownedStore)
-                    @if($ownedStore->id === $dashboardStore->id)
-                        <span class="dash-store-switch-item is-active">
-                            <span class="dash-store-avatar">@if($ownedStore->logo_path)<img src="{{ $ownedStore->logo_url }}" alt="">@else<x-dashboard-icon name="store"/>@endif</span>
-                            {{ $ownedStore->name }}
-                        </span>
-                    @else
-                        <form method="POST" action="{{ route('dashboard.store.switch', $ownedStore) }}">
-                            @csrf
-                            <button type="submit" class="dash-store-switch-item">
+            @if($dashboardStore && $dashboardStores->count() > 1)
+            <div class="dash-company-wrap" x-data="{ storeMenuOpen: false }" @click.outside="storeMenuOpen = false">
+                <button type="button" class="dash-company" @click="storeMenuOpen = !storeMenuOpen" :aria-expanded="storeMenuOpen" title="Cambiar de negocio">
+                    <span class="dash-store-avatar">@if($dashboardStore->logo_path)<img src="{{ $dashboardStore->logo_url }}" alt="">@else<x-dashboard-icon name="store"/>@endif</span>
+                    <span class="dash-nav-label dash-company-name"><strong>{{ $dashboardStore->name }}</strong><small>{{ $dashboardStores->count() }} negocios · cambiar</small></span>
+                </button>
+                <div x-show="storeMenuOpen" x-cloak x-transition class="dash-store-switch-menu">
+                    @foreach($dashboardStores as $ownedStore)
+                        @if($ownedStore->id === $dashboardStore->id)
+                            <span class="dash-store-switch-item is-active">
                                 <span class="dash-store-avatar">@if($ownedStore->logo_path)<img src="{{ $ownedStore->logo_url }}" alt="">@else<x-dashboard-icon name="store"/>@endif</span>
                                 {{ $ownedStore->name }}
-                            </button>
-                        </form>
-                    @endif
-                @endforeach
-                <a href="{{ route('home') }}#precios" class="dash-store-switch-item dash-store-switch-add">+ Abrir otra tienda</a>
+                            </span>
+                        @else
+                            <form method="POST" action="{{ route('dashboard.store.switch', $ownedStore) }}">
+                                @csrf
+                                <button type="submit" class="dash-store-switch-item">
+                                    <span class="dash-store-avatar">@if($ownedStore->logo_path)<img src="{{ $ownedStore->logo_url }}" alt="">@else<x-dashboard-icon name="store"/>@endif</span>
+                                    {{ $ownedStore->name }}
+                                </button>
+                            </form>
+                        @endif
+                    @endforeach
+                    <a href="{{ route('home') }}#precios" class="dash-store-switch-item dash-store-switch-add">+ Abrir otra tienda</a>
+                </div>
             </div>
+            @elseif($dashboardStore)
+            <a href="{{ route('dashboard.index') }}" class="dash-company" title="{{ $dashboardStore->name }}">
+                <span class="dash-store-avatar">@if($dashboardStore->logo_path)<img src="{{ $dashboardStore->logo_url }}" alt="">@else<x-dashboard-icon name="store"/>@endif</span>
+                <span class="dash-nav-label dash-company-name"><strong>{{ $dashboardStore->name }}</strong></span>
+            </a>
+            @else
+            <a href="{{ route('dashboard.index') }}" class="dash-brand" aria-label="Tribio, inicio"><span class="dash-brand-mark">t<span>.</span></span></a>
+            @endif
+            <button type="button" class="dash-icon-button dash-close" x-ref="closeNavigation" @click="closeMenu()" aria-label="Cerrar navegación"><x-dashboard-icon name="close"/></button>
         </div>
-        @elseif($dashboardStore)
-        <a href="{{ $dashboardManages ? route('dashboard.store.edit') : route('tribio-pass') }}" class="dash-store-switch" title="{{ $dashboardManages ? 'Configurar ' . $dashboardStore->name : 'Mi Tribio Pass' }}">
-            <span class="dash-store-avatar">
-                @if($dashboardStore->logo_path)<img src="{{ $dashboardStore->logo_url }}" alt="">@else<x-dashboard-icon name="store"/>@endif
-            </span>
-            <span class="dash-nav-label min-w-0"><strong>{{ $dashboardStore->name }}</strong><small>Tu espacio de gestión</small></span>
-        </a>
-        @endif
         <nav class="dash-nav" aria-label="Secciones" data-keep-scroll="dashboard">
             @php
                 $navItems = \App\Support\DashboardNav::items($dashboardStore);
@@ -104,7 +100,7 @@
         </nav>
         @include('layouts._keep-nav-scroll')
         <div class="dash-sidebar-footer">
-            @if($dashboardStore && $dashboardStore->hasStorefront())
+            @if($dashboardStore && $dashboardStore->hasStorefront() && $dashboardManages)
             <a href="{{ route('store.show', $dashboardStore->slug) }}" target="_blank" rel="noopener" class="sidebar-link" title="Ver mi tienda (nueva pestaña)"><x-dashboard-icon name="external"/><span class="dash-nav-label">Ver mi tienda</span></a>
             @endif
             <form method="POST" action="{{ route('logout') }}">@csrf
@@ -115,6 +111,7 @@
     <div class="dash-main" :inert="mobileOpen">
         <header class="dash-topbar">
             <button type="button" class="dash-icon-button" x-ref="menuToggle" @click="toggleMenu()" aria-label="Alternar navegación" aria-controls="dashboard-navigation" :aria-expanded="desktop ? !collapsed : mobileOpen"><x-dashboard-icon name="menu"/></button>
+            <a href="{{ route('dashboard.index') }}" class="dash-top-brand" aria-label="Tribio, inicio">tribio<span>.</span></a>
             @if($dashboardCanSearch)
             <form method="GET" action="{{ route('dashboard.productos.index') }}" class="dash-search" role="search">
                 <label for="dashboard-search" class="sr-only">Buscar productos en mi tienda</label>
