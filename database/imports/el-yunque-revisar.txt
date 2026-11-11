@@ -1,0 +1,19 @@
+TORRE A fila 13: FOCO BOTELLA 50 WTS CALIDA OPALUX → sin cantidad: stock 0
+TORRE B fila 89: JUEGO DE LLAVE TORX 9 PIEZAS LARGO ABCY → PRECIO (1) MENOR AL COSTO (9): queda desactivado, revisa
+TORRE B fila 327: REGATON CIRCULAR PVC DE 1 3/4 → nombre corregido (era «REGATON CIRCUAR PVC DE 1 3/4»)
+TORRE C fila 4: TARUGO PLOMO 1/2 PVC -PQTE 500=EA → precio x6 (1.2) no es menor al precio: sin precio por mayor
+TORRE C fila 5: TARUGO NARANJA 3/8 PVC -PQTE 1000=CE → precio por mayor «DOCENA 2.5» no se pudo interpretar: sin precio por mayor
+TORRE C fila 6: TARUGO AZUL 5/16 PVC -PQTE 1000=BI → precio por mayor «DOCENA 1.5» no se pudo interpretar: sin precio por mayor
+TORRE C fila 7: TARUGO VERDE 1/4 PVC -PQTE 1000=BE → precio por mayor «DOCENA 1.5» no se pudo interpretar: sin precio por mayor
+TORRE C fila 8: TARUGO ROJO 3/16 PVC -PQTE 1000=BD → nombre corregido (era «TAURGO ROJO 3/16 PVC -PQTE 1000=BD»); precio por mayor «DOCENA 1.0» no se pudo interpretar: sin precio por mayor
+TORRE C fila 9: TARUGO 1/2 MADERA PQTE 1000=FA → precio por mayor «DOCENA 2.5» no se pudo interpretar: sin precio por mayor
+TORRE C fila 10: TARUGO 3/8 MADERA -PQTE 1000=EE → precio por mayor «DOCENA 2.5» no se pudo interpretar: sin precio por mayor
+TORRE C fila 11: TARUGO BLANCO 1/4 PVC -PQTE 1000=DF → precio por mayor «DOCENA 1» no se pudo interpretar: sin precio por mayor
+TORRE C fila 17: RODILLO 9" BLANCO PARACASA → nombre corregido (era «RODILO 9" BLANCO PARACASA»)
+TORRE C fila 112: CHAPA EMBUTIR YALE - EUROTOOLS → SIN PRECIO: queda desactivado hasta que pongas el precio
+TORRE C fila 113: CANDADO 70MM TRAVEX → SIN PRECIO: queda desactivado hasta que pongas el precio
+TORRE C fila 127: CANDADO ESTANDAR 60 MM FORTE → sin cantidad: stock 0
+TORRE C fila 137: CANDADO CLASICO 50 MM CANTOL → sin cantidad: stock 0
+TORRE C fila 139: CANDADO CLASICO 30 MM CANTOL → sin cantidad: stock 0
+NOMBRE REPETIDO «PANEL LED SOBREPONER 24 WTS FLYING»: TORRE A fila 58, TORRE A fila 61 (se importan los dos, con precios/stock distintos: revisa si es el mismo producto)
+NOMBRE REPETIDO «PANEL LED CUADRADO SOBREPONER 24 WTS FSL»: TORRE A fila 68, TORRE A fila 75 (se importan los dos, con precios/stock distintos: revisa si es el mismo producto)
