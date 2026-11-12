@@ -140,9 +140,13 @@ class OrderController extends Controller
     {
         $store = $this->getStore();
         abort_if($order->store_id !== $store->id, 403);
-        abort_unless($order->payment_confirmation === 'awaiting', 422, 'Este pedido no está esperando confirmación de pago.');
 
-        DB::transaction(function () use ($order, $request) {
+        $done = DB::transaction(function () use ($order, $request) {
+            // Re-read under lock: a double tap or a second person must not credit the payment twice.
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if ($order->payment_confirmation !== 'awaiting') {
+                return false;
+            }
             $due = (float) $order->balance_due > 0 ? (float) $order->balance_due : (float) $order->total;
             $kind = (float) $order->amount_paid > 0 ? OrderPayment::KIND_BALANCE : OrderPayment::KIND_FULL;
             $note = \App\Services\Payments\ManualPayments::label($order->payment_method) . ' · confirmado por el vendedor'
@@ -155,7 +159,13 @@ class OrderController extends Controller
                 'payment_confirmed_by' => $request->user()->id,
                 'status' => $order->status === 'pending' ? 'confirmed' : $order->status,
             ]);
+
+            return true;
         });
+
+        if (!$done) {
+            return back()->with('info', $this->alreadyHandled($order->fresh()));
+        }
 
         $this->notifyBuyer($order->fresh(), true, null);
 
@@ -167,20 +177,41 @@ class OrderController extends Controller
     {
         $store = $this->getStore();
         abort_if($order->store_id !== $store->id, 403);
-        abort_unless($order->payment_confirmation === 'awaiting', 422, 'Este pedido no está esperando confirmación de pago.');
         $data = $request->validate(['note' => 'nullable|string|max:300']);
 
-        $order->update([
+        $done = DB::transaction(function () use ($order, $request, $data) {
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if ($order->payment_confirmation !== 'awaiting') {
+                return false;
+            }
+            $order->update([
             'payment_confirmation' => 'rejected',
             'payment_confirmed_at' => now(),
             'payment_confirmed_by' => $request->user()->id,
             'payment_status' => 'failed',
             'internal_notes' => trim(($order->internal_notes ? $order->internal_notes . "\n" : '') . 'Pago no encontrado' . (!empty($data['note']) ? ': ' . $data['note'] : '')),
-        ]);
+            ]);
+
+            return true;
+        });
+
+        if (!$done) {
+            return back()->with('info', $this->alreadyHandled($order->fresh()));
+        }
 
         $this->notifyBuyer($order->fresh(), false, $data['note'] ?? null);
 
         return back()->with('success', "Marcaste el pago del pedido #{$order->order_number} como no recibido.");
+    }
+
+    /** The payment was already confirmed or rejected (double tap, another person, an old page). */
+    private function alreadyHandled(Order $order): string
+    {
+        return match ($order->payment_confirmation) {
+            'confirmed' => "El pago del pedido #{$order->order_number} ya estaba confirmado.",
+            'rejected'  => "El pago del pedido #{$order->order_number} ya estaba marcado como no recibido.",
+            default     => "El pedido #{$order->order_number} no está esperando confirmación de pago.",
+        };
     }
 
     private function notifyBuyer(Order $order, bool $confirmed, ?string $note): void

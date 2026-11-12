@@ -125,9 +125,11 @@ class ManualPaymentsTest extends TestCase
         $this->assertSame(1, $order->payments()->count());
         Mail::assertQueued(OrderPaymentConfirmed::class, fn ($m) => $m->confirmed);
 
-        // Confirming twice never double-credits the ledger.
-        $this->post(route('dashboard.pedidos.payment.confirm', $order))->assertStatus(422);
+        // Confirming twice (double tap, a second person, an old page) never double-credits and never shows an error page.
+        $this->post(route('dashboard.pedidos.payment.confirm', $order))->assertSessionHas('info')->assertSessionMissing('success');
         $this->assertSame(1, $order->payments()->count());
+        $this->post(route('dashboard.pedidos.payment.reject', $order), ['note' => 'tarde'])->assertSessionHas('info');
+        $this->assertSame('confirmed', $order->fresh()->payment_confirmation, 'a confirmed payment cannot be rejected afterwards');
     }
 
     public function test_rejecting_marks_the_payment_failed_without_crediting_anything(): void
