@@ -112,6 +112,7 @@
                         <li><a href="{{ route('directory') }}" class="text-slate-500 hover:text-slate-900 text-sm transition-colors">Directorio de tiendas</a></li>
                         <li><a href="{{ route('home') }}#precios" class="text-slate-500 hover:text-slate-900 text-sm transition-colors">Crear mi tienda</a></li>
                         <li><a href="#precios" class="text-slate-500 hover:text-slate-900 text-sm transition-colors">Precios</a></li>
+                        <li><a href="{{ route('home') }}#ferreterias" class="text-slate-500 hover:text-slate-900 text-sm transition-colors">Para ferreterías</a></li>
                     </ul>
                 </div>
 

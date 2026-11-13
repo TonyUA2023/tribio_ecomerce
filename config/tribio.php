@@ -50,6 +50,10 @@ return [
             'variant_options' => ['Talla' => ['38', '39', '40', '41', '42', '43'], 'Color' => ['Negro', 'Blanco']],
             'templates'       => ['street-kicks', 'sport-pro'],
         ],
+        'ferreteria'  => ['label' => 'Ferretería',           'icon' => '🔩',
+            'variant_options' => ['Medida' => ['1/4"', '1/2"', '3/4"', '1"'], 'Presentación' => ['Unidad', 'Caja']],
+            'templates'       => ['industrial-light'],
+        ],
         'tecnologia'  => ['label' => 'Tecnología',           'icon' => '💻'],
         'alimentos'   => ['label' => 'Alimentos y Bebidas',  'icon' => '🍕'],
         'joyeria'     => ['label' => 'Joyería y Accesorios', 'icon' => '💍'],
@@ -122,6 +126,19 @@ return [
                 'Soporte corporativo prioritario',
             ],
             'highlight' => false,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ofertas por rubro (landing)
+    |--------------------------------------------------------------------------
+    | Precio "desde" que se anuncia en la página principal para un rubro. No es un
+    | plan de compra: la venta se cierra por WhatsApp con el equipo de Tribio.
+    */
+    'offers' => [
+        'ferreteria' => [
+            'price_from' => 50.00,
         ],
     ],
 

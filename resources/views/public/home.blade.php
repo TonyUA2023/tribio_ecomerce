@@ -1,7 +1,12 @@
 @extends('layouts.public')
 
 @section('title', 'Tribio | Tu tienda, tus ventas, a tu manera')
-@section('meta_description', 'Crea tu tienda online con catálogo, carrito, inventario y pedidos. Elige un plan Tribio y empieza a vender en Perú.')
+@section('meta_description', 'Crea tu tienda online con catálogo, carrito, inventario y pedidos. Nuevo: Tribio para ferreterías desde S/ ' . number_format(config('tribio.offers.ferreteria.price_from'), 0) . ' al mes. Empieza a vender en Perú.')
+
+@php
+    $hardwarePrice = config('tribio.offers.ferreteria.price_from');
+    $hardwareWhatsapp = 'https://wa.me/' . config('tribio.support.whatsapp_number') . '?text=' . rawurlencode('Hola Tribio, tengo una ferretería y quiero información del servicio desde S/ ' . number_format($hardwarePrice, 0) . ' al mes.');
+@endphp
 
 @push('head')
 <link rel="preload" as="image" href="{{ asset('images/tribio-commerce-3d.png') }}">
@@ -12,7 +17,7 @@
     <section class="th-hero" id="inicio">
         <div class="th-shell th-hero-grid">
             <div class="th-hero-copy">
-                <div class="th-status"><span class="th-status-dot"></span> Tu negocio merece una tienda que se mueva contigo</div>
+                <a class="th-status th-status-link" href="#ferreterias"><span class="th-status-dot"></span> Nuevo: Tribio para ferreterías desde S/ {{ number_format($hardwarePrice, 0) }} al mes <span aria-hidden="true">→</span></a>
                 <h1>Tu tienda.<br>Tu forma de <span>vender.</span></h1>
                 <p>Convierte lo que ofreces en una experiencia fácil de comprar: catálogo, carrito y pedidos organizados en un solo lugar.</p>
                 <div class="th-hero-actions">
@@ -32,6 +37,33 @@
             </div>
         </div>
         <div class="th-shell th-hero-bottom"><span>Diseñado para negocios reales</span><span>Catálogo <b>→</b> carrito <b>→</b> pedido</span></div>
+    </section>
+
+    <section class="th-hardware" id="ferreterias">
+        <div class="th-shell th-hardware-grid">
+            <div class="th-hardware-copy">
+                <p class="th-kicker">Nuevo · Tribio para ferreterías</p>
+                <h2>Tu ferretería,<br>en orden desde<br><span>S/ {{ number_format($hardwarePrice, 0) }} al mes.</span></h2>
+                <p>Vende en mostrador y por internet con un solo inventario. Hecho para el día a día de una ferretería: miles de productos, venta por unidad o por caja, precios para maestros y clientes que compran al crédito.</p>
+                <div class="th-hardware-price">
+                    <small>Desde</small>
+                    <div class="th-price"><small>S/</small>{{ number_format($hardwarePrice, 2) }}<span>/mes</span></div>
+                    <p>Escríbenos por WhatsApp y armamos contigo la solución para tu ferretería.</p>
+                </div>
+                <div class="th-hero-actions">
+                    <a class="th-button th-button-amber" href="{{ $hardwareWhatsapp }}" target="_blank" rel="noopener noreferrer">Quiero Tribio para mi ferretería <span aria-hidden="true">↗</span></a>
+                    <a class="th-text-link th-text-link-light" href="#precios">Ver todos los planes <span aria-hidden="true">↘</span></a>
+                </div>
+            </div>
+            <ul class="th-hardware-list">
+                <li><span>01</span><div><strong>Caja rápida en mostrador</strong><p>Lector de código de barras, pago mixto con vuelto y ticket de 80 mm.</p></div></li>
+                <li><span>02</span><div><strong>Por unidad, caja o paquete</strong><p>Vende “2 cajas y 40 unidades” y el stock se descuenta solo.</p></div></li>
+                <li><span>03</span><div><strong>Precios para maestros y mayoristas</strong><p>Listas de precios por tipo de cliente y cotizaciones que cobras después.</p></div></li>
+                <li><span>04</span><div><strong>Fiado bajo control</strong><p>Ventas al crédito con cuotas, límite por cliente y recordatorio por WhatsApp.</p></div></li>
+                <li><span>05</span><div><strong>Compras y reposición</strong><p>Proveedores, órdenes de compra y sugerencias de lo que debes volver a pedir.</p></div></li>
+                <li><span>06</span><div><strong>Tu catálogo en internet</strong><p>Una plantilla pensada para herramientas y materiales, con pedidos por WhatsApp.</p></div></li>
+            </ul>
+        </div>
     </section>
 
     <section class="th-demo" id="demo">
@@ -89,6 +121,7 @@
     <section class="th-faq" id="preguntas"><div class="th-shell th-faq-grid"><div><p class="th-kicker">Respuestas claras</p><h2>Antes de empezar.</h2><p>Soporte y consultas por WhatsApp: {{ config('tribio.support.whatsapp_display') }}.</p><a href="https://wa.me/{{ config('tribio.support.whatsapp_number') }}" target="_blank" rel="noopener noreferrer" class="th-text-link">Hablar con Tribio ↗</a></div><div class="th-faq-list">
         <details><summary>¿Qué pasa al agregar un plan al carrito?<span>＋</span></summary><p>Verás el plan y su precio mensual. Después podrás crear tu cuenta y tienda. El pago se solicita en la siguiente pantalla, luego de revisar el resumen.</p></details>
         <details><summary>¿Puedo cambiar de plan antes de pagar?<span>＋</span></summary><p>Sí. Vuelve a los planes y agrega el que prefieras; el carrito mostrará tu nueva elección.</p></details>
+        <details><summary>¿Tribio sirve para mi ferretería?<span>＋</span></summary><p>Sí. Desde S/ {{ number_format($hardwarePrice, 0) }} al mes tienes caja para mostrador, inventario por unidad o por caja, listas de precios para maestros y mayoristas, cotizaciones y ventas al crédito. <a href="{{ $hardwareWhatsapp }}" target="_blank" rel="noopener noreferrer">Escríbenos por WhatsApp</a> y te ayudamos a empezar.</p></details>
         <details><summary>¿Cómo compran mis clientes?<span>＋</span></summary><p>Exploran tu catálogo, agregan productos al carrito y completan el pedido según los métodos que configures para tu tienda.</p></details>
         <details><summary>¿Qué necesito para abrir mi tienda?<span>＋</span></summary><p>Los datos de tu cuenta, el nombre y la dirección de tu tienda, una categoría y un número para contactar a tus clientes.</p></details>
     </div></div></section>
