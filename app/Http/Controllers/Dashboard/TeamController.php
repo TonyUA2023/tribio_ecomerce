@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\StoreMember;
 use App\Models\User;
+use App\Services\Team\AccessLog;
 use App\Services\Team\TeamAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,17 +18,30 @@ class TeamController extends Controller
     {
     }
 
-    public function index()
+    public function index(Request $request, AccessLog $log)
     {
         $store = $this->business();
+        $members = StoreMember::where('store_id', $store->id)->with('user:id,name,email')->orderBy('id')->get();
+        $ownerId = (int) $store->user_id;
+        $stats = $log->summary($store, array_values(array_filter(array_merge([$ownerId], $members->pluck('user_id')->all()))));
+        $only = $request->integer('persona') ?: null;
 
         return view('dashboard.team.index', [
             'store'    => $store,
-            'members'  => StoreMember::where('store_id', $store->id)->with('user:id,name,email,avatar')->orderBy('id')->get(),
+            'members'  => $members,
             'modules'  => TeamAccess::MODULES,
             'owner'    => $store->user,
             'isOwner'  => $this->team->roleIn(Auth::user(), $store) === 'owner',
             'passUrl'  => route('tribio-pass'),
+            'stats'    => $stats,
+            'activity' => $log->recent($store, $only, 40),
+            'only'     => $only,
+            'logReady' => AccessLog::ready(),
+            'summary'  => [
+                'people' => $members->count() + 1,
+                'today'  => collect($stats)->filter(fn ($s) => AccessLog::health($s['last_at']) === 'today')->count(),
+                'idle'   => $members->filter(fn ($m) => $m->is_active && $m->user_id && in_array(AccessLog::health($stats[$m->user_id]['last_at'] ?? null), ['stale', 'never'], true))->count(),
+            ],
         ]);
     }
 
