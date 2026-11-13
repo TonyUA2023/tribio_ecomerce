@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\Team\AccessLog;
 use App\Services\Team\TeamAccess;
 use Closure;
 use Illuminate\Http\Request;
@@ -22,6 +23,13 @@ class StoreMemberGuard
         $user = $request->user();
         $store = $user?->currentStore();
         $route = $request->route()?->getName();
+        if ($user && $store && $request->isMethod('GET') && !$request->expectsJson() && !$user->isSuperAdmin()) {
+            try {
+                app(AccessLog::class)->visit($user, $store, $request);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
         if (!$user || !$store || !$route || (int) $store->user_id === (int) $user->id || $user->isSuperAdmin()) {
             return $next($request);
         }

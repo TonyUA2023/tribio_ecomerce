@@ -43,6 +43,7 @@ class TribioPassController extends Controller
         abort_unless(app(TeamAccess::class)->roleIn($user, $store) !== null, 403);
 
         $user->switchToStore($store);
+        app(\App\Services\Team\AccessLog::class)->record($user, $store, 'enter');
 
         return redirect()->route('dashboard.index');
     }

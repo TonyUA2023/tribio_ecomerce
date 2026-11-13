@@ -35,6 +35,11 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Support\Facades\Event::listen(\Illuminate\Auth\Events\Login::class, function ($event) {
             try {
                 app(\App\Services\Team\TeamAccess::class)->claimInvites($event->user);
+                // The sign-in is recorded in every business this person works in.
+                $log = app(\App\Services\Team\AccessLog::class);
+                foreach (app(\App\Services\Team\TeamAccess::class)->workspaces($event->user) as $workspace) {
+                    $log->record($event->user, $workspace['store'], 'login');
+                }
             } catch (\Throwable $e) {
                 report($e);
             }
