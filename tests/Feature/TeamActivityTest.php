@@ -80,6 +80,24 @@ class TeamActivityTest extends TestCase
         $this->assertStringNotContainsString('Celular · Chrome', substr($only->getContent(), (int) strpos($only->getContent(), 'id="actividad"')));
     }
 
+    public function test_the_command_tells_who_entered_today_without_a_web_login(): void
+    {
+        [$owner, $store, $ana] = $this->team();
+        $rosa = User::factory()->create(['role' => 'cliente', 'name' => 'Rosa Quispe', 'email' => 'rosa@gmail.com']);
+        StoreMember::create(['store_id' => $store->id, 'user_id' => $rosa->id, 'email' => $rosa->email, 'role' => 'seller']);
+        MemberAccessLog::create(['store_id' => $store->id, 'user_id' => $ana->id, 'type' => 'login']);
+
+        $this->artisan('tribio:team-activity', ['store' => 'el-yunque'])
+            ->expectsOutputToContain('hoy')->assertSuccessful();
+        $out = new \Symfony\Component\Console\Output\BufferedOutput();
+        \Illuminate\Support\Facades\Artisan::call('tribio:team-activity', ['store' => 'el-yunque'], $out);
+        $text = $out->fetch();
+        $this->assertMatchesRegularExpression('/Ana Torres.*SÍ entró/', $text);
+        $this->assertMatchesRegularExpression('/Rosa Quispe.*NO entró/', $text);
+
+        $this->artisan('tribio:team-activity', ['store' => 'nadie'])->assertFailed();
+    }
+
     public function test_when_and_health_labels(): void
     {
         $lima = fn (string $mod) => Carbon::now(AccessLog::TZ)->startOfDay()->modify($mod)->setTimezone('UTC');
