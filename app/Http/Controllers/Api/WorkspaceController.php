@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Mobile\StoreSummaryResource;
 use App\Models\Store;
+use App\Services\Team\TeamAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -18,16 +19,18 @@ class WorkspaceController extends Controller
 
         return response()->json([
             'current_store_id' => $current?->id,
-            'stores'           => StoreSummaryResource::collection($user->stores()->oldest()->get()),
+            // Owned businesses and the ones the person was let into, each with their role there.
+            'stores'           => app(TeamAccess::class)->workspaces($user)
+                ->map(fn ($w) => (new StoreSummaryResource($w['store']))->resolve() + ['role' => $w['role']])->values(),
         ]);
     }
 
     public function switch(Request $request, int $store): JsonResponse
     {
         $user = $request->user();
-        // Only the account's own stores: any other id answers 404, never confirming it exists.
-        $target = $user->stores()->find($store);
-        abort_unless($target instanceof Store, 404, 'Tienda no encontrada.');
+        // Only businesses the account works in (own or team): any other id answers 404, never confirming it exists.
+        $target = Store::find($store);
+        abort_unless($target instanceof Store && app(TeamAccess::class)->roleIn($user, $target) !== null, 404, 'Tienda no encontrada.');
 
         $user->switchToStore($target);
 

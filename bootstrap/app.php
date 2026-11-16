@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'pos.kiosk' => \App\Http\Middleware\PosKioskGuard::class,
             'store.modules' => \App\Http\Middleware\StoreModuleGuard::class,
             'store.member' => \App\Http\Middleware\StoreMemberGuard::class,
+            'api.team' => \App\Http\Middleware\ApiTeamAccess::class,
             'storefront' => \App\Http\Middleware\StorefrontEnabled::class,
         ]);
         $middleware->encryptCookies(except: [

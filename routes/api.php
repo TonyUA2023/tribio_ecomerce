@@ -59,8 +59,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/customer/reviews', [\App\Http\Controllers\CustomerReviewController::class, 'store'])->middleware('throttle:20,1');
 
     // Dashboard del vendedor (paridad con el dashboard web)
-    Route::prefix('dashboard')->group(function () {
+    Route::prefix('dashboard')->middleware('api.team')->group(function () {
         Route::get('/stats', [DashboardController::class, 'index']);
+
+        // Qué ve esta persona en este negocio (tipo de cuenta, rol y módulos)
+        Route::get('/espacio', [\App\Http\Controllers\Api\EspacioController::class, 'show']);
+
+        // Equipo: personas con su propio Tribio Pass y qué módulos abren
+        Route::get('/equipo', [\App\Http\Controllers\Api\TeamController::class, 'index']);
+        Route::get('/equipo/actividad', [\App\Http\Controllers\Api\TeamController::class, 'activity']);
+        Route::post('/equipo', [\App\Http\Controllers\Api\TeamController::class, 'store'])->middleware('throttle:30,1');
+        Route::put('/equipo/{id}', [\App\Http\Controllers\Api\TeamController::class, 'update'])->whereNumber('id')->middleware('throttle:60,1');
+        Route::delete('/equipo/{id}', [\App\Http\Controllers\Api\TeamController::class, 'destroy'])->whereNumber('id')->middleware('throttle:30,1');
 
         // Tiendas de la cuenta (Tribio Pass multi-tienda)
         Route::get('/tiendas', [WorkspaceController::class, 'index']);

@@ -34,8 +34,8 @@ class AuthController extends Controller
             ], 422);
         }
 
-        // Check if user is store_owner or super_admin
-        if (!$user->isStoreOwner() && !$user->isSuperAdmin()) {
+        // Owners, super admins, anyone with a business of their own, and team members (sellers/admins of a business).
+        if (!$user->isStoreOwner() && !$user->isSuperAdmin() && !$user->hasStore() && !$user->isTeamMember()) {
             return response()->json([
                 'message' => 'No tienes permiso para acceder a esta aplicación.',
             ], 403);
@@ -43,6 +43,10 @@ class AuthController extends Controller
 
         $tokenName = $request->device_name ?? 'mobile-app';
         $token = $user->createToken($tokenName)->plainTextToken;
+        // A sign-in from the phone counts in the access log of every business the person works in.
+        foreach (app(\App\Services\Team\TeamAccess::class)->workspaces($user) as $workspace) {
+            app(\App\Services\Team\AccessLog::class)->record($user, $workspace['store'], 'login', $request);
+        }
 
         // Tribio Pass accounts can now own more than one store; the mobile app (not yet
         // updated for multi-store) still gets a single `store` key — the account's

@@ -42,6 +42,17 @@ class TeamAccess
     /** Owner / admin only even inside a seller's module: money setup, staff PINs, SUNAT, series. */
     private const MANAGER_ONLY = ['dashboard.pos.staff.*', 'dashboard.pos.documents.*', 'dashboard.pos.registers.store', 'dashboard.pos.kiosk.*'];
 
+    /**
+     * The mobile API's first path segment after /api/dashboard → the module it needs.
+     * '*' = every member; anything not listed is for owners and admins only.
+     */
+    public const API_SEGMENTS = [
+        'tiendas' => '*', 'espacio' => '*', 'cuenta' => '*',
+        'caja' => 'vender', 'pedidos' => 'ventas',
+        'productos' => 'productos', 'categorias' => 'productos', 'marcas' => 'productos',
+        'inventario' => 'inventario',
+    ];
+
     public static function ready(): bool
     {
         static $ready = null;
@@ -111,6 +122,49 @@ class TeamAccess
         }
 
         return false;
+    }
+
+    /** May this person call this mobile-API area (first segment after /api/dashboard)? */
+    public function allowsApi(User $user, Store $store, string $segment): bool
+    {
+        $role = $this->roleIn($user, $store);
+        if ($role === null) {
+            return false;
+        }
+        if ($role !== StoreMember::SELLER) {
+            return true;
+        }
+        $need = self::API_SEGMENTS[$segment] ?? null;
+
+        return match (true) {
+            $need === '*' => true,
+            $need === null => false,
+            default => in_array($need, $this->modulesOf($user, $store), true),
+        };
+    }
+
+    /**
+     * What the phone needs to draw the right menu: account type, role and the modules this person opens.
+     *
+     * @return array<string, mixed>
+     */
+    public function profile(User $user, Store $store): array
+    {
+        $role = $this->roleIn($user, $store);
+        $manages = in_array($role, ['owner', StoreMember::ADMIN], true);
+
+        return [
+            'role'           => $role,
+            'manages'        => $manages,
+            'is_owner'       => $role === 'owner',
+            'mode'           => $store->mode(),
+            'has_storefront' => $store->hasStorefront(),
+            'has_pos'        => $store->hasPos(),
+            'is_simple'      => $store->isSimple(),
+            'has_crm'        => $store->hasCrm(),
+            'modules'        => $manages ? array_keys(self::MODULES) : $this->modulesOf($user, $store),
+            'module_catalog' => collect(self::MODULES)->map(fn (array $m, string $key) => ['key' => $key, 'label' => $m['label'], 'hint' => $m['hint'], 'default' => $m['default']])->values()->all(),
+        ];
     }
 
     /** Where a seller lands: the first thing they may do. */
